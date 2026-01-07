@@ -9,12 +9,16 @@ class PendingUser extends Model
 {
     protected $fillable = [
         'name',
-        'username',
         'email',
+        'username',
+        'age',
         'password',
-        'avatar',
-        'bio',
-        'verification_token'
+        'verification_token',
+        'expires_at'
+    ];
+
+    protected $casts = [
+        'expires_at' => 'datetime'
     ];
 }
 

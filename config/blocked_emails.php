@@ -1,0 +1,8 @@
+<?php
+return [
+    'tempmail.com',
+    '10minutemail.com',
+    'mailinator.com',
+    'guerrillamail.com',
+    'yopmail.com',
+];
