@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 
-class Forum extends Model
+class Category extends Model
 {
     use HasFactory;
 
@@ -14,25 +14,13 @@ class Forum extends Model
         'name',
         'slug',
         'description',
-        'views', // Add views to fillable
+        'views',
     ];
 
-    // A forum can have many posts
-    public function posts()
+    // A category can have many forums
+    public function forums()
     {
-        return $this->hasMany(Post::class);
-    }
-
-    // A forum can have many tags
-    public function tags()
-    {
-        return $this->belongsToMany(Tag::class);
-    }
-
-    // A forum belongs to a category
-    public function category()
-    {
-        return $this->belongsTo(Category::class);
+        return $this->hasMany(Forum::class);
     }
 
     protected static function boot(): void
