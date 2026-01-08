@@ -5,7 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
-
+use App\Models\User;
 class Post extends Model
 {
     use HasFactory;
@@ -21,7 +21,11 @@ class Post extends Model
         'replies_count',
         'reputation_points',
     ];
-
+public function savedByUsers()
+{
+    return $this->belongsToMany(User::class, 'saved_posts')
+        ->withTimestamps();
+}
     // Relationships
     public function forum()
     {
