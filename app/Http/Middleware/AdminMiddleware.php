@@ -1,6 +1,5 @@
 <?php
 
-
 namespace App\Http\Middleware;
 
 use Closure;
@@ -13,15 +12,23 @@ class AdminMiddleware
     {
         $user = Auth::user();
 
-        // Not logged in → redirect home
+        // Not logged in
         if (!$user) {
-            return redirect('/');
+            return redirect('/')->with('error', 'Please log in first.');
         }
 
-        // Check if user has admin role
-        $isAdmin = $user->roles()->where('name', 'admin')->exists();
+        /**
+         * Allow if:
+         *  - admin role (highest)
+         *  - OR has permission to login admin panel
+         *
+         * This supports your plan:
+         * - admin always allowed
+         * - super_member / moderator can be allowed if you assign login_admin_panel
+         */
+        $allowed = $user->hasRole('admin') || $user->hasPermission('login_admin_panel');
 
-        if (!$isAdmin) {
+        if (!$allowed) {
             return redirect('/')->with('error', 'You are not authorized to access this page.');
         }
 

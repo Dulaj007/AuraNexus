@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -11,41 +10,37 @@ class Forum extends Model
     use HasFactory;
 
     protected $fillable = [
+        'category_id',   // ✅ ADD THIS
         'name',
         'slug',
         'description',
-        'views', // Add views to fillable
+        'views',
     ];
 
-    // A forum can have many posts
     public function posts()
     {
         return $this->hasMany(Post::class);
     }
 
-    // A forum can have many tags
     public function tags()
     {
         return $this->belongsToMany(Tag::class);
     }
 
-    // A forum belongs to a category
     public function category()
     {
-        return $this->belongsTo(Category::class);
+        return $this->belongsTo(Category::class, 'category_id');
     }
 
     protected static function boot(): void
     {
         parent::boot();
 
-        // Auto-generate slug when creating
         static::creating(function ($model) {
             $slug = Str::slug($model->name);
             $original = $slug;
             $count = 1;
 
-            // Ensure slug is unique
             while (self::where('slug', $slug)->exists()) {
                 $slug = $original . '-' . $count++;
             }

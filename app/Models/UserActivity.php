@@ -5,18 +5,31 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class UserLogin extends Model
+class UserActivity extends Model
 {
     use HasFactory;
 
     protected $fillable = [
         'user_id',
+        'event',
+        'subject_type',
+        'subject_id',
         'ip_address',
         'user_agent',
+        'meta',
+    ];
+
+    protected $casts = [
+        'meta' => 'array',
     ];
 
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function subject()
+    {
+        return $this->morphTo();
     }
 }
