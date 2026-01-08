@@ -35,7 +35,7 @@ class VerifyController extends Controller
 
         $pending->delete();
 
-        $table->string('verification_token')->unique();
+       
 
     });
 
