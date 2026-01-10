@@ -63,6 +63,15 @@ class User extends Authenticatable
     {
         return $this->hasMany(UserActivity::class);
     }
+public function postReactions()
+{
+    return $this->hasMany(\App\Models\PostReaction::class);
+}
+
+public function postReports()
+{
+    return $this->hasMany(\App\Models\PostReport::class);
+}
 
     public function posts()
     {
@@ -127,10 +136,13 @@ class User extends Authenticatable
     }
 
     /**
-     * Permission resolution order:
+     * Permission resolution order (YOUR CURRENT DB DESIGN):
      * 1) Admin role => allow everything
-     * 2) User override (allow/deny)
-     * 3) Role permissions (permissions_role pivot)
+     * 2) User override (permission_user allow/deny)
+     *
+     * NOTE:
+     * You DO NOT have a role-permission pivot table (permissions_role / permission_role),
+     * so we MUST NOT try to check role permissions here.
      */
     public function hasPermission(string $permissionName): bool
     {
@@ -139,20 +151,17 @@ class User extends Authenticatable
             return true;
         }
 
-        // 2) User override first
-        $override = $this->permissionOverrides()
+        // 2) Check per-user overrides only
+        $permission = $this->permissionOverrides()
             ->where('permissions.name', $permissionName)
             ->first();
 
-        if ($override) {
-            return $override->pivot->effect === 'allow';
+        if (!$permission) {
+            return false;
         }
 
-        // 3) Fall back to role permissions
-        return $this->roles()
-            ->whereHas('permissions', function ($q) use ($permissionName) {
-                $q->where('name', $permissionName);
-            })
-            ->exists();
+        // permission_user.effect = allow | deny
+        return $permission->pivot->effect === 'allow';
     }
 }
+

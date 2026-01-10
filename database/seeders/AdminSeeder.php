@@ -6,42 +6,58 @@ use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
 use App\Models\User;
+use App\Models\Permission;
 
 class AdminSeeder extends Seeder
 {
-    public function run()
+    public function run(): void
     {
-        $email = env('ADMIN_EMAIL');
-        $password = env('ADMIN_PASSWORD');
+        $email = env('ADMIN_EMAIL', 'admin@example.com');
+        $password = env('ADMIN_PASSWORD', 'password123');
 
-        // Create the admin user
+        // 1️⃣ Create admin user
         $admin = User::firstOrCreate(
             ['email' => $email],
             [
                 'name' => 'Administrator',
                 'username' => 'admin',
                 'password' => Hash::make($password),
+                'email_verified_at' => now(),
+                'status' => 'active',
             ]
         );
 
-        // Assign role as 'admin'
-        $role = DB::table('roles')->where('name', 'admin')->first();
+        // 2️⃣ Assign admin role
+        $adminRoleId = DB::table('roles')->where('name', 'admin')->value('id');
 
-        if ($role) {
-            DB::table('role_user')->updateOrInsert([
-                'user_id' => $admin->id,
-                'role_id' => $role->id,
-            ]);
+        if ($adminRoleId) {
+            DB::table('role_user')->updateOrInsert(
+                [
+                    'user_id' => $admin->id,
+                    'role_id' => $adminRoleId,
+                ],
+                [
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]
+            );
         }
 
-        // Optionally give all permissions
-        $allPermissions = DB::table('permissions')->pluck('id');
+        // 3️⃣ OPTIONAL: give ALL permissions directly to admin (user override)
+        $permissionIds = Permission::pluck('id');
 
-        foreach ($allPermissions as $permId) {
-            DB::table('permission_role')->updateOrInsert([
-                'role_id' => $role->id,
-                'permission_id' => $permId,
-            ]);
+        foreach ($permissionIds as $permissionId) {
+            DB::table('permission_user')->updateOrInsert(
+                [
+                    'user_id' => $admin->id,
+                    'permission_id' => $permissionId,
+                ],
+                [
+                    'effect' => 'allow',
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]
+            );
         }
     }
 }

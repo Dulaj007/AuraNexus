@@ -1,20 +1,18 @@
 <?php
 
-
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class ParagraphTemplate extends Model
 {
+    use HasFactory;
+
     protected $fillable = [
         'category',
-        'content'
+        'content',
     ];
 
-    public function usedInPosts()
-    {
-        return $this->hasMany(PostParagraph::class, 'paragraph_id');
-    }
+   
 }
-

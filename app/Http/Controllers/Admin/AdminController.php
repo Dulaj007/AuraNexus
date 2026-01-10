@@ -1,7 +1,9 @@
 <?php
 namespace App\Http\Controllers\Admin;
 use Illuminate\Http\Request;
-
+use App\Models\ParagraphTemplate;
+use App\Models\PostReport;
+use App\Models\Setting;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\Post;
@@ -18,6 +20,7 @@ use App\Models\Permission;
 use App\Models\Role;
 use Illuminate\Support\Facades\DB;
 
+use Illuminate\Validation\Rules\Password;
 
 
 class AdminController extends Controller
@@ -68,10 +71,27 @@ class AdminController extends Controller
         ));
     }
 
-public function users()
+public function users(Request $request)
 {
-    $users = User::latest()
-        ->paginate(20);
+    $q = trim((string) $request->query('q', ''));
+
+    // Main list (searchable + paginated)
+    $usersQuery = User::query()->latest();
+
+    if ($q !== '') {
+        $usersQuery->where(function ($sub) use ($q) {
+            $sub->where('username', 'like', "%{$q}%")
+                ->orWhere('name', 'like', "%{$q}%")          // display name (your column is name)
+                ->orWhere('email', 'like', "%{$q}%");
+        });
+    }
+
+    $users = $usersQuery
+        ->paginate(20)
+        ->withQueryString(); // keep ?q=... when paging
+
+    // Latest 10 users (for a small panel)
+    $latestUsers = User::latest()->limit(10)->get(['id', 'name', 'username', 'email', 'created_at']);
 
     // Get last login per user (latest row)
     $lastLogins = UserLogin::select('user_id', 'ip_address', 'user_agent', 'created_at')
@@ -79,7 +99,7 @@ public function users()
         ->orderBy('created_at', 'desc')
         ->get()
         ->groupBy('user_id')
-        ->map(fn($rows) => $rows->first());
+        ->map(fn ($rows) => $rows->first());
 
     // Online users in last 5 minutes
     $onlineUserIds = PageView::whereNotNull('user_id')
@@ -97,8 +117,16 @@ public function users()
         ->get()
         ->keyBy('user_id');
 
-    return view('admin.users', compact('users', 'lastLogins', 'onlineUserIds', 'lastActive'));
+    return view('admin.users', compact(
+        'users',
+        'q',
+        'latestUsers',
+        'lastLogins',
+        'onlineUserIds',
+        'lastActive'
+    ));
 }
+
 
 
 public function showUser(User $user)
@@ -195,7 +223,13 @@ public function customization()
         ->orderBy('name')
         ->get();
 
-    return view('admin.customization', compact('categories'));
+
+$paragraphTemplates = ParagraphTemplate::orderBy('category')
+    ->orderByDesc('id')
+    ->get();
+
+
+    return view('admin.customization', compact('categories', 'paragraphTemplates'));
 }
 
 /* ---------------- CATEGORIES ---------------- */
@@ -343,6 +377,133 @@ public function updateUserRole(Request $request, User $user)
     $user->roles()->sync([$validated['role_id']]);
 
     return back()->with('success', 'User role updated.');
+}
+
+public function storeParagraphTemplate(Request $request)
+{
+    $data = $request->validate([
+        'category' => 'required|string|max:100',
+        'content'  => 'required|string', // large allowed
+    ]);
+
+    ParagraphTemplate::create($data);
+
+    return back()->with('success', 'Paragraph template added.');
+}
+
+public function updateParagraphTemplate(Request $request, ParagraphTemplate $paragraph_template)
+{
+    $data = $request->validate([
+        'category' => 'required|string|max:100',
+        'content'  => 'required|string',
+    ]);
+
+    $paragraph_template->update($data);
+
+    return back()->with('success', 'Paragraph template updated.');
+}
+
+public function destroyParagraphTemplate(ParagraphTemplate $paragraph_template)
+{
+    $paragraph_template->delete();
+
+    return back()->with('success', 'Paragraph template deleted.');
+}
+
+
+
+public function createUser()
+{
+    // Optional: only admins can do this
+    if (!auth()->user()?->hasRole('admin')) {
+        abort(403);
+    }
+
+    $roles = Role::orderBy('name')->get(['id', 'name']);
+
+    return view('admin.user-create', compact('roles'));
+}
+
+public function storeUser(Request $request)
+{
+    if (!auth()->user()?->hasRole('admin')) {
+        abort(403);
+    }
+
+    $validated = $request->validate([
+        'role_id'       => ['required', 'exists:roles,id'],
+        'name'          => ['required', 'string', 'max:50'],   // display name (your column is "name")
+        'username'      => ['required', 'string', 'max:30', 'alpha_dash', 'unique:users,username'],
+        'email'         => ['required', 'email', 'max:255', 'unique:users,email'],
+        'password'      => ['required', 'string', Password::min(8)],
+        'status'        => ['nullable', 'string', 'max:20'],   // optional
+        'age'           => ['nullable', 'integer', 'min:13', 'max:120'], // optional
+    ]);
+
+    DB::transaction(function () use ($validated) {
+        $user = User::create([
+            'name'     => $validated['name'],
+            'username' => $validated['username'],
+            'email'    => $validated['email'],
+            'password' => $validated['password'], // hashed via cast in User model
+            'status'   => $validated['status'] ?? 'active',
+              // ✅ IMPORTANT so they can login immediately
+    'email_verified_at' => now(),
+   
+            // add age only if your users table has it
+            // 'age'   => $validated['age'] ?? null,
+        ]);
+
+        // Single-role system
+        $user->roles()->sync([$validated['role_id']]);
+    });
+
+    return redirect()->route('admin.users')->with('success', 'User created successfully.');
+}
+
+/**
+ * Optional: quick form inside customization/users page (same submit)
+ * If you don’t need it, you can remove this method and just use storeUser().
+ */
+public function storeUserInline(Request $request)
+{
+    return $this->storeUser($request);
+}
+
+public function reports(Request $request)
+{
+    $q = trim($request->get('q', ''));
+
+    $reports = PostReport::with([
+            'post:id,title,slug,status',
+            'user:id,username,name',
+        ])
+        ->when($q, function ($query) use ($q) {
+            $query->where('reason', 'like', "%{$q}%")
+                  ->orWhereHas('post', fn($p) => $p->where('title', 'like', "%{$q}%"))
+                  ->orWhereHas('user', fn($u) => $u->where('username', 'like', "%{$q}%")
+                                                 ->orWhere('email', 'like', "%{$q}%"));
+        })
+        ->latest()
+        ->paginate(20)
+        ->withQueryString();
+
+    $reportMessage = Setting::get(
+        'report_post_message',
+        'Please explain why you are reporting this post.'
+    );
+
+    return view('admin.reports', compact('reports', 'reportMessage', 'q'));
+}
+public function updateReportMessage(Request $request)
+{
+    $data = $request->validate([
+        'report_post_message' => ['required', 'string', 'max:500'],
+    ]);
+
+    Setting::set('report_post_message', $data['report_post_message']);
+
+    return back()->with('success', 'Report message updated.');
 }
 
 }
