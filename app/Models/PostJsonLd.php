@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class PostJsonLd extends Model
 {
+    protected $table = 'post_jsonld';
+    
     protected $fillable = [
         'post_id',
         'json_content'

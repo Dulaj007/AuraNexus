@@ -26,5 +26,10 @@ class Tag extends Model
     {
         return $this->morphMany(PageView::class, 'viewable');
     }
+    public function getRouteKeyName()
+{
+    return 'slug';
+}
+
 }
 

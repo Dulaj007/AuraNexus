@@ -5,7 +5,43 @@
 <x-admin.card>
     <x-slot:title>Users</x-slot:title>
 
-    <div class="overflow-x-auto">
+    <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        {{-- Search --}}
+        <form method="GET" action="{{ route('admin.users') }}" class="flex w-full sm:max-w-xl gap-2">
+            <input
+                type="text"
+                name="q"
+                value="{{ $q ?? '' }}"
+                placeholder="Search by username, name, or email..."
+                class="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-indigo-300"
+            />
+            <button
+                type="submit"
+                class="rounded-lg bg-gray-900 px-4 py-2 text-sm text-white hover:bg-gray-800"
+            >
+                Search
+            </button>
+
+            @if(!empty($q))
+                <a
+                    href="{{ route('admin.users') }}"
+                    class="rounded-lg border border-gray-200 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                >
+                    Clear
+                </a>
+            @endif
+        </form>
+
+        {{-- Create user --}}
+        <a href="{{ route('admin.users.create') }}"
+           class="inline-flex items-center justify-center rounded-lg bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-500">
+            + Create User
+        </a>
+    </div>
+
+
+    {{-- Main results --}}
+    <div class="mt-6 overflow-x-auto">
         <table class="w-full text-sm">
             <thead>
                 <tr class="text-left border-b">
@@ -18,7 +54,7 @@
                 </tr>
             </thead>
             <tbody>
-            @foreach($users as $u)
+            @forelse($users as $u)
                 @php
                     $isOnline = in_array($u->id, $onlineUserIds ?? []);
                     $login = $lastLogins[$u->id] ?? null;
@@ -27,7 +63,7 @@
 
                 <tr class="border-b">
                     <td class="py-2">
-                        <div class="font-medium">{{ $u->display_name ?? $u->username }}</div>
+                        <div class="font-medium">{{ $u->name ?? $u->username }}</div>
                         <div class="text-xs text-gray-500">{{ $u->username }} • {{ $u->email }}</div>
                     </td>
 
@@ -68,7 +104,13 @@
                         </div>
                     </td>
                 </tr>
-            @endforeach
+            @empty
+                <tr>
+                    <td colspan="6" class="py-6 text-center text-sm text-gray-500">
+                        No users found.
+                    </td>
+                </tr>
+            @endforelse
             </tbody>
         </table>
     </div>

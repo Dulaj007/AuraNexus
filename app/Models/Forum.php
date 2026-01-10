@@ -17,10 +17,17 @@ class Forum extends Model
         'views',
     ];
 
-    public function posts()
-    {
-        return $this->hasMany(Post::class);
-    }
+public function posts()
+{
+    return $this->hasMany(\App\Models\Post::class);
+}
+
+
+public function latestPublishedPost()
+{
+    return $this->hasOne(\App\Models\Post::class)->latestOfMany('created_at');
+}
+
 
     public function tags()
     {

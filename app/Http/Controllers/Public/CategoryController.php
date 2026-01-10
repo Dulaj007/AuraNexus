@@ -9,7 +9,16 @@ class CategoryController extends Controller
 {
     public function index()
     {
-        $categories = Category::with(['forums' => fn($q) => $q->orderBy('name')])
+        $categories = Category::query()
+            ->withCount('forums')
+            ->with(['forums' => function ($q) {
+                $q->with('category:id,name,slug')
+                  ->withCount(['posts as posts_count' => function ($qq) {
+                      $qq->where('status', 'published');
+                  }])
+                  ->with('latestPublishedPost') // ✅ do NOT limit columns here
+                  ->orderBy('name');
+            }])
             ->orderBy('name')
             ->get();
 
@@ -18,7 +27,15 @@ class CategoryController extends Controller
 
     public function show(Category $category)
     {
-        $category->load(['forums' => fn($q) => $q->orderBy('name')]);
+        $category->loadCount('forums');
+
+        $category->load(['forums' => function ($q) {
+            $q->withCount(['posts as posts_count' => function ($qq) {
+                $qq->where('status', 'published');
+            }])
+            ->with('latestPublishedPost') // ✅ do NOT limit columns here
+            ->orderBy('name');
+        }]);
 
         return view('categories.show', compact('category'));
     }
