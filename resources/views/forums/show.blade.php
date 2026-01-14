@@ -79,9 +79,10 @@
             </div>
         @else
            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-    @foreach($posts as $post)
-        <x-forum.post-card :post="$post" />
-    @endforeach
+@foreach($posts as $post)
+    <x-forum.post-card :post="$post" :pinned-ids="$pinnedIds" />
+@endforeach
+
 </div>
 
 

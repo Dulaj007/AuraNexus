@@ -9,18 +9,21 @@ use App\Models\Post;
 use App\Models\PostEdit;
 use App\Models\PostParagraph;
 use App\Models\Tag;
+use App\Support\LogsUserActivity;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class PostUpdateController extends Controller
 {
+    use LogsUserActivity;
+
     public function edit(Request $request, Post $post)
     {
         $user = $request->user();
 
         // ✅ Only owner OR edit_post can access
-        $isOwner = $user && $user->id === $post->user_id;
+        $isOwner   = $user && (int) $user->id === (int) $post->user_id;
         $canEditAny = $user?->hasPermission('edit_post') ?? false;
 
         if (!$isOwner && !$canEditAny) {
@@ -41,7 +44,7 @@ class PostUpdateController extends Controller
 
         // Existing paragraph (your save uses order=1)
         $existingParagraph = PostParagraph::where('post_id', $post->id)
-            ->orderBy('order')
+            ->where('order', 1)
             ->first();
 
         return view('posting.create', [
@@ -51,7 +54,7 @@ class PostUpdateController extends Controller
             'forums' => $forums,
             'templates' => $templates,
 
-            // for form prefills
+            // for form prefills (your JS can use these)
             'existingTagNames' => $existingTagNames,
             'existingHighlightName' => $existingHighlightName,
             'existingParagraph' => $existingParagraph,
@@ -62,7 +65,7 @@ class PostUpdateController extends Controller
     {
         $user = $request->user();
 
-        $isOwner = $user && $user->id === $post->user_id;
+        $isOwner    = $user && (int) $user->id === (int) $post->user_id;
         $canEditAny = $user?->hasPermission('edit_post') ?? false;
 
         if (!$isOwner && !$canEditAny) {
@@ -88,7 +91,7 @@ class PostUpdateController extends Controller
 
         // ✅ highlight must be among tag_names if set
         if (!empty($validated['highlight_tag_name'])) {
-            $tags = array_map(fn($t) => strtolower(trim($t)), $validated['tag_names'] ?? []);
+            $tags = array_map(fn ($t) => strtolower(trim($t)), $validated['tag_names'] ?? []);
             $highlight = strtolower(trim($validated['highlight_tag_name']));
 
             if (!in_array($highlight, $tags, true)) {
@@ -107,7 +110,7 @@ class PostUpdateController extends Controller
                 'content'  => $validated['content'],
             ]);
 
-            // ✅ tags
+            // ✅ tags (create if not exist)
             $tagIds = [];
             foreach (($validated['tag_names'] ?? []) as $name) {
                 $cleanName = trim($name);
@@ -126,6 +129,7 @@ class PostUpdateController extends Controller
 
             // ✅ highlight tag by NAME → ID
             $post->update(['highlight_tag_id' => null]);
+
             if (!empty($validated['highlight_tag_name'])) {
                 $highlightSlug = Str::slug($validated['highlight_tag_name']);
                 $highlightTagId = Tag::where('slug', $highlightSlug)->value('id');
@@ -135,9 +139,10 @@ class PostUpdateController extends Controller
                 }
             }
 
-            // ✅ paragraph update (keep single paragraph row, order=1)
-            // If empty → delete existing
-            $existing = PostParagraph::where('post_id', $post->id)->where('order', 1)->first();
+            // ✅ paragraph update (keep single row order=1)
+            $existing = PostParagraph::where('post_id', $post->id)
+                ->where('order', 1)
+                ->first();
 
             if (!empty($validated['paragraph_template_id']) && !empty($validated['paragraph_content'])) {
                 if ($existing) {
@@ -165,6 +170,16 @@ class PostUpdateController extends Controller
                 'was_owner' => $isOwner ? 1 : 0,
             ]);
         });
+
+        // ✅ Activity log (UserActivity)
+        $this->logActivity(
+            $request,
+            $user->id,
+            'post_updated',
+            Post::class,
+            $post->id,
+            ['slug' => $post->slug]
+        );
 
         return redirect()
             ->route('post.show', $post->slug)

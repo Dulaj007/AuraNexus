@@ -5,6 +5,7 @@ namespace App\Http\Controllers\User;
 use App\Http\Controllers\Controller;
 use App\Models\Post;
 use App\Models\RemovedPost;
+use App\Models\UserActivity;
 use Illuminate\Http\Request;
 
 class PostRemoveController extends Controller
@@ -37,7 +38,40 @@ class PostRemoveController extends Controller
             'status' => 'removed',
         ]);
 
-        return redirect()->route('post.show', $post)
+        // ✅ activity log
+        $this->logActivity(
+            $request,
+            (int) $user->id,
+            'post_removed',
+            Post::class,
+            (int) $post->id,
+            ['reason' => $data['reason']]
+        );
+
+        return redirect()
+            ->route('post.show', $post)
             ->with('success', 'Post removed.');
+    }
+
+    /* ============================================================
+     |  ACTIVITY LOGGER (UserActivity)
+     ============================================================ */
+    private function logActivity(
+        Request $request,
+        int $userId,
+        string $event,
+        string $subjectType,
+        int $subjectId,
+        array $meta = []
+    ): void {
+        UserActivity::create([
+            'user_id'      => $userId,
+            'event'        => $event,
+            'subject_type' => $subjectType,
+            'subject_id'   => $subjectId,
+            'ip_address'   => $request->ip(),
+            'user_agent'   => substr((string) $request->userAgent(), 0, 1000),
+            'meta'         => empty($meta) ? null : json_encode($meta, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
+        ]);
     }
 }

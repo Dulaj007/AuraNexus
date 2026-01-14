@@ -8,7 +8,6 @@ use App\Models\Forum;
 use App\Models\PageView;
 use App\Models\ParagraphTemplate;
 use App\Models\Post;
-use App\Models\PostJsonld;
 use App\Models\PostParagraph;
 use App\Models\Tag;
 use App\Models\TotalStat;
@@ -46,125 +45,145 @@ class PostingController extends Controller
         ]);
     }
 
-public function store(Request $request)
-{
-    $user = $request->user();
+    public function store(Request $request)
+    {
+        $user = $request->user();
 
-    // ✅ hard permission check (server-side)
-    if (!$user || !$user->hasPermission('create_post')) {
-        return redirect('/')->with('error', 'You are not allowed to create posts.');
-    }
-
-    // ✅ status rule
-    $status = ($user->hasPermission('approve_post'))
-        ? 'published'
-        : 'pending';
-
-    $validated = $request->validate([
-        'forum_id' => ['required', 'integer', 'exists:forums,id'],
-        'title'    => ['required', 'string', 'min:5', 'max:150'],
-        'content'  => ['required', 'string', 'min:20'],
-
-        // user-created tags (names)
-        'tag_names' => ['nullable', 'array', 'max:15'],
-        'tag_names.*' => ['string', 'min:1', 'max:30'],
-
-        // highlight tag by name (must be within tag_names)
-        'highlight_tag_name' => ['nullable', 'string', 'min:1', 'max:30'],
-
-        'paragraph_template_id' => ['nullable', 'integer', 'exists:paragraph_templates,id'],
-        'paragraph_content'     => ['nullable', 'string', 'max:5000'],
-    ]);
-
-    // ✅ if highlight set, ensure it exists in tag_names
-    if (!empty($validated['highlight_tag_name'])) {
-        $tags = array_map(fn($t) => strtolower(trim($t)), $validated['tag_names'] ?? []);
-        $highlight = strtolower(trim($validated['highlight_tag_name']));
-
-        if (!in_array($highlight, $tags, true)) {
-            return back()
-                ->withErrors(['highlight_tag_name' => 'Highlight tag must be one of your selected tags.'])
-                ->withInput();
+        // ✅ hard permission check (server-side)
+        if (!$user || !$user->hasPermission('create_post')) {
+            return redirect('/')->with('error', 'You are not allowed to create posts.');
         }
-    }
 
-    $post = DB::transaction(function () use ($validated, $user, $request, $status) {
+        // ✅ status rule
+        $status = $user->hasPermission('approve_post') ? 'published' : 'pending';
 
-        $title = trim($validated['title']);
-        $slug  = $this->uniqueSlug($title);
+        $validated = $request->validate([
+            'forum_id' => ['required', 'integer', 'exists:forums,id'],
+            'title'    => ['required', 'string', 'min:5', 'max:150'],
+            'content'  => ['required', 'string', 'min:20'],
 
-        $post = Post::create([
-            'forum_id' => $validated['forum_id'],
-            'user_id'  => $user->id,
-            'title'    => $title,
-            'slug'     => $slug,
-            'content'  => $validated['content'],
-            'views'    => 0,
-            'status'   => $status, // ✅ published or pending
-            'replies_count' => 0,
-            'reputation_points' => 0,
+            // user-created tags (names)
+            'tag_names'    => ['nullable', 'array', 'max:15'],
+            'tag_names.*'  => ['string', 'min:1', 'max:30'],
+
+            // highlight tag by name (must be within tag_names)
+            'highlight_tag_name' => ['nullable', 'string', 'min:1', 'max:30'],
+
+            'paragraph_template_id' => ['nullable', 'integer', 'exists:paragraph_templates,id'],
+            'paragraph_content'     => ['nullable', 'string', 'max:5000'],
         ]);
 
-        // ✅ tags: create on-the-fly from names
-        $tagIds = [];
-        foreach (($validated['tag_names'] ?? []) as $name) {
-            $cleanName = trim($name);
-            if ($cleanName === '') continue;
+        // ✅ normalize tag names once (lower/trim), remove empties, unique
+        $rawTagNames = $validated['tag_names'] ?? [];
+        $normTagNames = collect($rawTagNames)
+            ->map(fn ($t) => trim((string) $t))
+            ->filter(fn ($t) => $t !== '')
+            ->map(fn ($t) => mb_strtolower($t))
+            ->unique()
+            ->values()
+            ->all();
 
-            $tag = Tag::firstOrCreate(
-                ['slug' => Str::slug($cleanName)],
-                ['name' => $cleanName]
-            );
-
-            $tagIds[] = $tag->id;
-        }
-        $tagIds = array_values(array_unique($tagIds));
-
-        if (!empty($tagIds)) {
-            $post->tags()->sync($tagIds);
-        }
-
-        // ✅ highlight tag by NAME → convert to ID and save
+        // ✅ if highlight set, ensure it exists in tag_names
+        $highlightName = null;
         if (!empty($validated['highlight_tag_name'])) {
-            $highlightSlug = Str::slug($validated['highlight_tag_name']);
-            $highlightTagId = Tag::where('slug', $highlightSlug)->value('id');
-
-            if ($highlightTagId && in_array($highlightTagId, $tagIds, true)) {
-                $post->update(['highlight_tag_id' => $highlightTagId]);
+            $highlightName = mb_strtolower(trim((string) $validated['highlight_tag_name']));
+            if (!in_array($highlightName, $normTagNames, true)) {
+                return back()
+                    ->withErrors(['highlight_tag_name' => 'Highlight tag must be one of your selected tags.'])
+                    ->withInput();
             }
         }
 
-        // ✅ paragraph save
-        if (!empty($validated['paragraph_template_id']) && !empty($validated['paragraph_content'])) {
-            PostParagraph::create([
-                'post_id'      => $post->id,
-                'paragraph_id' => $validated['paragraph_template_id'],
-                'content'      => $validated['paragraph_content'],
-                'order'        => 1,
+        $post = DB::transaction(function () use ($validated, $user, $request, $status, $normTagNames, $highlightName) {
+
+            $title = trim($validated['title']);
+            $slug  = $this->uniqueSlug($title);
+
+            $post = Post::create([
+                'forum_id' => (int) $validated['forum_id'],
+                'user_id'  => (int) $user->id,
+                'title'    => $title,
+                'slug'     => $slug,
+                'content'  => $validated['content'],
+                'views'    => 0,
+                'status'   => $status, // published or pending
+                'replies_count'      => 0,
+                'reputation_points'  => 0,
             ]);
+
+            // ✅ tags: create on-the-fly from names
+            $tagIds = [];
+            $slugToId = [];
+
+            foreach ($normTagNames as $nameLower) {
+                // keep original-ish display casing: use first seen version from raw list if possible
+                $display = $this->findOriginalTagDisplay($validated['tag_names'] ?? [], $nameLower) ?? $nameLower;
+
+                $tag = Tag::firstOrCreate(
+                    ['slug' => Str::slug($nameLower)],
+                    ['name' => $display]
+                );
+
+                $tagIds[] = $tag->id;
+                $slugToId[$tag->slug] = $tag->id;
+            }
+
+            $tagIds = array_values(array_unique($tagIds));
+
+            if (!empty($tagIds)) {
+                $post->tags()->sync($tagIds);
+            }
+
+            // ✅ highlight tag by NAME -> convert to ID and save (must be within selected tags)
+            if ($highlightName) {
+                $highlightSlug = Str::slug($highlightName);
+                $highlightTagId = $slugToId[$highlightSlug] ?? null;
+
+                if ($highlightTagId) {
+                    $post->update(['highlight_tag_id' => $highlightTagId]);
+                }
+            }
+
+            // ✅ paragraph save (only if both exist)
+            if (!empty($validated['paragraph_template_id']) && !empty($validated['paragraph_content'])) {
+                PostParagraph::create([
+                    'post_id'      => $post->id,
+                    'paragraph_id' => (int) $validated['paragraph_template_id'],
+                    'content'      => $validated['paragraph_content'],
+                    'order'        => 1,
+                ]);
+            }
+
+            // ✅ stats + activity only if actually created
+            $this->incrementPostStats();
+
+            $this->logActivity(
+                $request,
+                (int) $user->id,
+                'post_created',
+                Post::class,
+                (int) $post->id,
+                [
+                    'status'   => $status,
+                    'forum_id' => (int) $post->forum_id,
+                    'path'     => $request->path(),
+                ]
+            );
+
+            return $post;
+        });
+
+        // ✅ Always redirect to the created post page
+        if ($post->status === 'pending') {
+            return redirect()
+                ->route('post.show', $post->slug)
+                ->with('success', 'Post submitted for approval (pending).');
         }
 
-        // ✅ stats + activity only if actually created
-        $this->incrementPostStats();
-        $this->logUserActivity($request, $user->id, $post->id);
-
-        return $post;
-    });
-
-    // ✅ redirect message based on status
-// ✅ Always redirect to the created post page
-if ($post->status === 'pending') {
-    return redirect()
-        ->route('post.show', $post->slug)   // or ->route('post.show', $post)
-        ->with('success', 'Post submitted for approval (pending).');
-}
-
-return redirect()
-    ->route('post.show', $post->slug)       // or ->route('post.show', $post)
-    ->with('success', 'Post published successfully!');
-
-}
-
+        return redirect()
+            ->route('post.show', $post->slug)
+            ->with('success', 'Post published successfully!');
+    }
 
     /* ---------------- helpers ---------------- */
 
@@ -175,43 +194,24 @@ return redirect()
 
         $i = 2;
         while (Post::where('slug', $slug)->exists()) {
-            $slug = $base . '-' . $i;
+            $slug = ($base ?: $slug) . '-' . $i;
             $i++;
         }
 
         return $slug;
     }
 
-    private function extractImageUrls(string $content): array
+    private function findOriginalTagDisplay(array $raw, string $needleLower): ?string
     {
-        $pattern = '/https?:\/\/[^\s"\']+\.(?:png|jpe?g|webp|gif)(?:\?[^\s"\']*)?/i';
-        preg_match_all($pattern, $content, $matches);
+        foreach ($raw as $t) {
+            $clean = trim((string) $t);
+            if ($clean === '') continue;
 
-        $urls = array_values(array_unique($matches[0] ?? []));
-        return array_slice($urls, 0, 10);
-    }
-
-    private function buildJsonLd(array $data): array
-    {
-        /** @var \App\Models\Post $post */
-        $post = $data['post'];
-
-        $authorName = optional($post->user)->name ?? 'Member';
-
-        return [
-            '@context' => 'https://schema.org',
-            '@type' => 'DiscussionForumPosting',
-            'headline' => $post->title,
-            'datePublished' => optional($post->created_at)->toIso8601String(),
-            'dateModified' => optional($post->updated_at)->toIso8601String(),
-            'author' => [
-                '@type' => 'Person',
-                'name' => $authorName,
-            ],
-            'url' => $data['url'] ?? null,
-            'image' => $data['images'] ?? [],
-            'articleBody' => Str::limit(strip_tags($post->content), 5000),
-        ];
+            if (mb_strtolower($clean) === $needleLower) {
+                return $clean;
+            }
+        }
+        return null;
     }
 
     private function logPageView(Request $request): void
@@ -262,18 +262,22 @@ return redirect()
         TotalStat::where('id', 1)->increment('posts_count');
     }
 
-    private function logUserActivity(Request $request, int $userId, int $postId): void
-    {
+    private function logActivity(
+        Request $request,
+        int $userId,
+        string $event,
+        string $subjectType,
+        int $subjectId,
+        array $meta = []
+    ): void {
         UserActivity::create([
-            'user_id' => $userId,
-            'event' => 'post_created',
-            'subject_type' => Post::class,
-            'subject_id' => $postId,
-            'ip_address' => $request->ip(),
-            'user_agent' => substr((string) $request->userAgent(), 0, 1000),
-            'meta' => json_encode([
-                'path' => $request->path(),
-            ], JSON_UNESCAPED_SLASHES),
+            'user_id'      => $userId,
+            'event'        => $event,
+            'subject_type' => $subjectType,
+            'subject_id'   => $subjectId,
+            'ip_address'   => $request->ip(),
+            'user_agent'   => substr((string) $request->userAgent(), 0, 1000),
+            'meta'         => empty($meta) ? null : json_encode($meta, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
         ]);
     }
 }

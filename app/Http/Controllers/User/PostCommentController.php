@@ -3,72 +3,102 @@
 namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Controller;
-use App\Models\Post;
 use App\Models\Comment;
+use App\Models\Post;
+use App\Models\UserActivity;
 use Illuminate\Http\Request;
 
 class PostCommentController extends Controller
 {
     public function store(Request $request, Post $post)
     {
+        $user = $request->user();
+
+        // ✅ must be logged in to comment
+        if (!$user) {
+            return redirect()->route('login')->with('error', 'Please login to comment.');
+        }
+
         $data = $request->validate([
             'content' => ['required', 'string', 'min:3', 'max:500'],
         ]);
 
-        // Anti-link spam (simple)
+        // ✅ Anti-link spam (simple)
         if (preg_match('/https?:\/\/|www\./i', $data['content'])) {
-            return back()->withErrors(['content' => 'Links are not allowed in comments.']);
+            return back()->withErrors(['content' => 'Links are not allowed in comments.'])->withInput();
         }
 
-        $user = $request->user();
-
+        // ✅ permission rule you already use: create_post OR approve_post can comment
         $canCreate = $user->hasPermission('create_post');
         $canApprove = $user->hasPermission('approve_post');
-$commentsQuery = Comment::with('user:id,username')
-    ->where('post_id', $post->id)
-    ->latest();
 
-if ($canApprove) {
-    $commentsQuery->whereIn('status', ['published', 'pending']);
-} else {
-    $commentsQuery->where('status', 'published');
-}
-
-$comments = $commentsQuery->get();
         if (!$canCreate && !$canApprove) {
             return redirect('/')->with('error', 'You are not allowed to comment.');
         }
 
-     $status = $canApprove ? 'published' : 'pending';
+        // ✅ if approver => publish instantly, else pending
+        $status = $canApprove ? 'published' : 'pending';
 
-
-        Comment::create([
-            'post_id' => $post->id,
-            'user_id' => $user->id,
-            'parent_id' => null,
-            'content' => $data['content'],
-            'status' => $status,
+        // ✅ create comment (IMPORTANT: keep the created model in $comment)
+        $comment = Comment::create([
+            'post_id'    => $post->id,
+            'user_id'    => $user->id,
+            'parent_id'  => null,
+            'content'    => $data['content'],
+            'status'     => $status,
         ]);
 
-        return back()->with('success', $status === 'published'
-            ? 'Comment posted.'
-            : 'Comment submitted for approval.');
+        // ✅ activity log (fix: you were using $comment without defining it)
+        UserActivity::create([
+            'user_id'      => $user->id,
+            'event'        => 'comment_created',
+            'subject_type' => Comment::class,
+            'subject_id'   => $comment->id,
+            'ip_address'   => $request->ip(),
+            'user_agent'   => substr((string) $request->userAgent(), 0, 1000),
+            'meta'         => json_encode([
+                'post_id' => $post->id,
+                'status'  => $status,
+                'path'    => $request->path(),
+            ], JSON_UNESCAPED_SLASHES),
+        ]);
+
+        return back()->with(
+            'success',
+            $status === 'published'
+                ? 'Comment posted.'
+                : 'Comment submitted for approval.'
+        );
     }
 
-public function approve(Request $request, Comment $comment)
-{
-    if (!$request->user()?->hasPermission('approve_post')) {
-        abort(403);
+    public function approve(Request $request, Comment $comment)
+    {
+        $user = $request->user();
+
+        if (!$user || !$user->hasPermission('approve_post')) {
+            abort(403);
+        }
+
+        if ($comment->status === 'published') {
+            return back();
+        }
+
+        $comment->update(['status' => 'published']);
+
+        // ✅ activity log
+        UserActivity::create([
+            'user_id'      => $user->id,
+            'event'        => 'comment_approved',
+            'subject_type' => Comment::class,
+            'subject_id'   => $comment->id,
+            'ip_address'   => $request->ip(),
+            'user_agent'   => substr((string) $request->userAgent(), 0, 1000),
+            'meta'         => json_encode([
+                'post_id' => $comment->post_id,
+                'path'    => $request->path(),
+            ], JSON_UNESCAPED_SLASHES),
+        ]);
+
+        return back()->with('success', 'Comment approved.');
     }
-
-    if ($comment->status === 'published') {
-        return back();
-    }
-
-    $comment->update(['status' => 'published']);
-
-    return back()->with('success', 'Comment approved.');
-}
-
-    
 }
