@@ -8,30 +8,37 @@ use Illuminate\Support\Facades\Auth;
 
 class AdminMiddleware
 {
+    /**
+     * Handle an incoming request.
+     *
+     * Rules:
+     * - User MUST be authenticated
+     * - Allowed if:
+     *      - Has role "admin"
+     *      - OR has permission "login_admin_panel"
+     */
     public function handle(Request $request, Closure $next)
     {
         $user = Auth::user();
 
-        // Not logged in
+        // Not logged in → go to login
         if (!$user) {
-            return redirect('/')->with('error', 'Please log in first.');
+            return redirect()
+                ->route('login')
+                ->with('error', 'Please log in to access the admin panel.');
         }
 
-        /**
-         * Allow if:
-         *  - admin role (highest)
-         *  - OR has permission to login admin panel
-         *
-         * This supports your plan:
-         * - admin always allowed
-         * - super_member / moderator can be allowed if you assign login_admin_panel
-         */
-        $allowed = $user->hasRole('admin') || $user->hasPermission('login_admin_panel');
-
-        if (!$allowed) {
-            return redirect('/')->with('error', 'You are not authorized to access this page.');
+        // ✅ Allow admin OR explicit permission
+        if (
+            $user->hasRole('admin') ||
+            $user->hasPermission('login_admin_panel')
+        ) {
+            return $next($request);
         }
 
-        return $next($request);
+        // Logged in but not authorized → go home
+        return redirect()
+            ->route('home')
+            ->with('error', 'You do not have permission to access the admin panel.');
     }
 }

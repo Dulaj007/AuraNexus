@@ -89,6 +89,11 @@ class Post extends Model
     {
         return $this->morphMany(PageView::class, 'viewable');
     }
+    public function pinnedInForums()
+{
+    return $this->hasMany(\App\Models\PinnedPost::class);
+}
+
 public function category()
 {
     return $this->belongsTo(\App\Models\Category::class);

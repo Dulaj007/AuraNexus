@@ -38,6 +38,15 @@ public function latestPublishedPost()
     {
         return $this->belongsTo(Category::class, 'category_id');
     }
+public function pinnedPosts()
+{
+    return $this->hasMany(\App\Models\PinnedPost::class)->orderByDesc('pinned_at');
+}
+
+public function pinnedPostIds()
+{
+    return $this->pinnedPosts()->pluck('post_id');
+}
 
     protected static function boot(): void
     {
