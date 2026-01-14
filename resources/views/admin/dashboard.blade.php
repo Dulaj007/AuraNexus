@@ -1,63 +1,123 @@
 @extends('layouts.admin')
 
-@section('title', 'Admin Dashboard')
+@section('title', 'Dashboard')
 
 @section('content')
-<h1 class="text-2xl font-bold mb-6">Admin Dashboard</h1>
+<div class="space-y-6">
+    <x-admin.section title="Overview" description="Quick stats and live activity snapshot.">
+        <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+            <x-admin.stat label="Users" value="{{ number_format($totalUsers) }}" icon="👤" />
+            <x-admin.stat label="Posts" value="{{ number_format($totalPosts) }}" icon="📝" />
+            <x-admin.stat label="Forums" value="{{ number_format($totalForums) }}" icon="💬" />
+            <x-admin.stat label="Categories" value="{{ number_format($totalCategories) }}" icon="🗂️" />
+            <x-admin.stat label="Page Views" value="{{ number_format($totalViews) }}" icon="👁️" />
+        </div>
+    </x-admin.section>
 
-{{-- LIVE STATS --}}
-<div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-    <x-admin.stat title="Active Viewers" :value="$activeViewers ?? 0" />
-    <x-admin.stat title="Logged Users" :value="$loggedUsers ?? 0" />
-    <x-admin.stat title="Guest Views" :value="$guestViews ?? 0" />
-    <x-admin.stat title="Registered Views" :value="$registeredViews ?? 0" />
-</div>
+    <div class="grid gap-6 lg:grid-cols-2">
+        <x-admin.card title="Live activity" subtitle="Last 5–15 minutes window.">
+            <div class="grid gap-4 sm:grid-cols-2">
+                <div class="rounded-xl border border-[var(--an-border)] bg-[var(--an-card-2)] p-4">
+                    <div class="text-sm text-[var(--an-text-muted)]">Active viewers (5m)</div>
+                    <div class="mt-2 text-2xl font-semibold text-[var(--an-text)]">
+                        {{ number_format($activeViewers) }}
+                    </div>
+                </div>
 
-{{-- TOTALS --}}
-<div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
-    <x-admin.stat title="Users" :value="$totalUsers ?? 0" />
-    <x-admin.stat title="Posts" :value="$totalPosts ?? 0" />
-    <x-admin.stat title="Forums" :value="$totalForums ?? 0" />
-    <x-admin.stat title="Categories" :value="$totalCategories ?? 0" />
-    <x-admin.stat title="Total Views" :value="$totalViews ?? 0" />
-</div>
+                <div class="rounded-xl border border-[var(--an-border)] bg-[var(--an-card-2)] p-4">
+                    <div class="text-sm text-[var(--an-text-muted)]">Logged users (15m)</div>
+                    <div class="mt-2 text-2xl font-semibold text-[var(--an-text)]">
+                        {{ number_format($loggedUsers) }}
+                    </div>
+                </div>
 
-{{-- TODAY --}}
-<div class="bg-white rounded shadow p-4 mb-6">
-    <h2 class="font-semibold text-lg mb-3">Today’s Activity</h2>
+                <div class="rounded-xl border border-[var(--an-border)] bg-[var(--an-card-2)] p-4">
+                    <div class="text-sm text-[var(--an-text-muted)]">Guest views</div>
+                    <div class="mt-2 text-2xl font-semibold text-[var(--an-text)]">
+                        {{ number_format($guestViews) }}
+                    </div>
+                </div>
 
-    @if($todayStats)
-        <ul class="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <li>Views: <strong>{{ $todayStats->total_views }}</strong></li>
-            <li>New Users: <strong>{{ $todayStats->new_users }}</strong></li>
-            <li>Posts: <strong>{{ $todayStats->posts_created }}</strong></li>
-            <li>Comments: <strong>{{ $todayStats->comments_created }}</strong></li>
-        </ul>
-    @else
-        <p class="text-gray-500">No data collected for today yet.</p>
-    @endif
-</div>
+                <div class="rounded-xl border border-[var(--an-border)] bg-[var(--an-card-2)] p-4">
+                    <div class="text-sm text-[var(--an-text-muted)]">Registered views</div>
+                    <div class="mt-2 text-2xl font-semibold text-[var(--an-text)]">
+                        {{ number_format($registeredViews) }}
+                    </div>
+                </div>
+            </div>
+        </x-admin.card>
 
-{{-- SEARCH --}}
-<div class="bg-white rounded shadow p-4">
-    <h2 class="font-semibold text-lg mb-3">Search Analytics</h2>
+        <x-admin.card title="Search analytics" subtitle="Top searches + totals.">
+            <div class="grid gap-4 sm:grid-cols-3">
+                <div class="rounded-xl border border-[var(--an-border)] bg-[var(--an-card-2)] p-4">
+                    <div class="text-sm text-[var(--an-text-muted)]">Total searches</div>
+                    <div class="mt-2 text-2xl font-semibold text-[var(--an-text)]">
+                        {{ number_format($totalSearches) }}
+                    </div>
+                </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-        <div>Total Searches: <strong>{{ $totalSearches ?? 0 }}</strong></div>
-        <div>Searches Today: <strong>{{ $todaySearches ?? 0 }}</strong></div>
-        <div>Zero Results: <strong>{{ $zeroResultSearches ?? 0 }}</strong></div>
+                <div class="rounded-xl border border-[var(--an-border)] bg-[var(--an-card-2)] p-4">
+                    <div class="text-sm text-[var(--an-text-muted)]">Today</div>
+                    <div class="mt-2 text-2xl font-semibold text-[var(--an-text)]">
+                        {{ number_format($todaySearches) }}
+                    </div>
+                </div>
+
+                <div class="rounded-xl border border-[var(--an-border)] bg-[var(--an-card-2)] p-4">
+                    <div class="text-sm text-[var(--an-text-muted)]">Zero-result</div>
+                    <div class="mt-2 text-2xl font-semibold text-[var(--an-text)]">
+                        {{ number_format($zeroResultSearches) }}
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-5">
+                <div class="text-sm font-medium text-[var(--an-text)]">Top searches</div>
+                <div class="mt-3 space-y-2">
+                    @forelse($topSearches as $s)
+                        <div class="flex items-center justify-between rounded-xl border border-[var(--an-border)] bg-[var(--an-card-2)] px-4 py-3">
+                            <div class="truncate text-[var(--an-text)]">
+                                {{ $s->query ?? '(unknown)' }}
+                            </div>
+                            <x-admin.ui.badge tone="neutral">
+                                {{ number_format($s->views ?? 0) }}
+                            </x-admin.ui.badge>
+                        </div>
+                    @empty
+                        <div class="text-sm text-[var(--an-text-muted)]">No data yet.</div>
+                    @endforelse
+                </div>
+            </div>
+        </x-admin.card>
     </div>
 
-    <h3 class="font-semibold mb-2">Top Searches</h3>
+    <x-admin.card title="Today stats" subtitle="DailyStat table (if you use it).">
+        @if($todayStats)
+            <div class="grid gap-4 sm:grid-cols-3">
+                <div class="rounded-xl border border-[var(--an-border)] bg-[var(--an-card-2)] p-4">
+                    <div class="text-sm text-[var(--an-text-muted)]">Date</div>
+                    <div class="mt-2 font-semibold text-[var(--an-text)]">{{ $todayStats->date }}</div>
+                </div>
 
-    @if($topSearches->count())
-        <ul class="list-disc pl-5">
-            @foreach($topSearches as $search)
-                <li>{{ $search->query }} ({{ $search->views }})</li>
-            @endforeach
-        </ul>
-    @else
-        <p class="text-gray-500">No search data yet.</p>
-    @endif
+                <div class="rounded-xl border border-[var(--an-border)] bg-[var(--an-card-2)] p-4">
+                    <div class="text-sm text-[var(--an-text-muted)]">Posts</div>
+                    <div class="mt-2 text-2xl font-semibold text-[var(--an-text)]">
+                        {{ number_format($todayStats->posts ?? 0) }}
+                    </div>
+                </div>
+
+                <div class="rounded-xl border border-[var(--an-border)] bg-[var(--an-card-2)] p-4">
+                    <div class="text-sm text-[var(--an-text-muted)]">Views</div>
+                    <div class="mt-2 text-2xl font-semibold text-[var(--an-text)]">
+                        {{ number_format($todayStats->views ?? 0) }}
+                    </div>
+                </div>
+            </div>
+        @else
+            <div class="text-sm text-[var(--an-text-muted)]">
+                No DailyStat row for today.
+            </div>
+        @endif
+    </x-admin.card>
 </div>
 @endsection

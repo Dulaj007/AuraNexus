@@ -1,7 +1,30 @@
 {{-- resources/views/post/show.blade.php --}}
 @extends('layouts.post')
 
-@section('title', $post->title . ' • ' . config('app.name'))
+@php
+    // ✅ Safety fallbacks (avoid undefined variable crashes)
+    $post = $post ?? request()->route('post');
+
+    $paragraph = $paragraph ?? null;
+
+    $rendered = $rendered ?? [
+        'plainText' => '',
+        'images'    => [],
+        'sections'  => [],
+    ];
+
+    $jsonLd = $jsonLd ?? [];
+
+    $comments = $comments ?? [];
+    $pendingComments = $pendingComments ?? [];
+
+    $reactionCount = $reactionCount ?? ($post->reactions_count ?? 0);
+    $userReacted = $userReacted ?? false;
+
+    $isSaved = $isSaved ?? false;
+@endphp
+
+@section('title', ($post?->title ?? 'Post') . ' • ' . config('app.name'))
 
 @section('meta')
     @php
@@ -22,7 +45,7 @@
     <link rel="canonical" href="{{ $url }}">
 
     <meta property="og:type" content="article">
-    <meta property="og:title" content="{{ $post->title }}">
+    <meta property="og:title" content="{{ $post?->title }}">
     <meta property="og:description" content="{{ $desc }}">
     <meta property="og:url" content="{{ $url }}">
     @if($ogImage)
@@ -55,9 +78,9 @@
     // Pending flag
     $isPending = $isPending ?? ($post->status !== 'published');
 
-    // Reaction data passed by controller (fallbacks)
+    // Reaction data passed by controller (fallbacks already set above)
     $reactionCount = $reactionCount ?? ($post->reactions_count ?? 0);
-    $reactedByMe = $userReacted ?? false; // ✅ controller uses userReacted
+    $reactedByMe = $userReacted ?? false;
 
     // Report message (admin editable) passed by controller
     $reportMessage = $reportMessage ?? 'Please explain what is wrong with this post. Reports are reviewed by moderators.';
@@ -210,7 +233,7 @@
             @endif
         </x-post.card>
 
-        {{-- ✅ ACTIONS (React + Report + Edit + Remove) --}}
+        {{-- ✅ ACTIONS (React + Save + Report + Edit + Remove) --}}
         <x-post.card class="{{ $isPending ? 'opacity-80' : '' }}">
             <div class="flex flex-wrap items-center gap-3">
 
@@ -220,6 +243,27 @@
                     :reacted="$reactedByMe"
                     :can-react="$isLoggedIn"
                 />
+
+                {{-- ✅ SAVE --}}
+                @if($isLoggedIn)
+                    <form method="POST" action="{{ route('post.save.toggle', $post) }}">
+                        @csrf
+                        <button
+                            type="submit"
+                            class="rounded-lg px-4 py-2 text-sm font-semibold text-black
+                                   {{ $isSaved ? 'bg-emerald-400 hover:bg-emerald-300' : 'bg-sky-400 hover:bg-sky-300' }}"
+                        >
+                            {{ $isSaved ? 'Saved' : 'Save' }}
+                        </button>
+                    </form>
+                @else
+                    <a
+                        href="{{ route('login') }}"
+                        class="rounded-lg bg-sky-400 px-4 py-2 text-sm font-semibold text-black hover:bg-sky-300"
+                    >
+                        Save
+                    </a>
+                @endif
 
                 <x-post.report-button
                     :post="$post"
@@ -269,6 +313,55 @@
     @endif
 
 </div>
+<button
+    type="button"
+    class="rounded-lg bg-white/10 border border-white/10 px-4 py-2 text-sm font-semibold text-white hover:border-white/20"
+    onclick="sharePost()"
+>
+    Share <span class="text-white/60">({{ $shareCount ?? 0 }})</span>
+</button>
+
+<script>
+async function sharePost() {
+    const url = @json(url()->current());
+    const title = @json($post->title);
+
+    // try native share
+    if (navigator.share) {
+        try {
+            await navigator.share({ title, url });
+            await trackShare('native');
+            return;
+        } catch (e) {
+            // user cancelled -> do nothing
+        }
+    }
+
+    // fallback: copy
+    try {
+        await navigator.clipboard.writeText(url);
+        alert('Link copied!');
+        await trackShare('copy');
+    } catch (e) {
+        prompt('Copy this link:', url);
+        await trackShare('copy_prompt');
+    }
+}
+
+async function trackShare(channel) {
+    try {
+        await fetch(@json(route('post.share', $post)), {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': @json(csrf_token()),
+            },
+            body: JSON.stringify({ channel }),
+        });
+        // (optional) update count via reload or DOM increment
+    } catch (e) {}
+}
+</script>
 
 {{-- ✅ Remove Post Modal --}}
 @if($canDeletePost)
