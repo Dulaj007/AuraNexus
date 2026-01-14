@@ -1,190 +1,162 @@
 @extends('layouts.admin')
-@section('title','Removed Content')
+
+@section('title', 'Removal Reports')
 
 @section('content')
-<x-admin.card>
-    <x-slot:title>Removed Content</x-slot:title>
+<div class="space-y-6">
+    <x-admin.section
+        title="Removal reports"
+        description="Audit log for removed posts and removed comments."
+    >
+        <x-slot:actions>
+            <a href="{{ route('admin.reports') }}">
+                <x-admin.ui.button variant="secondary" type="button">
+                    ← Back to reports
+                </x-admin.ui.button>
+            </a>
+        </x-slot:actions>
 
-    {{-- TOP TABS --}}
-    <div class="mb-5 flex flex-wrap gap-2">
-        <a href="{{ route('admin.reports') }}"
-           class="rounded-lg px-4 py-2 text-sm border bg-white text-gray-700 border-gray-200 hover:bg-gray-50">
-            User Reports
-        </a>
+        <form method="GET" class="flex flex-col gap-3 sm:flex-row sm:items-end">
+            <div class="w-full sm:max-w-md">
+                <x-admin.ui.input
+                    name="q"
+                    label="Search removals"
+                    placeholder="reason, username, post title…"
+                    value="{{ $q }}"
+                />
+            </div>
 
-        <a href="{{ route('admin.reports.removals', ['removedTab' => ($removedTab ?? 'posts'), 'q' => $q]) }}"
-           class="rounded-lg px-4 py-2 text-sm border bg-gray-900 text-white border-gray-900">
-            Removed Content
-        </a>
-    </div>
+            <div class="flex gap-2">
+                <x-admin.ui.select name="removedTab" label="Type">
+                    <option value="posts" @selected(($removedTab ?? 'posts') === 'posts')>Posts</option>
+                    <option value="comments" @selected(($removedTab ?? 'posts') === 'comments')>Comments</option>
+                </x-admin.ui.select>
 
-    {{-- Sub tabs --}}
-    <div class="mb-4 flex gap-2">
-        <a href="{{ route('admin.reports.removals', ['removedTab' => 'posts', 'q' => $q]) }}"
-           class="rounded-lg px-3 py-2 text-sm border {{ ($removedTab ?? 'posts') === 'posts' ? 'bg-gray-900 text-white border-gray-900' : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50' }}">
-            Removed Posts
-        </a>
+                <div class="flex items-end">
+                    <x-admin.ui.button type="submit">Apply</x-admin.ui.button>
+                </div>
 
-        <a href="{{ route('admin.reports.removals', ['removedTab' => 'comments', 'q' => $q]) }}"
-           class="rounded-lg px-3 py-2 text-sm border {{ ($removedTab ?? 'posts') === 'comments' ? 'bg-gray-900 text-white border-gray-900' : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50' }}">
-            Removed Comments
-        </a>
-    </div>
+                <a class="flex items-end" href="{{ route('admin.reports.removals') }}">
+                    <x-admin.ui.button variant="secondary" type="button">Reset</x-admin.ui.button>
+                </a>
+            </div>
+        </form>
+    </x-admin.section>
 
-    {{-- Search --}}
-    <form method="GET" action="{{ route('admin.reports.removals') }}" class="flex gap-2">
-        <input type="hidden" name="removedTab" value="{{ $removedTab ?? 'posts' }}">
-        <input type="text" name="q" value="{{ $q }}"
-               class="w-full rounded-lg border px-3 py-2 text-sm"
-               placeholder="Search removals (reason, title/content, usernames)...">
-        <button class="rounded-lg bg-gray-900 px-4 py-2 text-white">Search</button>
-    </form>
-
-    {{-- Removed Posts --}}
     @if(($removedTab ?? 'posts') === 'posts')
-        <div class="mt-4 overflow-x-auto">
-            <table class="w-full text-sm">
-                <thead>
-                <tr class="border-b text-left">
-                    <th class="py-2">Post</th>
-                    <th class="py-2">Posted By</th>
-                    <th class="py-2">Removed By</th>
-                    <th class="py-2">Reason</th>
-                    <th class="py-2">Removed Time</th>
-                </tr>
-                </thead>
-                <tbody>
-                @forelse($removedPosts as $rp)
-                    @php
-                        $post = $rp->post;
-                        $poster = $post?->user;
-                        $remover = $rp->remover;
-                    @endphp
-                    <tr class="border-b align-top">
-                        <td class="py-2">
-                            @if($post)
-                                <a class="text-indigo-600 hover:underline"
-                                   href="{{ route('post.show', $post) }}"
-                                   target="_blank">
-                                    {{ $post->title }}
-                                </a>
-                                <div class="text-xs text-gray-500">{{ $post->slug }}</div>
-                            @else
-                                <span class="text-gray-500">Post not found</span>
-                            @endif
-                        </td>
-
-                        <td class="py-2">
-                            <div class="font-medium">{{ $poster?->name ?? $poster?->username ?? 'Unknown' }}</div>
-                            <div class="text-xs text-gray-500">{{ $poster?->username ?? '' }}</div>
-                        </td>
-
-                        <td class="py-2">
-                            <div class="font-medium">{{ $remover?->name ?? $remover?->username ?? 'Unknown' }}</div>
-                            <div class="text-xs text-gray-500">{{ $remover?->username ?? '' }}</div>
-                        </td>
-
-                        <td class="py-2">
-                            <div class="whitespace-pre-wrap text-gray-800">{{ $rp->reason }}</div>
-                        </td>
-
-                        <td class="py-2 text-xs text-gray-600">
-                            {{ $rp->created_at?->diffForHumans() }}
-                            <div>{{ $rp->created_at?->toDateTimeString() }}</div>
-                        </td>
-                    </tr>
-                @empty
+        <x-admin.card title="Removed posts" subtitle="Most recent first.">
+            <x-admin.table>
+                <x-slot:head>
                     <tr>
-                        <td colspan="5" class="py-6 text-center text-gray-500">
-                            No removed posts found.
-                        </td>
+                        <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-[var(--an-text-muted)]">Post</th>
+                        <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-[var(--an-text-muted)]">Owner</th>
+                        <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-[var(--an-text-muted)]">Removed by</th>
+                        <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-[var(--an-text-muted)]">Reason</th>
+                        <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-[var(--an-text-muted)]">Date</th>
                     </tr>
-                @endforelse
-                </tbody>
-            </table>
-        </div>
+                </x-slot:head>
 
-        <div class="mt-4">
-            {{ $removedPosts->links() }}
-        </div>
-    @endif
+                <x-slot:body>
+                    @forelse($removedPosts as $rp)
+                        <tr class="hover:bg-[var(--an-card-2)]/60">
+                            <td class="px-4 py-3">
+                                @if($rp->post)
+                                    <div class="font-medium text-[var(--an-text)]">
+                                        {{ $rp->post->title }}
+                                    </div>
+                                    <div class="mt-1 text-xs text-[var(--an-text-muted)]">
+                                        Forum: {{ $rp->post->forum?->name ?? '—' }}
+                                    </div>
+                                @else
+                                    <div class="text-sm text-[var(--an-text-muted)]">Post missing</div>
+                                @endif
+                            </td>
 
-    {{-- Removed Comments --}}
-    @if(($removedTab ?? 'posts') === 'comments')
-        <div class="mt-4 overflow-x-auto">
-            <table class="w-full text-sm">
-                <thead>
-                <tr class="border-b text-left">
-                    <th class="py-2">Comment</th>
-                    <th class="py-2">On Post</th>
-                    <th class="py-2">Posted By</th>
-                    <th class="py-2">Removed By</th>
-                    <th class="py-2">Reason</th>
-                    <th class="py-2">Removed Time</th>
-                </tr>
-                </thead>
-                <tbody>
-                @forelse($removedComments as $rc)
-                    @php
-                        $comment = $rc->comment;
-                        $poster = $comment?->user;
-                        $remover = $rc->remover;
-                        $post = $comment?->post;
-                    @endphp
+                            <td class="px-4 py-3 text-[var(--an-text)]">
+                                {{ $rp->post?->user?->username ?? '—' }}
+                            </td>
 
-                    <tr class="border-b align-top">
-                        <td class="py-2">
-                            <div class="whitespace-pre-wrap text-gray-800">
-                                {{ $comment?->content ?? 'Comment not found' }}
-                            </div>
-                        </td>
+                            <td class="px-4 py-3 text-[var(--an-text)]">
+                                {{ $rp->remover?->username ?? '—' }}
+                            </td>
 
-                        <td class="py-2">
-                            @if($post)
-                                <a class="text-indigo-600 hover:underline"
-                                   href="{{ route('post.show', $post) }}" target="_blank">
-                                    {{ $post->title }}
-                                </a>
-                                <div class="text-xs text-gray-500">{{ $post->slug }}</div>
-                            @else
-                                <span class="text-gray-500">Unknown post</span>
-                            @endif
-                        </td>
+                            <td class="px-4 py-3 text-[var(--an-text)]">
+                                <div class="line-clamp-3">{{ $rp->reason }}</div>
+                            </td>
 
-                        <td class="py-2">
-                            <div class="font-medium">{{ $poster?->name ?? $poster?->username ?? 'Unknown' }}</div>
-                            <div class="text-xs text-gray-500">{{ $poster?->username ?? '' }}</div>
-                        </td>
+                            <td class="px-4 py-3 text-right text-[var(--an-text-muted)]">
+                                {{ $rp->created_at?->format('Y-m-d H:i') }}
+                            </td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="5" class="px-4 py-8 text-center text-sm text-[var(--an-text-muted)]">
+                                No removed posts found.
+                            </td>
+                        </tr>
+                    @endforelse
+                </x-slot:body>
+            </x-admin.table>
 
-                        <td class="py-2">
-                            <div class="font-medium">{{ $remover?->name ?? $remover?->username ?? 'Unknown' }}</div>
-                            <div class="text-xs text-gray-500">{{ $remover?->username ?? '' }}</div>
-                        </td>
-
-                        <td class="py-2">
-                            <div class="whitespace-pre-wrap text-gray-800">{{ $rc->reason }}</div>
-                        </td>
-
-                        <td class="py-2 text-xs text-gray-600">
-                            {{ $rc->created_at?->diffForHumans() }}
-                            <div>{{ $rc->created_at?->toDateTimeString() }}</div>
-                        </td>
-                    </tr>
-                @empty
+            <div class="mt-4">
+                {{ $removedPosts->links() }}
+            </div>
+        </x-admin.card>
+    @else
+        <x-admin.card title="Removed comments" subtitle="Most recent first.">
+            <x-admin.table>
+                <x-slot:head>
                     <tr>
-                        <td colspan="6" class="py-6 text-center text-gray-500">
-                            No removed comments found.
-                        </td>
+                        <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-[var(--an-text-muted)]">Comment</th>
+                        <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-[var(--an-text-muted)]">Owner</th>
+                        <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-[var(--an-text-muted)]">Removed by</th>
+                        <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-[var(--an-text-muted)]">Reason</th>
+                        <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-[var(--an-text-muted)]">Date</th>
                     </tr>
-                @endforelse
-                </tbody>
-            </table>
-        </div>
+                </x-slot:head>
 
-        <div class="mt-4">
-            {{ $removedComments->links() }}
-        </div>
+                <x-slot:body>
+                    @forelse($removedComments as $rc)
+                        <tr class="hover:bg-[var(--an-card-2)]/60">
+                            <td class="px-4 py-3">
+                                <div class="text-[var(--an-text)]">
+                                    <div class="line-clamp-2">{{ $rc->comment?->content ?? '—' }}</div>
+                                </div>
+                                <div class="mt-1 text-xs text-[var(--an-text-muted)]">
+                                    Post: {{ $rc->comment?->post?->title ?? '—' }}
+                                </div>
+                            </td>
+
+                            <td class="px-4 py-3 text-[var(--an-text)]">
+                                {{ $rc->comment?->user?->username ?? '—' }}
+                            </td>
+
+                            <td class="px-4 py-3 text-[var(--an-text)]">
+                                {{ $rc->remover?->username ?? '—' }}
+                            </td>
+
+                            <td class="px-4 py-3 text-[var(--an-text)]">
+                                <div class="line-clamp-3">{{ $rc->reason }}</div>
+                            </td>
+
+                            <td class="px-4 py-3 text-right text-[var(--an-text-muted)]">
+                                {{ $rc->created_at?->format('Y-m-d H:i') }}
+                            </td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="5" class="px-4 py-8 text-center text-sm text-[var(--an-text-muted)]">
+                                No removed comments found.
+                            </td>
+                        </tr>
+                    @endforelse
+                </x-slot:body>
+            </x-admin.table>
+
+            <div class="mt-4">
+                {{ $removedComments->links() }}
+            </div>
+        </x-admin.card>
     @endif
-
-</x-admin.card>
+</div>
 @endsection
