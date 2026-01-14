@@ -6,30 +6,20 @@ use Illuminate\Database\Eloquent\Model;
 
 class Setting extends Model
 {
-    protected $fillable = [
-        'key',
-        'value',
-    ];
+    protected $fillable = ['key', 'value'];
 
-    /**
-     * Simple helper:
-     * Setting::get('report_post_message', 'default text');
-     */
+    public $timestamps = true; // keep true if your table has created_at/updated_at
+
     public static function get(string $key, $default = null)
     {
-        $row = static::query()->where('key', $key)->first();
-        return $row?->value ?? $default;
+        return static::where('key', $key)->value('value') ?? $default;
     }
 
-    /**
-     * Simple helper:
-     * Setting::put('report_post_message', 'new text');
-     */
-    public static function put(string $key, $value): self
+    public static function set(string $key, $value): void
     {
-        return static::query()->updateOrCreate(
+        static::updateOrCreate(
             ['key' => $key],
-            ['value' => $value]
+            ['value' => (string) $value]
         );
     }
 }
