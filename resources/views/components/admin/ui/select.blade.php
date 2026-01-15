@@ -24,8 +24,11 @@
                                  bg-[var(--an-input-bg)] text-[var(--an-input-text)]
                                  border-[var(--an-input-border)]
                                  focus:ring-2 focus:ring-[var(--an-ring)] focus:border-transparent
+<<<<<<< HEAD
                                  placeholder:text-[var(--an-text-muted)]
                                  disabled:opacity-60 disabled:cursor-not-allowed
+=======
+>>>>>>> origin/main
                                  '.($hasError ? 'border-[var(--an-danger)] focus:ring-[var(--an-danger)]' : '')
                 )
             ]) }}
@@ -38,6 +41,7 @@
         </div>
     </div>
 
+<<<<<<< HEAD
     {{-- Improve dropdown list readability (works in many browsers; some still use native UI) --}}
     <style>
         #{{ $id }} option {
@@ -50,6 +54,8 @@
         }
     </style>
 
+=======
+>>>>>>> origin/main
     @if($hint && !$hasError)
         <p class="text-xs text-[var(--an-text-muted)]">{{ $hint }}</p>
     @endif

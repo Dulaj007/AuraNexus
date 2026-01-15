@@ -21,4 +21,8 @@ class RemovedPost extends Model
     {
         return $this->belongsTo(User::class, 'removed_by');
     }
+        public function remover()
+    {
+        return $this->belongsTo(User::class, 'removed_by');
+    }
 }

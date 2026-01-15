@@ -17,10 +17,17 @@ class Forum extends Model
         'views',
     ];
 
-    public function posts()
-    {
-        return $this->hasMany(Post::class);
-    }
+public function posts()
+{
+    return $this->hasMany(\App\Models\Post::class);
+}
+
+
+public function latestPublishedPost()
+{
+    return $this->hasOne(\App\Models\Post::class)->latestOfMany('created_at');
+}
+
 
     public function tags()
     {
@@ -31,6 +38,15 @@ class Forum extends Model
     {
         return $this->belongsTo(Category::class, 'category_id');
     }
+public function pinnedPosts()
+{
+    return $this->hasMany(\App\Models\PinnedPost::class)->orderByDesc('pinned_at');
+}
+
+public function pinnedPostIds()
+{
+    return $this->pinnedPosts()->pluck('post_id');
+}
 
     protected static function boot(): void
     {

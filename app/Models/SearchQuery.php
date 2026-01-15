@@ -9,12 +9,12 @@ class SearchQuery extends Model
 {
     protected $fillable = [
         'query',
-        'results_count'
+        'results_count',
+        'views',
     ];
 
-    public function views()
+    public function pageViews()
     {
         return $this->morphMany(PageView::class, 'viewable');
     }
 }
-

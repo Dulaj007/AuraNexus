@@ -11,11 +11,14 @@ class Page extends Model
         'title',
         'slug',
         'content',
-        'status'
+        'status',
+        'views',
     ];
-
+    public const STATUS_PUBLISHED = 'published';
+    public const STATUS_DRAFT = 'draft';
     public function views()
     {
         return $this->morphMany(PageView::class, 'viewable');
     }
 }
+

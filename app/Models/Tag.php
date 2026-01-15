@@ -1,6 +1,5 @@
 <?php
 
-
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
@@ -9,22 +8,26 @@ class Tag extends Model
 {
     protected $fillable = [
         'name',
-        'slug'
+        'slug',
     ];
 
     public function posts()
     {
-        return $this->belongsToMany(Post::class);
+        return $this->belongsToMany(Post::class, 'post_tag');
     }
 
     public function forums()
     {
-        return $this->belongsToMany(Forum::class);
+        return $this->belongsToMany(Forum::class, 'forum_tag');
     }
 
     public function views()
     {
         return $this->morphMany(PageView::class, 'viewable');
     }
-}
 
+    public function getRouteKeyName()
+    {
+        return 'slug';
+    }
+}
