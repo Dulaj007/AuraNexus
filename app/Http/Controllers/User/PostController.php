@@ -35,7 +35,7 @@ class PostController extends Controller
 if ($post->status === Post::STATUS_REMOVED) {
     // custom removed page (you control the design)
     return response()
-        ->view('posts.removed', ['post' => $post], 410); // 410 Gone is ideal
+        ->view('post.removed', ['post' => $post], 410); // 410 Gone is ideal
 }
 
         // ✅ removed posts -> custom removed page

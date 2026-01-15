@@ -4,6 +4,7 @@
 
 @section('content')
 <div class="space-y-6">
+
     <x-admin.section
         title="Removal reports"
         description="Audit log for removed posts and removed comments."
@@ -26,11 +27,13 @@
                 />
             </div>
 
-            <div class="flex gap-2">
-                <x-admin.ui.select name="removedTab" label="Type">
-                    <option value="posts" @selected(($removedTab ?? 'posts') === 'posts')>Posts</option>
-                    <option value="comments" @selected(($removedTab ?? 'posts') === 'comments')>Comments</option>
-                </x-admin.ui.select>
+            <div class="flex flex-wrap gap-2">
+                <div class="min-w-[180px]">
+                    <x-admin.ui.select name="removedTab" label="Type">
+                        <option value="posts" @selected(($removedTab ?? 'posts') === 'posts')>Posts</option>
+                        <option value="comments" @selected(($removedTab ?? 'posts') === 'comments')>Comments</option>
+                    </x-admin.ui.select>
+                </div>
 
                 <div class="flex items-end">
                     <x-admin.ui.button type="submit">Apply</x-admin.ui.button>
@@ -45,58 +48,63 @@
 
     @if(($removedTab ?? 'posts') === 'posts')
         <x-admin.card title="Removed posts" subtitle="Most recent first.">
-            <x-admin.table>
-                <x-slot:head>
-                    <tr>
-                        <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-[var(--an-text-muted)]">Post</th>
-                        <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-[var(--an-text-muted)]">Owner</th>
-                        <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-[var(--an-text-muted)]">Removed by</th>
-                        <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-[var(--an-text-muted)]">Reason</th>
-                        <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-[var(--an-text-muted)]">Date</th>
-                    </tr>
-                </x-slot:head>
 
-                <x-slot:body>
-                    @forelse($removedPosts as $rp)
-                        <tr class="hover:bg-[var(--an-card-2)]/60">
-                            <td class="px-4 py-3">
-                                @if($rp->post)
-                                    <div class="font-medium text-[var(--an-text)]">
-                                        {{ $rp->post->title }}
-                                    </div>
-                                    <div class="mt-1 text-xs text-[var(--an-text-muted)]">
-                                        Forum: {{ $rp->post->forum?->name ?? '—' }}
-                                    </div>
-                                @else
-                                    <div class="text-sm text-[var(--an-text-muted)]">Post missing</div>
-                                @endif
-                            </td>
+            <div class="-mx-4 sm:mx-0 overflow-x-auto">
+                <div class="min-w-[1100px] sm:min-w-0">
+                    <x-admin.table>
+                        <x-slot:head>
+                            <tr>
+                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-[var(--an-text-muted)]">Post</th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-[var(--an-text-muted)]">Owner</th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-[var(--an-text-muted)]">Removed by</th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-[var(--an-text-muted)]">Reason</th>
+                                <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-[var(--an-text-muted)]">Date</th>
+                            </tr>
+                        </x-slot:head>
 
-                            <td class="px-4 py-3 text-[var(--an-text)]">
-                                {{ $rp->post?->user?->username ?? '—' }}
-                            </td>
+                        <x-slot:body>
+                            @forelse($removedPosts as $rp)
+                                <tr class="hover:bg-[var(--an-card-2)]/60">
+                                    <td class="px-4 py-3">
+                                        @if($rp->post)
+                                            <div class="font-medium text-[var(--an-text)]">
+                                                {{ $rp->post->title }}
+                                            </div>
+                                            <div class="mt-1 text-xs text-[var(--an-text-muted)]">
+                                                Forum: {{ $rp->post->forum?->name ?? '—' }}
+                                            </div>
+                                        @else
+                                            <div class="text-sm text-[var(--an-text-muted)]">Post missing</div>
+                                        @endif
+                                    </td>
 
-                            <td class="px-4 py-3 text-[var(--an-text)]">
-                                {{ $rp->remover?->username ?? '—' }}
-                            </td>
+                                    <td class="px-4 py-3 text-[var(--an-text)]">
+                                        {{ $rp->post?->user?->username ?? '—' }}
+                                    </td>
 
-                            <td class="px-4 py-3 text-[var(--an-text)]">
-                                <div class="line-clamp-3">{{ $rp->reason }}</div>
-                            </td>
+                                    <td class="px-4 py-3 text-[var(--an-text)]">
+                                        {{ $rp->remover?->username ?? '—' }}
+                                    </td>
 
-                            <td class="px-4 py-3 text-right text-[var(--an-text-muted)]">
-                                {{ $rp->created_at?->format('Y-m-d H:i') }}
-                            </td>
-                        </tr>
-                    @empty
-                        <tr>
-                            <td colspan="5" class="px-4 py-8 text-center text-sm text-[var(--an-text-muted)]">
-                                No removed posts found.
-                            </td>
-                        </tr>
-                    @endforelse
-                </x-slot:body>
-            </x-admin.table>
+                                    <td class="px-4 py-3 text-[var(--an-text)]">
+                                        <div class="line-clamp-3">{{ $rp->reason }}</div>
+                                    </td>
+
+                                    <td class="px-4 py-3 text-right text-[var(--an-text-muted)] whitespace-nowrap">
+                                        {{ $rp->created_at?->format('Y-m-d H:i') }}
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="5" class="px-4 py-8 text-center text-sm text-[var(--an-text-muted)]">
+                                        No removed posts found.
+                                    </td>
+                                </tr>
+                            @endforelse
+                        </x-slot:body>
+                    </x-admin.table>
+                </div>
+            </div>
 
             <div class="mt-4">
                 {{ $removedPosts->links() }}
@@ -104,59 +112,65 @@
         </x-admin.card>
     @else
         <x-admin.card title="Removed comments" subtitle="Most recent first.">
-            <x-admin.table>
-                <x-slot:head>
-                    <tr>
-                        <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-[var(--an-text-muted)]">Comment</th>
-                        <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-[var(--an-text-muted)]">Owner</th>
-                        <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-[var(--an-text-muted)]">Removed by</th>
-                        <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-[var(--an-text-muted)]">Reason</th>
-                        <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-[var(--an-text-muted)]">Date</th>
-                    </tr>
-                </x-slot:head>
 
-                <x-slot:body>
-                    @forelse($removedComments as $rc)
-                        <tr class="hover:bg-[var(--an-card-2)]/60">
-                            <td class="px-4 py-3">
-                                <div class="text-[var(--an-text)]">
-                                    <div class="line-clamp-2">{{ $rc->comment?->content ?? '—' }}</div>
-                                </div>
-                                <div class="mt-1 text-xs text-[var(--an-text-muted)]">
-                                    Post: {{ $rc->comment?->post?->title ?? '—' }}
-                                </div>
-                            </td>
+            <div class="-mx-4 sm:mx-0 overflow-x-auto">
+                <div class="min-w-[1100px] sm:min-w-0">
+                    <x-admin.table>
+                        <x-slot:head>
+                            <tr>
+                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-[var(--an-text-muted)]">Comment</th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-[var(--an-text-muted)]">Owner</th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-[var(--an-text-muted)]">Removed by</th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-[var(--an-text-muted)]">Reason</th>
+                                <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-[var(--an-text-muted)]">Date</th>
+                            </tr>
+                        </x-slot:head>
 
-                            <td class="px-4 py-3 text-[var(--an-text)]">
-                                {{ $rc->comment?->user?->username ?? '—' }}
-                            </td>
+                        <x-slot:body>
+                            @forelse($removedComments as $rc)
+                                <tr class="hover:bg-[var(--an-card-2)]/60">
+                                    <td class="px-4 py-3">
+                                        <div class="text-[var(--an-text)]">
+                                            <div class="line-clamp-2">{{ $rc->comment?->content ?? '—' }}</div>
+                                        </div>
+                                        <div class="mt-1 text-xs text-[var(--an-text-muted)]">
+                                            Post: {{ $rc->comment?->post?->title ?? '—' }}
+                                        </div>
+                                    </td>
 
-                            <td class="px-4 py-3 text-[var(--an-text)]">
-                                {{ $rc->remover?->username ?? '—' }}
-                            </td>
+                                    <td class="px-4 py-3 text-[var(--an-text)]">
+                                        {{ $rc->comment?->user?->username ?? '—' }}
+                                    </td>
 
-                            <td class="px-4 py-3 text-[var(--an-text)]">
-                                <div class="line-clamp-3">{{ $rc->reason }}</div>
-                            </td>
+                                    <td class="px-4 py-3 text-[var(--an-text)]">
+                                        {{ $rc->remover?->username ?? '—' }}
+                                    </td>
 
-                            <td class="px-4 py-3 text-right text-[var(--an-text-muted)]">
-                                {{ $rc->created_at?->format('Y-m-d H:i') }}
-                            </td>
-                        </tr>
-                    @empty
-                        <tr>
-                            <td colspan="5" class="px-4 py-8 text-center text-sm text-[var(--an-text-muted)]">
-                                No removed comments found.
-                            </td>
-                        </tr>
-                    @endforelse
-                </x-slot:body>
-            </x-admin.table>
+                                    <td class="px-4 py-3 text-[var(--an-text)]">
+                                        <div class="line-clamp-3">{{ $rc->reason }}</div>
+                                    </td>
+
+                                    <td class="px-4 py-3 text-right text-[var(--an-text-muted)] whitespace-nowrap">
+                                        {{ $rc->created_at?->format('Y-m-d H:i') }}
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="5" class="px-4 py-8 text-center text-sm text-[var(--an-text-muted)]">
+                                        No removed comments found.
+                                    </td>
+                                </tr>
+                            @endforelse
+                        </x-slot:body>
+                    </x-admin.table>
+                </div>
+            </div>
 
             <div class="mt-4">
                 {{ $removedComments->links() }}
             </div>
         </x-admin.card>
     @endif
+
 </div>
 @endsection

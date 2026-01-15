@@ -24,6 +24,8 @@
                                  bg-[var(--an-input-bg)] text-[var(--an-input-text)]
                                  border-[var(--an-input-border)]
                                  focus:ring-2 focus:ring-[var(--an-ring)] focus:border-transparent
+                                 placeholder:text-[var(--an-text-muted)]
+                                 disabled:opacity-60 disabled:cursor-not-allowed
                                  '.($hasError ? 'border-[var(--an-danger)] focus:ring-[var(--an-danger)]' : '')
                 )
             ]) }}
@@ -35,6 +37,18 @@
             ▼
         </div>
     </div>
+
+    {{-- Improve dropdown list readability (works in many browsers; some still use native UI) --}}
+    <style>
+        #{{ $id }} option {
+            background: var(--an-card);
+            color: var(--an-text);
+        }
+        #{{ $id }} optgroup {
+            background: var(--an-card);
+            color: var(--an-text-muted);
+        }
+    </style>
 
     @if($hint && !$hasError)
         <p class="text-xs text-[var(--an-text-muted)]">{{ $hint }}</p>

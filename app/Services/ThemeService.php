@@ -8,166 +8,214 @@ class ThemeService
 {
     public function prefix(): string
     {
-        // You can keep "an" (AuraNexus)
         return (string) config('admin-theme.prefix', 'an');
     }
 
-    public function mode(): string
+    /**
+     * Mode should be per-user (cookie/session/localStorage), NOT global setting.
+     * We accept it from caller and validate.
+     */
+    public function mode(?string $mode = null): string
     {
-        $key = (string) config('admin-theme.mode_key', 'theme_mode');
-        $mode = Setting::get($key, 'dark');
-
+        $mode = $mode ?? 'dark';
         return in_array($mode, ['dark', 'light'], true) ? $mode : 'dark';
     }
 
-    public function defaults(string $mode): array
+    public function payload(?string $mode = null): array
     {
-        $defaults = (array) config('admin-theme.defaults', []);
+        $mode = $this->mode($mode);
+        $vars = $this->resolvedVars($mode);
 
-        $dark = isset($defaults['dark']) && is_array($defaults['dark']) ? $defaults['dark'] : [];
-        $light = isset($defaults['light']) && is_array($defaults['light']) ? $defaults['light'] : [];
-
-        // If you haven't added config/admin-theme.php yet, keep safe fallbacks:
-        if (empty($dark)) $dark = $this->darkDefaults();
-        if (empty($light)) $light = $this->lightDefaults();
-
-        return $mode === 'light' ? $light : $dark;
+        return [
+            'mode' => $mode,
+            'vars' => $vars,
+            'css'  => $this->cssFromVars($vars),
+        ];
     }
 
-    public function lightOverrides(): array
+    public function css(?string $mode = null): string
     {
-        $key = (string) config('admin-theme.light_vars_key', 'theme_light_vars');
-        $saved = json_decode(Setting::get($key, '{}'), true);
-
-        return is_array($saved) ? $saved : [];
+        return $this->payload($mode)['css'];
     }
 
-    public function resolvedVars(): array
+    public function resolvedVars(?string $mode = null): array
     {
-        $mode = $this->mode();
+        $mode = $this->mode($mode);
+
+        // 3 priority accents from admin panel (admin-only can edit, but everyone uses them)
+        $primary   = $this->normalizeHex(Setting::get('theme_primary', '#8B5CF6'))   ?? '#8B5CF6';
+        $secondary = $this->normalizeHex(Setting::get('theme_secondary', '#22D3EE')) ?? '#22D3EE';
+        $tertiary  = $this->normalizeHex(Setting::get('theme_tertiary', '#FBBF24'))  ?? '#FBBF24';
+
+        $p = $this->accentPack($primary);
+        $s = $this->accentPack($secondary);
+        $t = $this->accentPack($tertiary);
 
         if ($mode === 'dark') {
-            return $this->defaults('dark');
+            // PURE BLACK base
+            return [
+                'bg' => '#000000',
+                'bg-2' => '#07070A',
+
+                // glass-like cards
+                'card' => 'rgba(255,255,255,.04)',
+                'card-2' => 'rgba(255,255,255,.06)',
+
+                'text' => '#FFFFFF',
+                'text-muted' => 'rgba(255,255,255,.65)',
+                'border' => 'rgba(255,255,255,.12)',
+
+                // subtle glow / depth (use as box-shadow color if needed)
+                'shadow' => 'rgba(255,255,255,.08)',
+
+                // Primary is MAIN THEME
+                'primary' => $p['base'],
+                'primary-2' => $p['dark'],
+                'ring' => $this->rgba($p['base'], 0.35),
+
+                // Secondary drives links/navigation
+                'link' => $s['base'],
+
+                // Tertiary drives info accents (chips, badges etc.)
+                'info' => $t['base'],
+
+                // status colors
+                'success' => '#22C55E',
+                'warning' => '#F59E0B',
+                'danger' => '#EF4444',
+
+                // Buttons use primary
+                'btn' => $p['base'],
+                'btn-text' => '#FFFFFF',
+                'btn-hover' => $p['dark'],
+
+                // Inputs
+                'input-bg' => 'rgba(255,255,255,.04)',
+                'input-text' => '#FFFFFF',
+                'input-border' => 'rgba(255,255,255,.14)',
+            ];
         }
 
-        return array_merge(
-            $this->defaults('light'),
-            $this->lightOverrides()
-        );
+        // LIGHT mode: PURE WHITE base
+        return [
+            'bg' => '#FFFFFF',
+            'bg-2' => '#F6F7FB',
+
+            'card' => '#FFFFFF',
+            'card-2' => '#F8FAFC',
+
+            'text' => '#000000',
+            'text-muted' => 'rgba(0,0,0,.62)',
+            'border' => 'rgba(0,0,0,.10)',
+
+            'shadow' => 'rgba(0,0,0,.12)',
+
+            'primary' => $p['base'],
+            'primary-2' => $p['dark'],
+            'ring' => $this->rgba($p['base'], 0.30),
+
+            'link' => $s['base'],
+            'info' => $t['base'],
+
+            'success' => '#16A34A',
+            'warning' => '#D97706',
+            'danger' => '#DC2626',
+
+            'btn' => $p['base'],
+            'btn-text' => '#FFFFFF',
+            'btn-hover' => $p['dark'],
+
+            'input-bg' => '#FFFFFF',
+            'input-text' => '#000000',
+            'input-border' => 'rgba(0,0,0,.18)',
+        ];
     }
 
-    public function css(): string
+    private function cssFromVars(array $vars): string
     {
         $prefix = $this->prefix();
-        $vars = $this->resolvedVars();
 
-        // Build CSS variables like: --an-bg: #fff;
         $lines = [];
-        foreach ($vars as $key => $value) {
-            $k = trim((string) $key);
-            $v = trim((string) $value);
-
+        foreach ($vars as $k => $v) {
+            $k = trim((string) $k);
+            $v = trim((string) $v);
             if ($k === '' || $v === '') continue;
-            if (str_contains($k, ';') || str_contains($v, ';')) continue; // basic safety
-
+            if (str_contains($k, ';') || str_contains($v, ';')) continue;
             $lines[] = "--{$prefix}-{$k}: {$v};";
         }
 
-        $root = ":root{\n  " . implode("\n  ", $lines) . "\n}";
+        $root = ":root{\n  " . implode("\n  ", $lines) . "\n}\n";
 
-        // Optional: some helpful defaults for admin UI (use vars in Tailwind via inline styles/classes)
-        $base = <<<CSS
-/* Admin theme variables */
+        return <<<CSS
+/* AuraNexus theme variables (admin + public) */
 {$root}
-
-/* Small base helpers (optional) */
-[data-admin-theme="dark"] { color-scheme: dark; }
-[data-admin-theme="light"] { color-scheme: light; }
+:root[data-theme="dark"]  { color-scheme: dark; }
+:root[data-theme="light"] { color-scheme: light; }
 CSS;
-
-        return $base;
     }
 
     /**
-     * This matches your AppServiceProvider expectations:
-     * $theme['mode'], $theme['css'], $theme['vars']
+     * Build base/dark/light variants from a single hex accent.
      */
-    public function payload(): array
+    private function accentPack(string $hex): array
     {
         return [
-            'mode' => $this->mode(),
-            'vars' => $this->resolvedVars(),
-            'css'  => $this->css(),
+            'base'  => $hex,
+            'dark'  => $this->mix($hex, '#000000', 0.22),
+            'light' => $this->mix($hex, '#FFFFFF', 0.18),
         ];
     }
 
-    // ---- Fallback defaults if config/admin-theme.php isn't ready yet ----
-
-    private function lightDefaults(): array
+    private function normalizeHex(string $val): ?string
     {
-        return [
-            'bg' => '#f6f7fb',
-            'bg-2' => '#eef1f7',
-            'card' => '#ffffff',
-            'card-2' => '#f9fafc',
+        $v = trim($val);
+        if ($v !== '' && $v[0] !== '#') $v = '#'.$v;
 
-            'text' => '#0f172a',
-            'text-muted' => '#475569',
-            'border' => '#e2e8f0',
-            'shadow' => 'rgba(2,6,23,.10)',
+        if (!preg_match('/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/', $v)) return null;
 
-            'primary' => '#4f46e5',
-            'primary-2' => '#4338ca',
-            'link' => '#2563eb',
+        if (strlen($v) === 4) {
+            $v = '#'.$v[1].$v[1].$v[2].$v[2].$v[3].$v[3];
+        }
 
-            'success' => '#16a34a',
-            'warning' => '#f59e0b',
-            'danger' => '#dc2626',
-            'info' => '#0284c7',
-
-            'btn' => '#0f172a',
-            'btn-text' => '#ffffff',
-            'btn-hover' => '#111827',
-
-            'input-bg' => '#ffffff',
-            'input-text' => '#0f172a',
-            'input-border' => '#cbd5e1',
-
-            'ring' => 'rgba(79,70,229,.35)',
-        ];
+        return strtoupper($v);
     }
 
-    private function darkDefaults(): array
+    private function hexToRgb(string $hex): array
     {
-        return [
-            'bg' => '#0b1220',
-            'bg-2' => '#0f172a',
-            'card' => '#0f172a',
-            'card-2' => '#111c33',
+        $hex = ltrim($hex, '#');
+        $r = hexdec(substr($hex, 0, 2));
+        $g = hexdec(substr($hex, 2, 2));
+        $b = hexdec(substr($hex, 4, 2));
+        return [$r, $g, $b];
+    }
 
-            'text' => '#e5e7eb',
-            'text-muted' => '#94a3b8',
-            'border' => 'rgba(148,163,184,.18)',
-            'shadow' => 'rgba(0,0,0,.35)',
+    private function rgbToHex(int $r, int $g, int $b): string
+    {
+        $r = max(0, min(255, $r));
+        $g = max(0, min(255, $g));
+        $b = max(0, min(255, $b));
+        return sprintf('#%02X%02X%02X', $r, $g, $b);
+    }
 
-            'primary' => '#7c3aed',
-            'primary-2' => '#6d28d9',
-            'link' => '#60a5fa',
+    /**
+     * Mix color A towards color B by $t (0..1).
+     */
+    private function mix(string $a, string $b, float $t): string
+    {
+        [$ar, $ag, $ab] = $this->hexToRgb($a);
+        [$br, $bg, $bb] = $this->hexToRgb($b);
 
-            'success' => '#22c55e',
-            'warning' => '#f59e0b',
-            'danger' => '#ef4444',
-            'info' => '#38bdf8',
+        $r  = (int) round($ar + ($br - $ar) * $t);
+        $g  = (int) round($ag + ($bg - $ag) * $t);
+        $b2 = (int) round($ab + ($bb - $ab) * $t);
 
-            'btn' => '#e5e7eb',
-            'btn-text' => '#0b1220',
-            'btn-hover' => '#ffffff',
+        return $this->rgbToHex($r, $g, $b2);
+    }
 
-            'input-bg' => '#0b1220',
-            'input-text' => '#e5e7eb',
-            'input-border' => 'rgba(148,163,184,.25)',
-
-            'ring' => 'rgba(124,58,237,.45)',
-        ];
+    private function rgba(string $hex, float $alpha): string
+    {
+        [$r, $g, $b] = $this->hexToRgb($hex);
+        $a = max(0, min(1, $alpha));
+        return "rgba({$r},{$g},{$b},{$a})";
     }
 }

@@ -1,15 +1,15 @@
 @props([
     'title' => null,
     'description' => null,
-    'actions' => null, // <x-slot:actions>...</x-slot:actions>
+    'actions' => null,
 ])
 
 <div {{ $attributes->merge(['class' => 'space-y-4']) }}>
     @if($title || $description || $actions)
-        <div class="flex items-start justify-between gap-4">
-            <div>
+        <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+            <div class="min-w-0">
                 @if($title)
-                    <h2 class="text-lg font-semibold text-[var(--an-text)]">
+                    <h2 class="text-lg font-semibold text-[var(--an-text)] truncate">
                         {{ $title }}
                     </h2>
                 @endif

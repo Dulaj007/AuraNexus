@@ -7,8 +7,15 @@
     $pad = $compact ? 'px-3 py-2' : 'px-4 py-3';
 @endphp
 
-<div {{ $attributes->merge(['class' => 'overflow-hidden rounded-2xl border border-[var(--an-border)] bg-[var(--an-card)] shadow-sm']) }}>
-    <div class="overflow-x-auto">
+<div {{ $attributes->merge([
+    'class' => '
+        rounded-2xl border border-[var(--an-border)]
+        bg-[var(--an-card)]
+        backdrop-blur-xl
+        shadow-[0_20px_45px_var(--an-shadow)]
+    '
+]) }}>
+    <div class="relative overflow-x-auto">
         <table class="min-w-full text-sm">
             <thead class="bg-[var(--an-card-2)] text-[var(--an-text)]">
                 {{ $head ?? '' }}
@@ -22,8 +29,13 @@
 </div>
 
 @once
-    <style>
-        /* optional tiny improvements without breaking Tailwind */
-        table th { font-weight: 600; }
-    </style>
+<style>
+    table th {
+        font-weight: 600;
+        white-space: nowrap;
+    }
+    table td {
+        vertical-align: top;
+    }
+</style>
 @endonce
