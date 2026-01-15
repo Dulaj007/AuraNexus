@@ -1,18 +1,23 @@
 @props([
     'title' => null,
     'subtitle' => null,
-    'actions' => null,  // pass as slot: <x-slot:actions>...</x-slot:actions>
-    'padding' => 'p-5', // p-4 | p-5 | p-6
+    'actions' => null,
+    'padding' => 'p-5',
 ])
 
 <div {{ $attributes->merge([
-    'class' => 'rounded-2xl border border-[var(--an-border)] bg-[var(--an-card)] shadow-sm'
+    'class' => '
+        rounded-2xl border border-[var(--an-border)]
+        bg-[var(--an-card)]
+        backdrop-blur-xl
+        shadow-[0_20px_45px_var(--an-shadow)]
+    '
 ]) }}>
     @if($title || $subtitle || $actions)
-        <div class="flex items-start justify-between gap-4 border-b border-[var(--an-border)] px-5 py-4">
-            <div>
+        <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 border-b border-[var(--an-border)] px-5 py-4">
+            <div class="min-w-0">
                 @if($title)
-                    <div class="text-base font-semibold text-[var(--an-text)]">
+                    <div class="text-base font-semibold text-[var(--an-text)] truncate">
                         {{ $title }}
                     </div>
                 @endif

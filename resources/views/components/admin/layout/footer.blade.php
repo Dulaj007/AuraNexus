@@ -1,10 +1,12 @@
-<footer class="border-t border-white/10 bg-black/20">
-    <div class="px-6 py-4 text-xs text-white/40 flex flex-wrap items-center justify-between gap-2">
+<footer class="border-t"
+        style="border-color: var(--an-border); background: color-mix(in srgb, var(--an-card) 70%, transparent); backdrop-filter: blur(12px);">
+    <div class="px-4 sm:px-6 py-4 text-xs flex flex-wrap items-center justify-between gap-2"
+         style="color: var(--an-text-muted);">
         <div>
-            © {{ date('Y') }} {{ config('app.name', 'AuraNexus') }} — Admin
+            © {{ date('Y') }} {{ config('app.name', 'AuraNexus') }} 
         </div>
-        <div class="text-white/30">
-            v1.0 • Built for production
+        <div>
+            v1.0 
         </div>
     </div>
 </footer>

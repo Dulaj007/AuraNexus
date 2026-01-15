@@ -6,7 +6,6 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-// Related Models
 use App\Models\Post;
 use App\Models\Role;
 use App\Models\Permission;
@@ -27,6 +26,9 @@ class User extends Authenticatable
         'avatar',
         'bio',
         'status',
+        'suspended_until',
+        'banned_at',
+        'restricted_reason',
         'email_verified_at',
         'email_verified_ip',
     ];
@@ -40,7 +42,11 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
-            'password' => 'hashed',
+            'password'          => 'hashed',
+
+            // ✅ IMPORTANT: so Carbon works properly everywhere
+            'suspended_until'   => 'datetime',
+            'banned_at'         => 'datetime',
         ];
     }
 
@@ -63,15 +69,16 @@ class User extends Authenticatable
     {
         return $this->hasMany(UserActivity::class);
     }
-public function postReactions()
-{
-    return $this->hasMany(\App\Models\PostReaction::class);
-}
 
-public function postReports()
-{
-    return $this->hasMany(\App\Models\PostReport::class);
-}
+    public function postReactions()
+    {
+        return $this->hasMany(\App\Models\PostReaction::class);
+    }
+
+    public function postReports()
+    {
+        return $this->hasMany(\App\Models\PostReport::class);
+    }
 
     public function posts()
     {
@@ -83,10 +90,6 @@ public function postReports()
         return $this->hasMany(Comment::class);
     }
 
-    /**
-     * Roles for this user
-     * Pivot: role_user (must have timestamps if you use withTimestamps())
-     */
     public function roles()
     {
         return $this->belongsToMany(Role::class, 'role_user')->withTimestamps();
@@ -102,26 +105,78 @@ public function postReports()
         return $this->hasMany(PageView::class);
     }
 
-    /**
-     * Per-user permission overrides (allow/deny)
-     * Pivot: permission_user (user_id, permission_id, effect, timestamps)
-     */
-    public function permissionOverrides()
+    /* ---------------- RESTRICTION HELPERS ---------------- */
+
+    public function isSuspended(): bool
     {
-        return $this->belongsToMany(Permission::class, 'permission_user')
-            ->withPivot('effect')   // allow|deny
-            ->withTimestamps();
+        return ($this->status === 'suspended');
+    }
+
+    public function isBanned(): bool
+    {
+        return ($this->status === 'banned');
+    }
+
+    public function isRestricted(): bool
+    {
+        return $this->isSuspended() || $this->isBanned();
     }
 
     /**
-     * Alias so controller can do $user->load(['roles','permissions'])
+     * ✅ Auto-clear suspension if time is over.
+     * Call this from middleware (best) and anywhere else you want.
      */
+    public function syncRestrictionState(): void
+    {
+        if ($this->status === 'suspended') {
+            if ($this->suspended_until && $this->suspended_until->isPast()) {
+                $this->clearRestriction();
+            }
+        }
+
+        // Safety cleanup
+        if ($this->status === 'active') {
+            if ($this->suspended_until || $this->banned_at || $this->restricted_reason) {
+                $this->forceFill([
+                    'suspended_until'   => null,
+                    'banned_at'         => null,
+                    'restricted_reason' => null,
+                ])->save();
+            }
+        }
+    }
+
+    public function suspensionRemainingSeconds(): ?int
+    {
+        if (!$this->isSuspended() || !$this->suspended_until) return null;
+
+        $sec = now()->diffInSeconds($this->suspended_until, false);
+        return $sec > 0 ? $sec : 0;
+    }
+
+    public function clearRestriction(): void
+    {
+        $this->forceFill([
+            'status'            => 'active',
+            'suspended_until'   => null,
+            'banned_at'         => null,
+            'restricted_reason' => null,
+        ])->save();
+    }
+
+    /* ---------------- AUTHZ ---------------- */
+
+    public function permissionOverrides()
+    {
+        return $this->belongsToMany(Permission::class, 'permission_user')
+            ->withPivot('effect')
+            ->withTimestamps();
+    }
+
     public function permissions()
     {
         return $this->permissionOverrides();
     }
-
-    /* ---------------- AUTHZ HELPERS ---------------- */
 
     public function hasRole(string $name): bool
     {
@@ -135,23 +190,12 @@ public function postReports()
         return $this->roles->whereIn('name', $names)->isNotEmpty();
     }
 
-    /**
-     * Permission resolution order (YOUR CURRENT DB DESIGN):
-     * 1) Admin role => allow everything
-     * 2) User override (permission_user allow/deny)
-     *
-     * NOTE:
-     * You DO NOT have a role-permission pivot table (permissions_role / permission_role),
-     * so we MUST NOT try to check role permissions here.
-     */
     public function hasPermission(string $permissionName): bool
     {
-        // 1) Admin can do everything
         if ($this->hasRole('admin')) {
             return true;
         }
 
-        // 2) Check per-user overrides only
         $permission = $this->permissionOverrides()
             ->where('permissions.name', $permissionName)
             ->first();
@@ -160,8 +204,6 @@ public function postReports()
             return false;
         }
 
-        // permission_user.effect = allow | deny
         return $permission->pivot->effect === 'allow';
     }
 }
-

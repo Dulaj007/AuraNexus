@@ -1,293 +1,397 @@
+{{-- C:\xampp\htdocs\AuraNexus\resources\views\admin\customization\index.blade.php --}}
 @extends('layouts.admin')
 
 @section('title', 'Customization')
 
 @section('content')
-<div class="space-y-6">
-    <x-admin.section
-        title="Customization"
-        description="Manage categories, forums, and paragraph templates."
-    />
+@php
+    $categories = $categories ?? collect();
+    $paragraphTemplates = $paragraphTemplates ?? collect();
+@endphp
 
-    <div class="grid gap-6 lg:grid-cols-2">
+<div class="max-w-6xl mx-auto space-y-6">
 
-        {{-- LEFT: Categories + Forums --}}
-        <x-admin.card title="Categories" subtitle="Create / edit / delete categories and forums.">
-            {{-- Create category --}}
-            <form method="POST" action="{{ route('admin.categories.store') }}" class="space-y-3">
-                @csrf
+    {{-- Page intro card --}}
+    <div class="rounded-2xl border p-5 sm:p-6"
+         style="background: var(--an-card); border-color: var(--an-border); box-shadow: 0 18px 45px var(--an-shadow);">
+        <h2 class="text-xl font-semibold text-[var(--an-text)]">Community Customization</h2>
+        <p class="mt-1 text-sm text-[var(--an-text-muted)]">
+            Manage categories, forums, and content templates. Mobile-friendly layout with expandable sections.
+        </p>
+    </div>
+
+    {{-- Accordions --}}
+    <div class="space-y-4">
+
+        {{-- =========================
+            CATEGORIES
+        ========================== --}}
+        <details open class="rounded-2xl border overflow-hidden"
+                 style="background: var(--an-card); border-color: var(--an-border); box-shadow: 0 18px 45px var(--an-shadow);">
+            <summary class="cursor-pointer select-none p-5 sm:p-6 flex items-center justify-between gap-4">
+                <div>
+                    <div class="text-lg font-semibold text-[var(--an-text)]">Categories</div>
+                    <div class="text-sm text-[var(--an-text-muted)]">Create, edit, and delete categories</div>
+                </div>
+                <span class="text-xs rounded-full border px-3 py-1"
+                      style="border-color: var(--an-border); background: var(--an-card-2); color: var(--an-text-muted);">
+                    {{ $categories->count() }} total
+                </span>
+            </summary>
+
+            <div class="px-5 sm:px-6 pb-6 space-y-5">
+                {{-- Create category --}}
+                <div class="rounded-2xl border p-4"
+                     style="background: var(--an-card-2); border-color: var(--an-border);">
+                    <form method="POST" action="{{ route('admin.categories.store') }}" class="grid sm:grid-cols-[1fr_auto] gap-3">
+                        @csrf
+                        <input
+                            name="name"
+                            placeholder="New category name"
+                            class="h-11 w-full rounded-xl border px-3 outline-none"
+                            style="background: var(--an-input-bg); border-color: var(--an-input-border); color: var(--an-input-text);"
+                        />
+                        <button
+                            type="submit"
+                            class="h-11 rounded-xl px-4 font-semibold transition"
+                            style="background: var(--an-primary); color: var(--an-btn-text); box-shadow: 0 12px 30px var(--an-shadow);">
+                            Add
+                        </button>
+                    </form>
+                    <p class="mt-2 text-xs text-[var(--an-text-muted)]">
+                        Tip: keep names short & clear (ex: Announcements, Support, Feedback).
+                    </p>
+                </div>
+
+                {{-- List categories --}}
                 <div class="grid gap-3">
-                    <x-admin.ui.input name="name" label="Category name" placeholder="e.g. Announcements" />
-                    <x-admin.ui.input name="description" label="Description (optional)" placeholder="Short description…" />
-                </div>
+                    @forelse($categories as $category)
+                        <div class="rounded-2xl border p-4"
+                             style="background: var(--an-card-2); border-color: var(--an-border);">
 
-                <div class="pt-2">
-                    <x-admin.ui.button type="submit">Add category</x-admin.ui.button>
-                </div>
-            </form>
-
-            {{-- Controls --}}
-            <div class="mt-6 flex flex-wrap items-center justify-between gap-2">
-                <div class="text-sm text-[var(--an-text-muted)]">
-                    {{ $categories->count() }} categories
-                </div>
-
-                <div class="flex gap-2">
-                    <x-admin.ui.button type="button" variant="ghost" onclick="window.__anExpandAll(true)">
-                        Expand all
-                    </x-admin.ui.button>
-                    <x-admin.ui.button type="button" variant="ghost" onclick="window.__anExpandAll(false)">
-                        Collapse all
-                    </x-admin.ui.button>
-                </div>
-            </div>
-
-            <div class="mt-4 space-y-3">
-                @forelse($categories as $category)
-                    <details class="group rounded-2xl border border-[var(--an-border)] bg-[var(--an-card-2)]"
-                             data-an-accordion
-                             @if(request()->get('open') == $category->id) open @endif>
-                        {{-- Header --}}
-                        <summary class="cursor-pointer list-none p-4">
-                            <div class="flex items-start justify-between gap-4">
-                                <div class="min-w-0">
-                                    <div class="flex items-center gap-2">
-                                        <div class="truncate font-semibold text-[var(--an-text)]">
-                                            {{ $category->name }}
-                                        </div>
-
-                                        <span class="text-xs font-mono px-2 py-0.5 rounded border border-[var(--an-border)] text-[var(--an-text-muted)]">
-                                            {{ $category->slug }}
-                                        </span>
-                                    </div>
-
-                                    <div class="mt-1 text-sm text-[var(--an-text-muted)]">
-                                        {{ $category->description ?: '—' }}
-                                    </div>
-
-                                    <div class="mt-2">
-                                        <x-admin.ui.badge tone="neutral">
-                                            {{ $category->forums?->count() ?? 0 }} forums
-                                        </x-admin.ui.badge>
-                                    </div>
-                                </div>
-
-                                {{-- Chevron --}}
-                                <div class="shrink-0 mt-1">
-                                    <div class="h-8 w-8 grid place-items-center rounded-xl border border-[var(--an-border)] bg-[var(--an-card)]
-                                                transition group-open:rotate-180">
-                                        <span class="text-[var(--an-text-muted)]">⌄</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </summary>
-
-                        {{-- Body --}}
-                        <div class="px-4 pb-4 pt-0 space-y-5">
-                            {{-- Category actions --}}
-                            <div class="grid gap-3 md:grid-cols-2">
-                                {{-- Update category --}}
-                                <form method="POST" action="{{ route('admin.categories.update', $category) }}" class="space-y-2">
+                            <div class="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+                                {{-- Update --}}
+                                <form method="POST" action="{{ route('admin.categories.update', $category) }}"
+                                      class="flex-1 flex flex-col sm:flex-row gap-2">
                                     @csrf
                                     @method('PUT')
 
-                                    <x-admin.ui.input
+                                    <input
                                         name="name"
-                                        label="Edit name"
                                         value="{{ old('name', $category->name) }}"
-                                    />
-                                    <x-admin.ui.input
-                                        name="description"
-                                        label="Edit description"
-                                        value="{{ old('description', $category->description) }}"
+                                        class="h-11 w-full rounded-xl border px-3 outline-none"
+                                        style="background: var(--an-input-bg); border-color: var(--an-input-border); color: var(--an-input-text);"
                                     />
 
-                                    <div class="pt-1">
-                                        <x-admin.ui.button type="submit" variant="secondary">Update category</x-admin.ui.button>
-                                    </div>
+                                    <button type="submit"
+                                            class="h-11 rounded-xl px-4 font-semibold transition"
+                                            style="background: var(--an-btn); color: var(--an-btn-text);">
+                                        Save
+                                    </button>
                                 </form>
 
-                                {{-- Delete category --}}
-                                <form method="POST"
-                                      action="{{ route('admin.categories.destroy', $category) }}"
-                                      onsubmit="return confirm('Delete this category? You must remove forums first.');"
-                                      class="flex md:items-end">
+                                {{-- Delete --}}
+                                <form method="POST" action="{{ route('admin.categories.destroy', $category) }}">
                                     @csrf
                                     @method('DELETE')
-
-                                    <div class="w-full">
-                                        <x-admin.ui.alert tone="warning" title="Delete category">
-                                            Deleting requires the category to have <b>no forums</b>.
-                                        </x-admin.ui.alert>
-
-                                        <div class="mt-3">
-                                            <x-admin.ui.button type="submit" variant="danger">
-                                                Delete category
-                                            </x-admin.ui.button>
-                                        </div>
-                                    </div>
+                                    <button type="submit"
+                                            onclick="return confirm('Delete this category? Forums inside may be affected.')"
+                                            class="h-11 w-full sm:w-auto rounded-xl px-4 font-semibold transition"
+                                            style="background: color-mix(in srgb, var(--an-danger) 20%, transparent); color: var(--an-danger); border: 1px solid color-mix(in srgb, var(--an-danger) 30%, var(--an-border));">
+                                        Delete
+                                    </button>
                                 </form>
                             </div>
 
-                            {{-- Forums list --}}
-                            <div>
-                                <div class="flex items-center justify-between gap-3">
-                                    <div class="text-sm font-medium text-[var(--an-text)]">Forums</div>
+                            <div class="mt-2 text-xs">
+                                <a
+                                    href="{{ route('categories.show', $category) }}"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    class="text-[var(--an-link)] hover:underline break-all"
+                                >
+                                    {{ url('/category/' . $category->slug) }}
+                                </a>
+                            </div>
+
+                        </div>
+                    @empty
+                        <div class="rounded-2xl border p-5 text-sm"
+                             style="background: var(--an-card-2); border-color: var(--an-border); color: var(--an-text-muted);">
+                            No categories yet. Create your first one above.
+                        </div>
+                    @endforelse
+                </div>
+            </div>
+        </details>
+
+        {{-- =========================
+            FORUMS
+        ========================== --}}
+        <details open class="rounded-2xl border overflow-hidden"
+                 style="background: var(--an-card); border-color: var(--an-border); box-shadow: 0 18px 45px var(--an-shadow);">
+            <summary class="cursor-pointer select-none p-5 sm:p-6 flex items-center justify-between gap-4">
+                <div>
+                    <div class="text-lg font-semibold text-[var(--an-text)]">Forums</div>
+                    <div class="text-sm text-[var(--an-text-muted)]">Forums live under a category</div>
+                </div>
+                <span class="text-xs rounded-full border px-3 py-1"
+                      style="border-color: var(--an-border); background: var(--an-card-2); color: var(--an-text-muted);">
+                    {{ $categories->sum(fn($c) => ($c->forums?->count() ?? 0)) }} total
+                </span>
+            </summary>
+
+            <div class="px-5 sm:px-6 pb-6 space-y-5">
+
+                {{-- Create forum --}}
+                <div class="rounded-2xl border p-4"
+                     style="background: var(--an-card-2); border-color: var(--an-border);">
+                    <form method="POST" action="{{ route('admin.forums.store') }}" class="grid gap-3 sm:grid-cols-3">
+                        @csrf
+
+                        <input
+                            name="name"
+                            placeholder="Forum name"
+                            class="h-11 w-full rounded-xl border px-3 outline-none"
+                            style="background: var(--an-input-bg); border-color: var(--an-input-border); color: var(--an-input-text);"
+                        />
+
+                        <select
+                            name="category_id"
+                            class="h-11 w-full rounded-xl border px-3 appearance-none outline-none"
+                            style="background: var(--an-input-bg); border-color: var(--an-input-border); color: var(--an-input-text);"
+                        >
+                            <option value="">Select category</option>
+                            @foreach($categories as $category)
+                                <option value="{{ $category->id }}">{{ $category->name }}</option>
+                            @endforeach
+                        </select>
+
+                        <button
+                            type="submit"
+                            class="h-11 rounded-xl px-4 font-semibold transition"
+                            style="background: var(--an-primary); color: var(--an-btn-text); box-shadow: 0 12px 30px var(--an-shadow);">
+                            Add Forum
+                        </button>
+                    </form>
+
+                    <p class="mt-2 text-xs text-[var(--an-text-muted)]">
+                        Example: “General Discussion”, “Bug Reports”, “Suggestions”.
+                    </p>
+                </div>
+
+                {{-- Forums grouped by category (FIXED) --}}
+                <div class="space-y-4">
+                    @forelse($categories as $category)
+                        @php
+                            $catForums = $category->forums ?? collect();
+                        @endphp
+
+                        <div class="rounded-2xl border overflow-hidden"
+                             style="background: var(--an-card-2); border-color: var(--an-border);">
+                            <div class="p-4 flex items-center justify-between gap-3">
+                                <div class="min-w-0">
+                                    <div class="font-semibold truncate text-[var(--an-text)]">{{ $category->name }}</div>
                                     <div class="text-xs text-[var(--an-text-muted)]">
-                                        Category ID: <span class="font-mono">{{ $category->id }}</span>
+                                        {{ $catForums->count() }} forum(s)
                                     </div>
                                 </div>
 
-                                <div class="mt-3 space-y-2">
-                                    @forelse($category->forums as $forum)
-                                        <div class="rounded-xl border border-[var(--an-border)] bg-[var(--an-card)] p-3">
-                                            <div class="flex items-start justify-between gap-3">
-                                                <div class="min-w-0">
-                                                    <div class="truncate font-medium text-[var(--an-text)]">
-                                                        {{ $forum->name }}
-                                                    </div>
-                                                    <div class="text-xs text-[var(--an-text-muted)]">
-                                                        Slug: <span class="font-mono">{{ $forum->slug }}</span>
-                                                    </div>
-                                                    <div class="mt-1 text-sm text-[var(--an-text-muted)]">
-                                                        {{ $forum->description ?: '—' }}
-                                                    </div>
-                                                </div>
-                                            </div>
+                                <span class="text-xs rounded-full border px-3 py-1"
+                                      style="border-color: var(--an-border); background: var(--an-card); color: var(--an-text-muted);">
+                                    Category #{{ $category->id }}
+                                </span>
+                            </div>
 
-                                            <div class="mt-3 grid gap-3 md:grid-cols-2">
-                                                {{-- Update forum --}}
-                                                <form method="POST" action="{{ route('admin.forums.update', $forum) }}" class="space-y-2">
-                                                    @csrf
-                                                    @method('PUT')
+                            <div class="px-4 pb-4 space-y-3">
+                                @forelse($catForums as $forum)
+                                    <div class="rounded-2xl border p-4"
+                                         style="background: var(--an-card); border-color: var(--an-border);">
+                                        <div class="flex flex-col sm:flex-row sm:items-center gap-3">
 
-                                                    <input type="hidden" name="category_id" value="{{ $category->id }}">
+                                            {{-- Update forum --}}
+                                            <form method="POST" action="{{ route('admin.forums.update', $forum) }}"
+                                                  class="flex-1 flex flex-col sm:flex-row gap-2">
+                                                @csrf
+                                                @method('PUT')
 
-                                                    <x-admin.ui.input name="name" label="Edit name" value="{{ old('name', $forum->name) }}" />
-                                                    <x-admin.ui.input name="description" label="Edit description" value="{{ old('description', $forum->description) }}" />
+                                                <input
+                                                    name="name"
+                                                    value="{{ old('name', $forum->name) }}"
+                                                    class="h-11 w-full rounded-xl border px-3 outline-none"
+                                                    style="background: var(--an-input-bg); border-color: var(--an-input-border); color: var(--an-input-text);"
+                                                />
 
-                                                    <div class="pt-1">
-                                                        <x-admin.ui.button type="submit" variant="secondary">Update forum</x-admin.ui.button>
-                                                    </div>
-                                                </form>
+                                                <select
+                                                    name="category_id"
+                                                    class="h-11 w-full sm:w-56 rounded-xl border px-3 appearance-none outline-none"
+                                                    style="background: var(--an-input-bg); border-color: var(--an-input-border); color: var(--an-input-text);"
+                                                >
+                                                    @foreach($categories as $c)
+                                                        <option value="{{ $c->id }}" @selected($forum->category_id == $c->id)>
+                                                            {{ $c->name }}
+                                                        </option>
+                                                    @endforeach
+                                                </select>
 
-                                                {{-- Delete forum --}}
-                                                <form method="POST"
-                                                      action="{{ route('admin.forums.destroy', $forum) }}"
-                                                      onsubmit="return confirm('Delete this forum?');"
-                                                      class="flex md:items-end">
-                                                    @csrf
-                                                    @method('DELETE')
+                                                <button type="submit"
+                                                        class="h-11 rounded-xl px-4 font-semibold transition"
+                                                        style="background: var(--an-btn); color: var(--an-btn-text);">
+                                                    Save
+                                                </button>
+                                            </form>
 
-                                                    <div class="w-full">
-                                                        <x-admin.ui.alert tone="danger" title="Delete forum">
-                                                            This will remove the forum. Posts may also be affected depending on your DB rules.
-                                                        </x-admin.ui.alert>
-
-                                                        <div class="mt-3">
-                                                            <x-admin.ui.button type="submit" variant="danger">
-                                                                Delete forum
-                                                            </x-admin.ui.button>
-                                                        </div>
-                                                    </div>
-                                                </form>
-                                            </div>
+                                            {{-- Delete forum --}}
+                                            <form method="POST" action="{{ route('admin.forums.destroy', $forum) }}">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit"
+                                                        onclick="return confirm('Delete this forum? Posts may be affected.')"
+                                                        class="h-11 w-full sm:w-auto rounded-xl px-4 font-semibold transition"
+                                                        style="background: color-mix(in srgb, var(--an-danger) 20%, transparent); color: var(--an-danger); border: 1px solid color-mix(in srgb, var(--an-danger) 30%, var(--an-border));">
+                                                    Delete
+                                                </button>
+                                            </form>
                                         </div>
-                                    @empty
-                                        <div class="text-sm text-[var(--an-text-muted)]">
-                                            No forums in this category yet.
+
+                                        <div class="mt-2 text-xs">
+                                            <a
+                                                href="{{ route('forums.show', $forum) }}"
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                class="text-[var(--an-link)] hover:underline break-all"
+                                            >
+                                                {{ url('/forum/' . $forum->slug) }}
+                                            </a>
                                         </div>
-                                    @endforelse
-                                </div>
 
-                                {{-- Create forum --}}
-                                <div class="mt-4 rounded-2xl border border-[var(--an-border)] bg-[var(--an-card)] p-4">
-                                    <div class="text-sm font-medium text-[var(--an-text)]">Add forum</div>
-
-                                    <form method="POST" action="{{ route('admin.forums.store') }}" class="mt-3 space-y-3">
-                                        @csrf
-                                        <input type="hidden" name="category_id" value="{{ $category->id }}">
-
-                                        <x-admin.ui.input name="name" label="Forum name" placeholder="e.g. General Discussion" />
-                                        <x-admin.ui.input name="description" label="Description (optional)" placeholder="Short description…" />
-
-                                        <div class="pt-1">
-                                            <x-admin.ui.button type="submit">Add forum</x-admin.ui.button>
-                                        </div>
-                                    </form>
-                                </div>
+                                    </div>
+                                @empty
+                                    <div class="rounded-2xl border p-4 text-sm"
+                                         style="background: var(--an-card); border-color: var(--an-border); color: var(--an-text-muted);">
+                                        No forums under this category yet.
+                                    </div>
+                                @endforelse
                             </div>
                         </div>
-                    </details>
-                @empty
-                    <div class="text-sm text-[var(--an-text-muted)]">No categories yet.</div>
-                @endforelse
-            </div>
-
-            <script>
-                window.__anExpandAll = function (open) {
-                    document.querySelectorAll('[data-an-accordion]').forEach((el) => {
-                        el.open = !!open;
-                    });
-                };
-            </script>
-        </x-admin.card>
-
-        {{-- RIGHT: Paragraph Templates --}}
-        <x-admin.card title="Paragraph templates" subtitle="Reusable paragraph blocks (by category label).">
-            <form method="POST" action="{{ route('admin.paragraph_templates.store') }}" class="space-y-3">
-                @csrf
-                <x-admin.ui.input name="category" label="Template category" placeholder="e.g. Gameplay / Story / Patch Notes" />
-                <x-admin.ui.textarea name="content" label="Content" rows="5" placeholder="Write your template content…"></x-admin.ui.textarea>
-
-                <div class="pt-2">
-                    <x-admin.ui.button type="submit">Add template</x-admin.ui.button>
+                    @empty
+                        <div class="rounded-2xl border p-5 text-sm"
+                             style="background: var(--an-card-2); border-color: var(--an-border); color: var(--an-text-muted);">
+                            Create categories first, then you can add forums under them.
+                        </div>
+                    @endforelse
                 </div>
-            </form>
 
-            <div class="mt-6 space-y-3">
-                @forelse($paragraphTemplates as $tpl)
-                    <details class="group rounded-2xl border border-[var(--an-border)] bg-[var(--an-card-2)]">
-                        <summary class="cursor-pointer list-none p-4">
-                            <div class="flex items-center justify-between gap-3">
-                                <div class="min-w-0">
-                                    <div class="truncate font-semibold text-[var(--an-text)]">{{ $tpl->category }}</div>
-                                    <div class="mt-1 text-xs text-[var(--an-text-muted)]">
-                                        ID: <span class="font-mono">{{ $tpl->id }}</span>
-                                    </div>
-                                </div>
-                                <x-admin.ui.badge tone="neutral">template</x-admin.ui.badge>
-                            </div>
-                        </summary>
+            </div>
+        </details>
 
-                        <div class="px-4 pb-4 pt-0 space-y-3">
-                            <form method="POST" action="{{ route('admin.paragraph_templates.update', $tpl) }}" class="space-y-3">
+        {{-- =========================
+            PARAGRAPH TEMPLATES
+        ========================== --}}
+        <details class="rounded-2xl border overflow-hidden"
+                 style="background: var(--an-card); border-color: var(--an-border); box-shadow: 0 18px 45px var(--an-shadow);">
+            <summary class="cursor-pointer select-none p-5 sm:p-6 flex items-center justify-between gap-4">
+                <div>
+                    <div class="text-lg font-semibold text-[var(--an-text)]">Paragraph Templates</div>
+                    <div class="text-sm text-[var(--an-text-muted)]">Reusable blocks for posts</div>
+                </div>
+                <span class="text-xs rounded-full border px-3 py-1"
+                      style="border-color: var(--an-border); background: var(--an-card-2); color: var(--an-text-muted);">
+                    {{ $paragraphTemplates->count() }} total
+                </span>
+            </summary>
+
+            <div class="px-5 sm:px-6 pb-6 space-y-5">
+
+                {{-- Create template (matches your OLD working field names: category + content) --}}
+                <div class="rounded-2xl border p-4"
+                     style="background: var(--an-card-2); border-color: var(--an-border);">
+                    <form method="POST" action="{{ route('admin.paragraph_templates.store') }}" class="grid gap-3">
+                        @csrf
+
+                        <input
+                            name="category"
+                            placeholder="Template category (e.g. Gameplay / Story / Patch Notes)"
+                            class="h-11 w-full rounded-xl border px-3 outline-none"
+                            style="background: var(--an-input-bg); border-color: var(--an-input-border); color: var(--an-input-text);"
+                        />
+
+                        <textarea
+                            name="content"
+                            rows="4"
+                            placeholder="Template content..."
+                            class="w-full rounded-xl border px-3 py-2 outline-none"
+                            style="background: var(--an-input-bg); border-color: var(--an-input-border); color: var(--an-input-text);"
+                        ></textarea>
+
+                        <button
+                            type="submit"
+                            class="h-11 rounded-xl px-4 font-semibold transition justify-self-start"
+                            style="background: var(--an-primary); color: var(--an-btn-text); box-shadow: 0 12px 30px var(--an-shadow);">
+                            Add Template
+                        </button>
+                    </form>
+
+                    <p class="mt-2 text-xs text-[var(--an-text-muted)]">
+                        Templates help admins write posts faster (re-usable blocks).
+                    </p>
+                </div>
+
+                {{-- List templates --}}
+                <div class="grid gap-3">
+                    @forelse($paragraphTemplates as $tpl)
+                        <div class="rounded-2xl border p-4"
+                             style="background: var(--an-card-2); border-color: var(--an-border);">
+
+                            <form method="POST" action="{{ route('admin.paragraph_templates.update', $tpl) }}" class="grid gap-3">
                                 @csrf
                                 @method('PUT')
 
-                                <x-admin.ui.input name="category" label="Category" value="{{ old('category', $tpl->category) }}" />
-                                <x-admin.ui.textarea name="content" label="Content" rows="5">{{ old('content', $tpl->content) }}</x-admin.ui.textarea>
+                                <input
+                                    name="category"
+                                    value="{{ old('category', $tpl->category ?? '') }}"
+                                    class="h-11 w-full rounded-xl border px-3 outline-none"
+                                    style="background: var(--an-input-bg); border-color: var(--an-input-border); color: var(--an-input-text);"
+                                />
 
-                                <div class="flex flex-wrap gap-2 pt-1">
-                                    <x-admin.ui.button type="submit" variant="secondary">Update</x-admin.ui.button>
+                                <textarea
+                                    name="content"
+                                    rows="4"
+                                    class="w-full rounded-xl border px-3 py-2 outline-none"
+                                    style="background: var(--an-input-bg); border-color: var(--an-input-border); color: var(--an-input-text);"
+                                >{{ old('content', $tpl->content ?? '') }}</textarea>
+
+                                <div class="flex flex-col sm:flex-row gap-2">
+                                    <button type="submit"
+                                            class="h-11 rounded-xl px-4 font-semibold transition"
+                                            style="background: var(--an-btn); color: var(--an-btn-text);">
+                                        Save
+                                    </button>
+
+                                    <form method="POST" action="{{ route('admin.paragraph_templates.destroy', $tpl) }}">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit"
+                                                onclick="return confirm('Delete this template?')"
+                                                class="h-11 rounded-xl px-4 font-semibold transition w-full sm:w-auto"
+                                                style="background: color-mix(in srgb, var(--an-danger) 20%, transparent); color: var(--an-danger); border: 1px solid color-mix(in srgb, var(--an-danger) 30%, var(--an-border));">
+                                            Delete
+                                        </button>
+                                    </form>
                                 </div>
                             </form>
-
-                            <form method="POST"
-                                  action="{{ route('admin.paragraph_templates.destroy', $tpl) }}"
-                                  onsubmit="return confirm('Delete this template?');">
-                                @csrf
-                                @method('DELETE')
-
-                                <x-admin.ui.button type="submit" variant="danger">Delete</x-admin.ui.button>
-                            </form>
                         </div>
-                    </details>
-                @empty
-                    <div class="text-sm text-[var(--an-text-muted)]">No templates yet.</div>
-                @endforelse
+                    @empty
+                        <div class="rounded-2xl border p-5 text-sm"
+                             style="background: var(--an-card-2); border-color: var(--an-border); color: var(--an-text-muted);">
+                            No templates yet. Add one above if you’re using paragraph templates.
+                        </div>
+                    @endforelse
+                </div>
+
             </div>
-        </x-admin.card>
+        </details>
+
     </div>
 </div>
 @endsection

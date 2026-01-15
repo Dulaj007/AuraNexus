@@ -1,7 +1,7 @@
 <?php
 
 namespace App\Http\Controllers\Admin;
-
+use Carbon\Carbon;
 use App\Http\Controllers\Controller;
 use App\Models\PageView;
 use App\Models\Permission;
@@ -10,7 +10,10 @@ use App\Models\User;
 use App\Models\UserLogin;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
+use Illuminate\Support\Facades\Storage;
+
 
 class UsersController extends Controller
 {
@@ -74,24 +77,58 @@ class UsersController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'role_id'       => ['required', 'exists:roles,id'],
-            'name'          => ['required', 'string', 'max:50'],
-            'username'      => ['required', 'string', 'max:30', 'alpha_dash', 'unique:users,username'],
-            'email'         => ['required', 'email', 'max:255', 'unique:users,email'],
-            'password'      => ['required', 'string', Password::min(8)],
-            'status'        => ['nullable', 'string', 'max:20'],
-            'age'           => ['nullable', 'integer', 'min:13', 'max:120'],
+            'role_id'  => ['required', 'exists:roles,id'],
+            'name'     => ['required', 'string', 'max:50'],
+            'username' => ['required', 'string', 'max:30', 'alpha_dash', 'unique:users,username'],
+            'email'    => ['required', 'email', 'max:255', 'unique:users,email'],
+            'password' => ['required', 'string', Password::min(8)],
+
+            // moderation fields (optional at creation time)
+            'status'            => ['nullable', Rule::in(['active', 'suspended', 'banned'])],
+            'restricted_reason' => ['nullable', 'string', 'max:500'],
+            'suspend_for_value' => ['nullable', 'integer', 'min:1', 'max:52'],
+            'suspend_for_unit'  => ['nullable', Rule::in(['days', 'weeks', 'months'])],
+
+            'age'      => ['nullable', 'integer', 'min:13', 'max:120'],
+            'bio'      => ['nullable', 'string', 'max:500'],
         ]);
 
         DB::transaction(function () use ($validated) {
-            $user = User::create([
+            $status = $validated['status'] ?? 'active';
+
+            $data = [
                 'name'              => $validated['name'],
                 'username'          => $validated['username'],
                 'email'             => $validated['email'],
                 'password'          => $validated['password'], // hashed by model cast/mutator
-                'status'            => $validated['status'] ?? 'active',
+                'status'            => $status,
+                'bio'               => $validated['bio'] ?? null,
                 'email_verified_at' => now(),
-            ]);
+            ];
+
+            // Apply moderation fields
+            if ($status === 'active') {
+                $data['suspended_until'] = null;
+                $data['banned_at'] = null;
+                $data['restricted_reason'] = null;
+            }
+
+            if ($status === 'banned') {
+                $data['banned_at'] = now();
+                $data['suspended_until'] = null;
+                $data['restricted_reason'] = $validated['restricted_reason'] ?? null;
+            }
+
+            if ($status === 'suspended') {
+                $value = (int)($validated['suspend_for_value'] ?? 1);
+                $unit  = $validated['suspend_for_unit'] ?? 'weeks';
+
+                $data['suspended_until'] = now()->add($unit, $value);
+                $data['banned_at'] = null;
+                $data['restricted_reason'] = $validated['restricted_reason'] ?? null;
+            }
+
+            $user = User::create($data);
 
             $user->roles()->sync([$validated['role_id']]);
         });
@@ -144,33 +181,150 @@ class UsersController extends Controller
         ));
     }
 
-    public function update(Request $request, User $user)
-    {
-        // IMPORTANT: your form uses name/username/email (not display_name)
-        $validated = $request->validate([
-            'name'     => ['nullable', 'string', 'max:50'],
-            'username' => ['required', 'string', 'max:30', 'alpha_dash', 'unique:users,username,' . $user->id],
-            'email'    => ['required', 'email', 'unique:users,email,' . $user->id],
-            'age'      => ['nullable', 'integer', 'min:13', 'max:120'],
-            'status'   => ['nullable', 'string', 'max:20'],
-            'bio'      => ['nullable', 'string', 'max:500'],
-        ]);
 
-        $oldUsername = $user->username;
 
-        $user->update($validated);
+public function update(Request $request, User $user)
+{
+    $editingSelf = auth()->id() === $user->id;
 
-        if ($oldUsername !== $user->username) {
-            return redirect()
-                ->route('admin.users.show', $user)
-                ->with('success', 'User updated. Username changed, redirected to new URL.');
+    $validated = $request->validate([
+        'name'     => ['nullable', 'string', 'max:50'],
+        'username' => ['required', 'string', 'max:30', 'alpha_dash', 'unique:users,username,' . $user->id],
+        'email'    => ['required', 'email', 'unique:users,email,' . $user->id],
+        'age'      => ['nullable', 'integer', 'min:13', 'max:120'],
+        'bio'      => ['nullable', 'string', 'max:500'],
+        'avatar' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
+        'remove_avatar' => ['nullable', 'boolean'],
+
+        'status'            => ['required', Rule::in(['active', 'suspended', 'banned'])],
+        'restricted_reason' => ['nullable', 'string', 'max:500'],
+
+        // optional quick duration (used if suspended_until is empty)
+        'suspend_for_value' => ['nullable', 'integer', 'min:1', 'max:525600'], // up to ~1 year in minutes
+        'suspend_for_unit'  => ['nullable', Rule::in(['minutes', 'hours', 'days', 'months'])],
+
+        // optional exact datetime
+        'suspended_until'   => ['nullable', 'date'],
+    ]);
+
+    if ($editingSelf && ($validated['status'] ?? 'active') !== 'active') {
+        return back()->withErrors([
+            'status' => 'You cannot suspend/ban your own account.',
+        ])->withInput();
+    }
+
+    $oldUsername = $user->username;
+    $status = $validated['status'];
+
+    $update = [
+        'name'     => $validated['name'] ?? null,
+        'username' => $validated['username'],
+        'email'    => $validated['email'],
+        'age'      => $validated['age'] ?? null,
+        'bio'      => $validated['bio'] ?? null,
+        'status'   => $status,
+    ];
+
+    if ($request->boolean('remove_avatar')) {
+    if ($user->avatar && Storage::disk('public')->exists($user->avatar)) {
+        Storage::disk('public')->delete($user->avatar);
+    }
+    $update['avatar'] = null;
+}
+
+    if ($status === 'active') {
+        $update['suspended_until']   = null;
+        $update['banned_at']         = null;
+        $update['restricted_reason'] = null;
+    }
+
+    if ($status === 'banned') {
+        $update['banned_at']         = $user->banned_at ?? now();
+        $update['suspended_until']   = null;
+        $update['restricted_reason'] = $validated['restricted_reason'] ?? null;
+    }
+
+    if ($status === 'suspended') {
+        $until = null;
+
+        if (!empty($validated['suspended_until'])) {
+            $until = Carbon::parse($validated['suspended_until']);
+        } else {
+            $value = (int)($validated['suspend_for_value'] ?? 60);
+            $unit  = $validated['suspend_for_unit'] ?? 'minutes';
+
+            $until = match ($unit) {
+                'minutes' => now()->addMinutes($value),
+                'hours'   => now()->addHours($value),
+                'days'    => now()->addDays($value),
+                'months'  => now()->addMonths($value),
+            };
         }
 
-        return back()->with('success', 'User updated.');
+        if ($until && $until->isPast()) {
+            return back()->withErrors([
+                'suspended_until' => 'Suspended until must be a future date/time.',
+            ])->withInput();
+        }
+
+        $update['suspended_until']   = $until;
+        $update['banned_at']         = null;
+        $update['restricted_reason'] = $validated['restricted_reason'] ?? null;
     }
+// ✅ Avatar upload wins
+if ($request->hasFile('avatar')) {
+
+    // delete old
+    if ($user->avatar && Storage::disk('public')->exists($user->avatar)) {
+        Storage::disk('public')->delete($user->avatar);
+    }
+
+    // store new
+    $path = $request->file('avatar')->store('avatars', 'public');
+    $update['avatar'] = $path;
+
+} elseif ($request->boolean('remove_avatar')) {
+
+    // delete old
+    if ($user->avatar && Storage::disk('public')->exists($user->avatar)) {
+        Storage::disk('public')->delete($user->avatar);
+    }
+
+    $update['avatar'] = null;
+}
+
+    $user->update($update);
+
+    // optional: if admin sets suspended_until in past by mistake, normalize now
+    $user->syncRestrictionState();
+
+    if ($oldUsername !== $user->username) {
+        return redirect()
+            ->route('admin.users.show', $user)
+            ->with('success', 'User updated. Username changed, redirected to new URL.');
+    }
+
+    return back()->with('success', 'User updated.');
+}
+
+
 
     public function destroy(User $user)
     {
+        if (auth()->id() === $user->id) {
+            return back()->withErrors(['admin' => 'You cannot delete your own account.']);
+        }
+
+        $adminRoleId = Role::where('name', 'admin')->value('id');
+
+        // prevent deleting the last admin
+        if ($adminRoleId && $user->roles()->where('roles.id', $adminRoleId)->exists()) {
+            $adminsCount = User::whereHas('roles', fn ($q) => $q->where('name', 'admin'))->count();
+            if ($adminsCount <= 1) {
+                return back()->withErrors(['admin' => 'You cannot delete the last admin.']);
+            }
+        }
+
         $user->delete();
         return redirect()->route('admin.users')->with('success', 'User deleted.');
     }
@@ -215,4 +369,5 @@ class UsersController extends Controller
 
         return back()->with('success', 'User role updated.');
     }
+    
 }
