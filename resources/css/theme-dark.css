@@ -1,0 +1,37 @@
+@import 'tailwindcss';
+
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../storage/framework/views/*.php';
+@source '../**/*.blade.php';
+@source '../**/*.js';
+
+:root{
+  --bg:#000000;
+  --bg-2:#000000;
+  --card:rgba(255,255,255,.04);
+  --card-2:rgba(255,255,255,.06);
+
+  --text:#e5e7eb;
+  --text-muted:rgba(229,231,235,.65);
+  --border:rgba(255,255,255,.10);
+  --shadow:rgba(0,0,0,.45);
+
+  --primary:#7c3aed;
+  --primary-2:#6d28d9;
+  --link:#60a5fa;
+
+  --success:#22c55e;
+  --warning:#f59e0b;
+  --danger:#ef4444;
+  --info:#38bdf8;
+
+  --btn:#111827;
+  --btn-text:#ffffff;
+  --btn-hover:#0b1220;
+
+  --input-bg:rgba(0,0,0,.25);
+  --input-text:#e5e7eb;
+  --input-border:rgba(255,255,255,.10);
+
+  --ring:rgba(124,58,237,.35);
+}
