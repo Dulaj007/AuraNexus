@@ -386,7 +386,92 @@ $avatarUrl = $user->avatar
                         </form>
                     @endif
                 </x-admin.card>
+                
+                {{-- Permission Overrides --}}
+                <x-admin.card title="Permission overrides" subtitle="Override role permissions for this user (allow / deny / inherit).">
+                    <form method="POST" action="{{ route('admin.users.permissions.update', $user) }}" class="space-y-4">
+                        @csrf
+                        @method('PUT')
+
+                        @php
+                            // Build map: permission_id => effect (allow/deny)
+                            $overrideMap = $user->permissionOverrides
+                                ? $user->permissionOverrides->pluck('pivot.effect', 'id')->toArray()
+                                : [];
+
+                            // Helper to keep old() after validation
+                            $oldOverrides = old('overrides', []);
+                        @endphp
+
+                        <div class="space-y-3">
+                            @foreach($allPermissions as $perm)
+                                @php
+                                    $current = $oldOverrides[$perm->id] ?? ($overrideMap[$perm->id] ?? 'inherit');
+                                @endphp
+
+                                <div class="flex flex-col gap-2 rounded-2xl border border-[var(--an-border)] bg-[var(--an-card-2)]/40 p-3">
+                                    <div class="flex items-center justify-between gap-3">
+                                        <div class="min-w-0">
+                                            <div class="text-sm font-semibold text-[var(--an-text)] truncate">
+                                                {{ $perm->name }}
+                                            </div>
+                                            @if(!empty($perm->description))
+                                                <div class="text-xs text-[var(--an-text-muted)]">
+                                                    {{ $perm->description }}
+                                                </div>
+                                            @endif
+                                        </div>
+
+                                        <div class="flex items-center gap-2">
+                                            {{-- Inherit --}}
+                                            <label class="inline-flex items-center gap-2 text-xs text-[var(--an-text-muted)]">
+                                                <input
+                                                    type="radio"
+                                                    name="overrides[{{ $perm->id }}]"
+                                                    value="inherit"
+                                                    @checked($current === 'inherit')
+                                                >
+                                                Inherit
+                                            </label>
+
+                                            {{-- Allow --}}
+                                            <label class="inline-flex items-center gap-2 text-xs text-[var(--an-text-muted)]">
+                                                <input
+                                                    type="radio"
+                                                    name="overrides[{{ $perm->id }}]"
+                                                    value="allow"
+                                                    @checked($current === 'allow')
+                                                >
+                                                Allow
+                                            </label>
+
+                                            {{-- Deny --}}
+                                            <label class="inline-flex items-center gap-2 text-xs text-[var(--an-text-muted)]">
+                                                <input
+                                                    type="radio"
+                                                    name="overrides[{{ $perm->id }}]"
+                                                    value="deny"
+                                                    @checked($current === 'deny')
+                                                >
+                                                Deny
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+
+                        <div class="flex items-center justify-between gap-3 border-t border-[var(--an-border)] pt-3">
+                            <div class="text-xs text-[var(--an-text-muted)]">
+                                “Inherit” = use role permissions. “Allow/Deny” overrides the role.
+                            </div>
+                            <x-admin.ui.button type="submit">Save overrides</x-admin.ui.button>
+                        </div>
+                    </form>
+                </x-admin.card>
             </div>
+
+
 
         </div>
     </x-admin.section>

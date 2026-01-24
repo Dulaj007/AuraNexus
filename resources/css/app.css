@@ -9,3 +9,88 @@
     --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
 }
+
+@keyframes an-gradient-move {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.an-gradient-animated {
+  background-size: 200% 200%;
+  animation: an-gradient-move 4s ease-in-out infinite alternate;
+
+}
+.an-gradient-animated-link {
+  background-size: 200% 200%;
+  animation: an-gradient-move 10s ease-in-out infinite alternate;
+
+}
+
+.an-gradient-animated-hover {
+  background-size: 200% 200%;
+}
+.an-gradient-animated-hover:hover {
+  animation: an-gradient-move 4s ease-in-out infinite alternate;
+}
+
+
+.marquee {
+    overflow: hidden;
+    width: 100%;
+}
+
+.marquee__inner {
+    display: flex;
+    width: max-content;
+    animation: marquee-left 50s linear infinite;
+}
+
+.marquee__inner_right {
+    display: flex;
+    width: max-content;
+    animation: marquee-left 50s linear infinite;
+    animation-direction: reverse;
+}
+
+
+.marquee__inner span {
+    padding-right: 0.5rem; /* spacing BETWEEN words only */
+    font-size: 1.125rem; /* text-normal */
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    white-space: nowrap;
+    
+}
+
+.marquee__inner_right span {
+    padding-right: 0.5rem; /* spacing BETWEEN words only */
+    font-size: 1.125rem; /* text-normal */
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    white-space: nowrap;
+    
+}
+
+/* Pause on hover (desktop UX) */
+.marquee:hover .marquee__inner {
+    animation-play-state: paused;
+}
+
+@keyframes marquee-left {
+    0% {
+        transform: translateX(0);
+    }
+    100% {
+        transform: translateX(-50%);
+    }
+}
+
+@keyframes marquee-right {
+    0% {
+        transform: translateX(0);
+    }
+    100% {
+        transform: translateX(50%);
+    }
+}

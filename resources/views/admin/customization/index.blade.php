@@ -43,21 +43,33 @@
                 {{-- Create category --}}
                 <div class="rounded-2xl border p-4"
                      style="background: var(--an-card-2); border-color: var(--an-border);">
-                    <form method="POST" action="{{ route('admin.categories.store') }}" class="grid sm:grid-cols-[1fr_auto] gap-3">
-                        @csrf
-                        <input
-                            name="name"
-                            placeholder="New category name"
-                            class="h-11 w-full rounded-xl border px-3 outline-none"
-                            style="background: var(--an-input-bg); border-color: var(--an-input-border); color: var(--an-input-text);"
-                        />
-                        <button
-                            type="submit"
-                            class="h-11 rounded-xl px-4 font-semibold transition"
-                            style="background: var(--an-primary); color: var(--an-btn-text); box-shadow: 0 12px 30px var(--an-shadow);">
-                            Add
-                        </button>
-                    </form>
+                        <form method="POST" action="{{ route('admin.categories.store') }}" class="grid gap-3">
+                            @csrf
+
+                            <div class="grid sm:grid-cols-2 gap-3">
+                                <input
+                                    name="name"
+                                    placeholder="New category name"
+                                    class="h-11 w-full rounded-xl border px-3 outline-none"
+                                    style="background: var(--an-input-bg); border-color: var(--an-input-border); color: var(--an-input-text);"
+                                />
+
+                                <input
+                                    name="description"
+                                    placeholder="Short description (optional)"
+                                    class="h-11 w-full rounded-xl border px-3 outline-none"
+                                    style="background: var(--an-input-bg); border-color: var(--an-input-border); color: var(--an-input-text);"
+                                />
+                            </div>
+
+                            <button
+                                type="submit"
+                                class="h-11 rounded-xl px-4 font-semibold transition justify-self-start"
+                                style="background: var(--an-primary); color: var(--an-btn-text); box-shadow: 0 12px 30px var(--an-shadow);">
+                                Add
+                            </button>
+                        </form>
+
                     <p class="mt-2 text-xs text-[var(--an-text-muted)]">
                         Tip: keep names short & clear (ex: Announcements, Support, Feedback).
                     </p>
@@ -72,23 +84,34 @@
                             <div class="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
                                 {{-- Update --}}
                                 <form method="POST" action="{{ route('admin.categories.update', $category) }}"
-                                      class="flex-1 flex flex-col sm:flex-row gap-2">
+                                    class="flex-1 grid gap-2">
                                     @csrf
                                     @method('PUT')
 
-                                    <input
-                                        name="name"
-                                        value="{{ old('name', $category->name) }}"
-                                        class="h-11 w-full rounded-xl border px-3 outline-none"
-                                        style="background: var(--an-input-bg); border-color: var(--an-input-border); color: var(--an-input-text);"
-                                    />
+                                    <div class="grid sm:grid-cols-2 gap-2">
+                                        <input
+                                            name="name"
+                                            value="{{ old('name', $category->name) }}"
+                                            class="h-11 w-full rounded-xl border px-3 outline-none"
+                                            style="background: var(--an-input-bg); border-color: var(--an-input-border); color: var(--an-input-text);"
+                                        />
+
+                                        <input
+                                            name="description"
+                                            value="{{ old('description', $category->description ?? '') }}"
+                                            placeholder="Description (optional)"
+                                            class="h-11 w-full rounded-xl border px-3 outline-none"
+                                            style="background: var(--an-input-bg); border-color: var(--an-input-border); color: var(--an-input-text);"
+                                        />
+                                    </div>
 
                                     <button type="submit"
-                                            class="h-11 rounded-xl px-4 font-semibold transition"
+                                            class="h-11 rounded-xl px-4 font-semibold transition justify-self-start"
                                             style="background: var(--an-btn); color: var(--an-btn-text);">
                                         Save
                                     </button>
                                 </form>
+
 
                                 {{-- Delete --}}
                                 <form method="POST" action="{{ route('admin.categories.destroy', $category) }}">
@@ -146,34 +169,44 @@
                 {{-- Create forum --}}
                 <div class="rounded-2xl border p-4"
                      style="background: var(--an-card-2); border-color: var(--an-border);">
-                    <form method="POST" action="{{ route('admin.forums.store') }}" class="grid gap-3 sm:grid-cols-3">
+                    <form method="POST" action="{{ route('admin.forums.store') }}" class="grid gap-3">
                         @csrf
 
-                        <input
-                            name="name"
-                            placeholder="Forum name"
-                            class="h-11 w-full rounded-xl border px-3 outline-none"
-                            style="background: var(--an-input-bg); border-color: var(--an-input-border); color: var(--an-input-text);"
-                        />
+                        <div class="grid sm:grid-cols-3 gap-3">
+                            <input
+                                name="name"
+                                placeholder="Forum name"
+                                class="h-11 w-full rounded-xl border px-3 outline-none"
+                                style="background: var(--an-input-bg); border-color: var(--an-input-border); color: var(--an-input-text);"
+                            />
 
-                        <select
-                            name="category_id"
-                            class="h-11 w-full rounded-xl border px-3 appearance-none outline-none"
-                            style="background: var(--an-input-bg); border-color: var(--an-input-border); color: var(--an-input-text);"
-                        >
-                            <option value="">Select category</option>
-                            @foreach($categories as $category)
-                                <option value="{{ $category->id }}">{{ $category->name }}</option>
-                            @endforeach
-                        </select>
+                            <select
+                                name="category_id"
+                                class="h-11 w-full rounded-xl border px-3 appearance-none outline-none"
+                                style="background: var(--an-input-bg); border-color: var(--an-input-border); color: var(--an-input-text);"
+                            >
+                                <option value="">Select category</option>
+                                @foreach($categories as $category)
+                                    <option value="{{ $category->id }}">{{ $category->name }}</option>
+                                @endforeach
+                            </select>
+
+                            <input
+                                name="description"
+                                placeholder="Short description (optional)"
+                                class="h-11 w-full rounded-xl border px-3 outline-none"
+                                style="background: var(--an-input-bg); border-color: var(--an-input-border); color: var(--an-input-text);"
+                            />
+                        </div>
 
                         <button
                             type="submit"
-                            class="h-11 rounded-xl px-4 font-semibold transition"
+                            class="h-11 rounded-xl px-4 font-semibold transition justify-self-start"
                             style="background: var(--an-primary); color: var(--an-btn-text); box-shadow: 0 12px 30px var(--an-shadow);">
                             Add Forum
                         </button>
                     </form>
+
 
                     <p class="mt-2 text-xs text-[var(--an-text-muted)]">
                         Example: “General Discussion”, “Bug Reports”, “Suggestions”.
@@ -211,35 +244,46 @@
 
                                             {{-- Update forum --}}
                                             <form method="POST" action="{{ route('admin.forums.update', $forum) }}"
-                                                  class="flex-1 flex flex-col sm:flex-row gap-2">
+                                                class="flex-1 grid gap-2">
                                                 @csrf
                                                 @method('PUT')
 
-                                                <input
-                                                    name="name"
-                                                    value="{{ old('name', $forum->name) }}"
-                                                    class="h-11 w-full rounded-xl border px-3 outline-none"
-                                                    style="background: var(--an-input-bg); border-color: var(--an-input-border); color: var(--an-input-text);"
-                                                />
+                                                <div class="grid sm:grid-cols-3 gap-2">
+                                                    <input
+                                                        name="name"
+                                                        value="{{ old('name', $forum->name) }}"
+                                                        class="h-11 w-full rounded-xl border px-3 outline-none"
+                                                        style="background: var(--an-input-bg); border-color: var(--an-input-border); color: var(--an-input-text);"
+                                                    />
 
-                                                <select
-                                                    name="category_id"
-                                                    class="h-11 w-full sm:w-56 rounded-xl border px-3 appearance-none outline-none"
-                                                    style="background: var(--an-input-bg); border-color: var(--an-input-border); color: var(--an-input-text);"
-                                                >
-                                                    @foreach($categories as $c)
-                                                        <option value="{{ $c->id }}" @selected($forum->category_id == $c->id)>
-                                                            {{ $c->name }}
-                                                        </option>
-                                                    @endforeach
-                                                </select>
+                                                    <select
+                                                        name="category_id"
+                                                        class="h-11 w-full rounded-xl border px-3 appearance-none outline-none"
+                                                        style="background: var(--an-input-bg); border-color: var(--an-input-border); color: var(--an-input-text);"
+                                                    >
+                                                        @foreach($categories as $c)
+                                                            <option value="{{ $c->id }}" @selected($forum->category_id == $c->id)>
+                                                                {{ $c->name }}
+                                                            </option>
+                                                        @endforeach
+                                                    </select>
+
+                                                    <input
+                                                        name="description"
+                                                        value="{{ old('description', $forum->description ?? '') }}"
+                                                        placeholder="Description (optional)"
+                                                        class="h-11 w-full rounded-xl border px-3 outline-none"
+                                                        style="background: var(--an-input-bg); border-color: var(--an-input-border); color: var(--an-input-text);"
+                                                    />
+                                                </div>
 
                                                 <button type="submit"
-                                                        class="h-11 rounded-xl px-4 font-semibold transition"
+                                                        class="h-11 rounded-xl px-4 font-semibold transition justify-self-start"
                                                         style="background: var(--an-btn); color: var(--an-btn-text);">
                                                     Save
                                                 </button>
                                             </form>
+
 
                                             {{-- Delete forum --}}
                                             <form method="POST" action="{{ route('admin.forums.destroy', $forum) }}">

@@ -5,6 +5,7 @@ use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 
 use App\Http\Middleware\AdminMiddleware;
+use App\Http\Middleware\EnsureRegistrationsOpen;
 use App\Http\Middleware\EnsureUserHasPermission;
 use App\Http\Middleware\SyncPermissionSession;
 use App\Http\Middleware\AccountStatusMiddleware;
@@ -30,6 +31,8 @@ return Application::configure(basePath: dirname(__DIR__))
 
             // ✅ main restriction logic
             'account.status' => AccountStatusMiddleware::class,
+
+            'registrations.open' => EnsureRegistrationsOpen::class,
         ]);
 
         /**

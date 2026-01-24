@@ -25,8 +25,11 @@ public function posts()
 
 public function latestPublishedPost()
 {
-    return $this->hasOne(\App\Models\Post::class)->latestOfMany('created_at');
+    return $this->hasOne(\App\Models\Post::class)
+        ->where('status', 'published')
+        ->latestOfMany('created_at');
 }
+
 
 
     public function tags()

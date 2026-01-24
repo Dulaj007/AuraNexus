@@ -79,6 +79,43 @@
                 <span>Customization</span>
             </a>
 
+            {{-- ✅ NEW: Settings --}}
+            <a href="{{ route('admin.settings.index') }}"
+   class="{{ $linkBase }}"
+   style="{{ request()->routeIs('admin.settings*') ? $active : $inactive }} color: {{ request()->routeIs('admin.settings*') ? 'var(--an-text)' : 'var(--an-text-muted)' }};">
+    <span>Settings</span>
+
+
+                <span class="ml-2 inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold"
+                      style="background: color-mix(in srgb, var(--an-primary) 16%, transparent); color: var(--an-primary); border:1px solid color-mix(in srgb, var(--an-primary) 22%, transparent);">
+                    SEO
+                </span>
+            </a>
+
+            {{-- ✅ UI → Home Tag Cards --}}
+            <a href="{{ route('admin.ui.home-tag-cards.index') }}"
+               class="{{ $linkBase }}"
+               style="{{ request()->routeIs('admin.ui.home-tag-cards*') ? $active : $inactive }} color: {{ request()->routeIs('admin.ui.home-tag-cards*') ? 'var(--an-text)' : 'var(--an-text-muted)' }};">
+                <span>Home Tag Cards</span>
+
+                <span class="ml-2 inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold"
+                      style="background: color-mix(in srgb, var(--an-primary) 16%, transparent); color: var(--an-primary); border:1px solid color-mix(in srgb, var(--an-primary) 22%, transparent);">
+                    UI
+                </span>
+            </a>
+
+            {{-- Ads --}}
+            <a href="{{ route('admin.ads.index') }}"
+               class="{{ $linkBase }}"
+               style="{{ request()->routeIs('admin.ads.*') ? $active : $inactive }} color: {{ request()->routeIs('admin.ads.*') ? 'var(--an-text)' : 'var(--an-text-muted)' }};">
+                <span>Ads</span>
+
+                <span class="ml-2 inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold"
+                      style="background: color-mix(in srgb, var(--an-primary) 16%, transparent); color: var(--an-primary); border:1px solid color-mix(in srgb, var(--an-primary) 22%, transparent);">
+                    NEW
+                </span>
+            </a>
+
             <a href="{{ route('admin.reports') }}"
                class="{{ $linkBase }}"
                style="{{ request()->routeIs('admin.reports*') ? $active : $inactive }} color: {{ request()->routeIs('admin.reports*') ? 'var(--an-text)' : 'var(--an-text-muted)' }};">

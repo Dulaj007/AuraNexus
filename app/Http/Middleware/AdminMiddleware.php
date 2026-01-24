@@ -17,28 +17,24 @@ class AdminMiddleware
      *      - Has role "admin"
      *      - OR has permission "login_admin_panel"
      */
-    public function handle(Request $request, Closure $next)
-    {
-        $user = Auth::user();
+public function handle(Request $request, Closure $next)
+{
+    $user = Auth::user();
 
-        // Not logged in → go to login
-        if (!$user) {
-            return redirect()
-                ->route('login')
-                ->with('error', 'Please log in to access the admin panel.');
-        }
-
-        // ✅ Allow admin OR explicit permission
-        if (
-            $user->hasRole('admin') ||
-            $user->hasPermission('login_admin_panel')
-        ) {
-            return $next($request);
-        }
-
-        // Logged in but not authorized → go home
+    if (!$user) {
         return redirect()
-            ->route('home')
-            ->with('error', 'You do not have permission to access the admin panel.');
+            ->route('login')
+            ->with('error', 'Please log in to access the admin panel.');
     }
+
+    // ✅ rely on SyncPermissionSession
+    if ($request->session()->get('can_login_admin_panel') === true) {
+        return $next($request);
+    }
+
+    return redirect()
+        ->route('home')
+        ->with('error', 'You do not have permission to access the admin panel.');
+}
+
 }

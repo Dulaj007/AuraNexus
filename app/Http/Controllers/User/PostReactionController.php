@@ -7,6 +7,7 @@ use App\Models\Post;
 use App\Models\PostReaction;
 use App\Models\UserActivity;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class PostReactionController extends Controller
 {
@@ -14,46 +15,63 @@ class PostReactionController extends Controller
     {
         $user = $request->user();
         if (!$user) {
-            abort(403); // must be logged in
+            abort(403);
         }
 
-        $existing = PostReaction::where('post_id', $post->id)
-            ->where('user_id', $user->id)
-            ->where('type', 'like')
-            ->first();
+        DB::transaction(function () use ($request, $user, $post) {
 
-        $didReact = false;
+            $existing = PostReaction::where('post_id', $post->id)
+                ->where('user_id', $user->id)
+                ->where('type', 'like')
+                ->first();
 
-        if ($existing) {
-            $existing->delete();
             $didReact = false;
-        } else {
-            PostReaction::create([
-                'post_id' => $post->id,
-                'user_id' => $user->id,
-                'type'    => 'like',
-            ]);
-            $didReact = true;
-        }
 
-        // ✅ activity log
-        $event = $didReact ? 'post_liked' : 'post_unliked';
+            if ($existing) {
+                // Unlike
+                $existing->delete();
+                $didReact = false;
 
-        $this->logActivity(
-            $request,
-            (int) $user->id,
-            $event,
-            Post::class,
-            (int) $post->id,
-            ['type' => 'like']
-        );
+                // ✅ Decrease post owner's reputation (if not self-like)
+                if ((int) $post->user_id !== (int) $user->id) {
+                    DB::table('users')
+                        ->where('id', $post->user_id)
+                        ->where('reputation_points', '>', 0)
+                        ->decrement('reputation_points', 1);
+                }
+            } else {
+                // Like
+                PostReaction::create([
+                    'post_id' => $post->id,
+                    'user_id' => $user->id,
+                    'type'    => 'like',
+                ]);
+                $didReact = true;
+
+                // ✅ Increase post owner's reputation (if not self-like)
+                if ((int) $post->user_id !== (int) $user->id) {
+                    DB::table('users')
+                        ->where('id', $post->user_id)
+                        ->increment('reputation_points', 1);
+                }
+            }
+
+            // ✅ activity log
+            $event = $didReact ? 'post_liked' : 'post_unliked';
+
+            $this->logActivity(
+                $request,
+                (int) $user->id,
+                $event,
+                Post::class,
+                (int) $post->id,
+                ['type' => 'like']
+            );
+        });
 
         return back();
     }
 
-    /* ============================================================
-     |  ACTIVITY LOGGER (UserActivity)
-     ============================================================ */
     private function logActivity(
         Request $request,
         int $userId,

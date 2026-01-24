@@ -1,3 +1,4 @@
+{{-- C:\xampp\htdocs\AuraNexus\resources\views\posting\create.blade.php --}}
 @extends('layouts.posting')
 
 @php
@@ -14,33 +15,70 @@
     $existingTagNames = $existingTagNames ?? [];
     $existingHighlightName = $existingHighlightName ?? '';
     $existingParagraph = $existingParagraph ?? null;
+
+    // Theme helpers
+    $glass  = 'rounded-3xl mx-2 border border-[var(--an-border)] bg-[color:var(--an-card)]/70 backdrop-blur-xl';
+    $shadow = 'shadow-[0_16px_55px_rgba(0,0,0,0.28)]';
+
+    $label = 'text-sm font-semibold text-[var(--an-text)]';
+    $hint  = 'text-xs text-[var(--an-text-muted)] mt-1';
+
+    $inputBase = 'w-full rounded-2xl border border-[var(--an-border)] bg-[color:var(--an-bg)]/35
+                  px-4 py-3 text-sm text-[var(--an-text)]
+                  outline-none focus:ring-2 focus:ring-[var(--an-ring)]/60 focus:border-[var(--an-border)]
+                  placeholder:text-[var(--an-text-muted)]';
+
+    $btnPrimary = 'inline-flex items-center justify-center gap-2 rounded-2xl px-5 py-3 text-sm font-extrabold
+                   border transition focus:outline-none focus:ring-2 focus:ring-[var(--an-ring)]
+                   active:scale-[0.98]';
 @endphp
 
 @section('title', $isEdit ? 'Update Post' : 'Create a Post')
 
 @section('content')
-<form id="postForm" action="{{ $formAction }}" method="POST" class="space-y-6">
+<form id="postForm" action="{{ $formAction }}" method="POST" class="space-y-4 sm:space-y-6">
     @csrf
     @if($isEdit)
         @method('PUT')
     @endif
 
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {{-- Left (main) --}}
-        <div class="lg:col-span-2 space-y-6">
+    {{-- Header --}}
+    <div class="px-3 sm:px-0">
+        <div class="flex flex-col gap-1">
+            <h1 class="text-xl sm:text-2xl font-extrabold tracking-tight text-[var(--an-text)]">
+                {{ $isEdit ? 'Update Post' : 'Create a Post' }}
+            </h1>
+            <p class="text-sm text-[var(--an-text-muted)]">
+                Read posting rules before posting. Any rule breaking can end up perminant bann of your account 
+            </p>
+        </div>
+    </div>
 
-            <x-posting.card>
-                <div class="space-y-5">
-                    <x-posting.field label="Title">
-                        <x-posting.input
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+
+        {{-- Left (main) --}}
+        <div class="lg:col-span-2 space-y-4 sm:space-y-6">
+
+            {{-- Basic info --}}
+            <div class="{{ $glass }} {{ $shadow }} overflow-hidden">
+                <div class="p-4 sm:p-6 space-y-3">
+                    <div>
+                        <div class="{{ $label }}">Title</div>
+                        <div class="{{ $hint }}">Keep it short and clear.</div>
+
+                        <input
                             name="title"
+                            class="{{ $inputBase }} mt-3"
                             placeholder="Type a clear title..."
                             value="{{ old('title', $isEdit ? ($post->title ?? '') : '') }}"
                         />
-                    </x-posting.field>
+                    </div>
 
-                    <x-posting.field label="Forum">
-                        <x-posting.select name="forum_id">
+                    <div>
+                        <div class="{{ $label }}">Forum</div>
+                        <div class="{{ $hint }}">Choose where this post belongs.</div>
+
+                        <select name="forum_id" class="{{ $inputBase }} mt-3">
                             <option value="">Select a forum</option>
                             @foreach($forums as $forum)
                                 <option
@@ -50,32 +88,39 @@
                                     {{ $forum->name }}
                                 </option>
                             @endforeach
-                        </x-posting.select>
-                    </x-posting.field>
+                        </select>
+                    </div>
 
                     {{-- Tag chip input --}}
-                    <x-posting.field
-                        label="Tags"
-                        hint="Type a tag name and press Enter (or Go/Done on mobile) to add. Then choose one highlight tag."
-                    >
-                        <div class="space-y-3">
-                            <div class="flex gap-2">
-                                <input
-                                    id="tagSearch"
-                                    type="text"
-                                    class="w-full rounded-lg border border-white/10 bg-black/40 px-3 py-2 outline-none focus:border-white/20"
-                                    inputmode="text"
-                                    enterkeyhint="done"
-                                    autocomplete="off"
-                                    autocapitalize="none"
-                                    spellcheck="false"
-                                    placeholder="Type a tag and press Enter..."
-                                />
-                                <button type="button" id="clearTags"
-                                    class="rounded-lg border border-white/10 px-3 py-2 text-sm text-white/70 hover:text-white hover:border-white/20">
-                                    Clear
-                                </button>
+                    <div>
+                        <div class="flex items-start justify-between gap-3">
+                            <div class="min-w-0">
+                                <div class="{{ $label }}">Tags</div>
+                                <div class="{{ $hint }}">
+                                    Try to add short tags.
+                                </div>
                             </div>
+                            <button type="button" id="clearTags"
+                                class="shrink-0 rounded-2xl border border-[var(--an-border)]
+                                       bg-[color:var(--an-card)]/40 px-4 py-2 text-xs font-semibold
+                                       text-[var(--an-text-muted)] hover:text-[var(--an-text)]
+                                       hover:bg-[color:var(--an-card)]/70">
+                                Clear
+                            </button>
+                        </div>
+
+                        <div class="mt-3 space-y-3">
+                            <input
+                                id="tagSearch"
+                                type="text"
+                                class="{{ $inputBase }}"
+                                inputmode="text"
+                                enterkeyhint="done"
+                                autocomplete="off"
+                                autocapitalize="none"
+                                spellcheck="false"
+                                placeholder="Type a tag and press Enter..."
+                            />
 
                             <div id="tagChips" class="flex flex-wrap gap-2"></div>
 
@@ -83,57 +128,61 @@
                             <div id="tagHiddenInputs"></div>
 
                             <div>
-                                <label class="block text-sm text-white/80 mb-2">Highlight Tag (optional)</label>
+                                <label class="block {{ $label }} mb-2">Highlight Tag (optional)</label>
                                 <select
                                     name="highlight_tag_name"
                                     id="highlightTagSelect"
-                                    class="w-full rounded-lg border border-white/10 bg-black/40 px-3 py-2 outline-none focus:border-white/20"
+                                    class="{{ $inputBase }}"
                                 >
                                     <option value="">Select highlight tag</option>
                                     {{-- options filled by JS based on selected tags --}}
                                 </select>
                             </div>
                         </div>
-                    </x-posting.field>
-                </div>
-            </x-posting.card>
+                    </div>
 
-            {{-- Content editor (no 3rd party) --}}
-            <x-posting.card>
-                <x-posting.field
-                    label="Content"
-                    hint="You can paste multiple links line by line and image URLs. Keep sections like: Download Links:, Watch Online:, Click image to see in high quality:"
-                >
-                    <x-posting.textarea
+                </div>
+            </div>
+
+            {{-- Content editor --}}
+            <div class="{{ $glass }} {{ $shadow }} overflow-hidden">
+                <div class="p-3 sm:p-6 space-y-3">
+                    <div class="{{ $label }} pl-1 pt-1 text-base">Content</div>
+                    <div class="{{ $hint }} pl-2">
+                        You can paste multiple links line by line and image URLs. Keep sections like: Download Links:, Watch Online:, Then image hotlinks 
+                    </div>
+
+                    <textarea
                         name="content"
                         rows="16"
+                        class="{{ $inputBase }} min-h-[320px] font-mono text-[13px] leading-6"
                         placeholder="Download Links:
 https://...
 
 Watch Online:
 https://...
 
-Click image to see in high quality:
+Images:
 https://imagehost.com/your-image.jpg
 "
-                    >{{ old('content', $isEdit ? ($post->content ?? '') : '') }}</x-posting.textarea>
-                </x-posting.field>
-            </x-posting.card>
+                    >{{ old('content', $isEdit ? ($post->content ?? '') : '') }}</textarea>
+                </div>
+            </div>
 
             {{-- Paragraph template picker --}}
-            <x-posting.card>
-                <div class="space-y-4">
+            <div class="{{ $glass }} {{ $shadow }} overflow-hidden">
+                <div class="p-4 sm:p-6 space-y-4">
                     <div>
-                        <h3 class="font-semibold">Paragraph Templates</h3>
-                        <p class="text-sm text-white/60">Pick a template, edit it, and we’ll save it to post_paragraphs.</p>
+                        <h3 class="text-sm font-semibold text-[var(--an-text)]">Paragraph Templates</h3>
+                        <p class="text-sm pl-1 text-[var(--an-text-muted)] mt-1">
+                            Pick a template, edit it according to your post. Do not use the same template
+                        </p>
                     </div>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div class="space-y-2">
-                            <label class="block text-sm text-white/80">Template Category</label>
-                            <select id="paraCategory"
-                                class="w-full rounded-lg border border-white/10 bg-black/40 px-3 py-2 outline-none focus:border-white/20"
-                            >
+                            <label class="block {{ $label }}">Template Category</label>
+                            <select id="paraCategory" class="{{ $inputBase }}">
                                 <option value="">Select category</option>
                                 @foreach($templates->keys() as $cat)
                                     <option value="{{ $cat }}">{{ $cat }}</option>
@@ -142,67 +191,86 @@ https://imagehost.com/your-image.jpg
                         </div>
 
                         <div class="space-y-2">
-                            <label class="block text-sm text-white/80">Templates</label>
-                            <select name="paragraph_template_id" id="paraTemplate"
-                                class="w-full rounded-lg border border-white/10 bg-black/40 px-3 py-2 outline-none focus:border-white/20"
-                            >
+                            <label class="block {{ $label }}">Templates</label>
+                            <select name="paragraph_template_id" id="paraTemplate" class="{{ $inputBase }}">
                                 <option value="">Select template</option>
                             </select>
                         </div>
                     </div>
 
-                    <div id="paraPreview" class="rounded-lg border border-white/10 bg-black/30 p-3 text-sm text-white/70 hidden"></div>
+                    <div id="paraPreview"
+                         class="hidden rounded-2xl border border-[var(--an-border)]
+                                bg-[color:var(--an-bg)]/25 p-4 text-sm text-[var(--an-text)]/80"></div>
 
                     <div class="space-y-2">
-                        <label class="block text-sm text-white/80">Edit Paragraph</label>
+                        <label class="block {{ $label }}">Edit Paragraph</label>
                         <textarea
                             name="paragraph_content"
                             id="paraEdit"
                             rows="6"
-                            class="w-full rounded-lg border border-white/10 bg-black/40 px-3 py-2 outline-none focus:border-white/20"
+                            class="{{ $inputBase }}"
                             placeholder="Select a template to start editing..."
                         >{{ old('paragraph_content', $isEdit ? ($existingParagraph->content ?? '') : '') }}</textarea>
                     </div>
                 </div>
-            </x-posting.card>
+            </div>
 
             {{-- Optional edit reason --}}
             @if($isEdit)
-                <x-posting.card>
-                    <x-posting.field
-                        label="Edit reason (optional)"
-                        hint="This is saved to edit logs (helps moderators track changes)."
-                    >
-                        <x-posting.textarea name="edit_reason" rows="3" placeholder="Why are you updating this post?">{{ old('edit_reason') }}</x-posting.textarea>
-                    </x-posting.field>
-                </x-posting.card>
+                <div class="{{ $glass }} {{ $shadow }} overflow-hidden">
+                    <div class="p-4 sm:p-6 space-y-3">
+                        <div class="{{ $label }}">Edit reason (optional)</div>
+                        <div class="{{ $hint }}">This is saved to edit logs (helps moderators track changes).</div>
+
+                        <textarea
+                            name="edit_reason"
+                            rows="3"
+                            class="{{ $inputBase }}"
+                            placeholder="Why are you updating this post?"
+                        >{{ old('edit_reason') }}</textarea>
+                    </div>
+                </div>
             @endif
 
-            <div class="flex items-center gap-3">
-                <button type="submit" class="rounded-lg bg-indigo-600 px-4 py-2 font-medium hover:bg-indigo-500">
+            {{-- Actions --}}
+            <div class="flex flex-col sm:flex-row sm:items-center mx-2  gap-3">
+                <button type="submit"
+                        class="{{ $btnPrimary }}"
+                        style="border-color: color-mix(in srgb, var(--an-primary) 35%, var(--an-border));
+                               background: color-mix(in srgb, var(--an-primary) 18%, transparent);
+                               color: var(--an-text);">
                     {{ $submitText }}
                 </button>
-                <a href="/" class="text-white/60 hover:text-white">Cancel</a>
+
+                <a href="/"
+                   class="inline-flex items-center justify-center rounded-2xl px-5 py-3 text-sm font-semibold
+                          border border-[var(--an-border)]
+                          bg-[color:var(--an-card)]/40
+                          text-[var(--an-text-muted)] hover:text-[var(--an-text)]
+                          hover:bg-[color:var(--an-card)]/70">
+                    Cancel
+                </a>
             </div>
 
         </div>
 
         {{-- Right (sidebar) --}}
-        <div class="space-y-6">
-            <x-posting.card>
-                <h3 class="font-semibold mb-2">SEO Tips</h3>
-                <ul class="text-sm text-white/60 space-y-2 list-disc pl-5">
-                    <li>Use a clear title with keywords.</li>
-                    <li>Put image URLs on their own line (jpg/png/webp) so we can detect them for JSON-LD.</li>
-                    <li>Keep “Download Links / Watch Online” as headings.</li>
-                    <li>Your saved paragraph will be rendered as a normal &lt;p&gt; later for extra indexable content.</li>
-                </ul>
-            </x-posting.card>
+        <div class="space-y-4 sm:space-y-6">
 
-            <x-posting.card>
-                <h3 class="font-semibold mb-2">Tags</h3>
-                <p class="text-sm text-white/60">Type any tag and press Enter/Done to add it. (Autocomplete can be added later.)</p>
-            </x-posting.card>
+            <div class="{{ $glass }} {{ $shadow }} overflow-hidden">
+                <div class="p-4 sm:p-6">
+                    <h3 class="text-base font-extrabold text-[var(--an-text)] mb-2">Posting Tips</h3>
+                    <ul class="text-sm text-[var(--an-text-muted)] space-y-2 list-disc pl-5">
+                        <li>Use a clear title with keywords.</li>
+                        <li>Put image URLs on their own line (jpg/png/webp).</li>
+                        <li>Keep “Download Links / Watch Online” as headings.</li>
+                        <li>The saved paragraph renders later as a normal text block.</li>
+                    </ul>
+                </div>
+            </div>
+
+
+
         </div>
     </div>
 </form>
@@ -252,7 +320,10 @@ function renderTags() {
   [...selected].forEach((name) => {
     const chip = document.createElement('button');
     chip.type = 'button';
-    chip.className = 'px-3 py-1 rounded-lg bg-white/10 border border-white/10 text-sm hover:border-white/20';
+    chip.className =
+      'px-3 py-1.5 rounded-2xl border border-[var(--an-border)] ' +
+      'bg-[color:var(--an-card)]/55 text-sm text-[var(--an-text)] ' +
+      'hover:bg-[color:var(--an-card)]/75 active:scale-[0.98]';
     chip.textContent = name + ' ×';
     chip.addEventListener('click', () => {
       selected.delete(name);

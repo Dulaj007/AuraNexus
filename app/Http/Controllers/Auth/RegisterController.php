@@ -9,16 +9,49 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Mail;
 use Carbon\Carbon;
+use App\Support\SiteSettings;
 
 class RegisterController extends Controller
 {
+    /**
+     * ✅ Central helper: check if registrations are open (from settings table)
+     */
+    protected function registrationsOpen(): bool
+    {
+        $settings = class_exists(SiteSettings::class) ? SiteSettings::public() : [];
+        return (int)($settings['registrations_open'] ?? 1) === 1;
+    }
+
+    /**
+     * ✅ Central helper: get site name (for messages)
+     */
+    protected function siteName(): string
+    {
+        $settings = class_exists(SiteSettings::class) ? SiteSettings::public() : [];
+        return (string)($settings['site_name'] ?? config('app.name', 'Site'));
+    }
+
     public function show()
     {
+        // ✅ If registrations are closed, show the closed page instead of the form
+        if (!$this->registrationsOpen()) {
+            return response()->view('auth.registration-closed', [
+                'siteName' => $this->siteName(),
+            ], 403);
+        }
+
         return view('auth.register');
     }
 
     public function store(Request $request)
     {
+        // ✅ Block registration attempts when registrations are closed
+        if (!$this->registrationsOpen()) {
+            return redirect()
+                ->route('login')
+                ->with('error', $this->siteName() . ' is currently not allowing new registrations.');
+        }
+
         // ✅ Backend validation including Google reCAPTCHA
         $request->validate(
             [

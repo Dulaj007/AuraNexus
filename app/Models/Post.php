@@ -5,6 +5,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
+use App\Models\PostLink;
+
 
 class Post extends Model
 {
@@ -24,6 +26,7 @@ class Post extends Model
         'status',
         'replies_count',
         'reputation_points',
+        'highlight_tag_id',
     ];
 
     /* =========================
@@ -90,14 +93,19 @@ class Post extends Model
         return $this->morphMany(PageView::class, 'viewable');
     }
     public function pinnedInForums()
-{
-    return $this->hasMany(\App\Models\PinnedPost::class);
-}
+    {
+        return $this->hasMany(\App\Models\PinnedPost::class);
+    }
+    public function links()
+    {
+        return $this->hasMany(\App\Models\PostLink::class);
+    }
 
-public function category()
-{
-    return $this->belongsTo(\App\Models\Category::class);
-}
+
+    public function category()
+    {
+        return $this->belongsTo(\App\Models\Category::class);
+    }
 
     /* =========================
      | Boot (slug)
@@ -195,10 +203,53 @@ public function latestPublishedPost()
 
             // normal link
             if (filter_var($line, FILTER_VALIDATE_URL)) {
-                $sections[] = ['type' => 'link', 'url' => $line, 'block' => $currentBlock];
-                $plainTextParts[] = $line;
+
+                // ✅ only gate http/https links
+                $scheme = parse_url($line, PHP_URL_SCHEME);
+                $scheme = strtolower((string) $scheme);
+
+                $host = parse_url($line, PHP_URL_HOST) ?: 'link';
+                $display = $host . '/…';
+
+                // Default: keep original URL
+                $gateUrl = $line;
+
+                if (in_array($scheme, ['http', 'https'], true)) {
+
+                    // Find existing link row for this post+url (or create new)
+                    $postLink = PostLink::query()
+                        ->where('post_id', $this->id)
+                        ->where('original_url', $line)
+                        ->first();
+
+                    if (!$postLink) {
+                        $postLink = PostLink::create([
+                            'post_id'      => $this->id,
+                            'code'         => $this->generateLinkCode(),
+                            'original_url' => $line,
+                            'type'         => $currentBlock ?: 'general',
+                            'is_enabled'   => true,
+                        ]);
+                    }
+
+                    // ✅ This goes to your unlock page route (/link/{code})
+                    $gateUrl = url('/link/' . $postLink->code);
+                }
+
+                $sections[] = [
+                    'type'     => 'link',
+                    'url'      => $line,        // keep original (optional)
+                    'gate_url' => $gateUrl,     // what the UI should use
+                    'display'  => $display,     // masked text
+                    'block'    => $currentBlock,
+                ];
+
+                // Plain text should NOT leak the full URL
+                $plainTextParts[] = $display;
+
                 continue;
             }
+
 
             // plain text
             $sections[] = ['type' => 'text', 'text' => $line, 'block' => $currentBlock];
@@ -214,6 +265,15 @@ public function latestPublishedPost()
             'plainText' => $plainText,
         ];
     }
+        private function generateLinkCode(): string
+        {
+            // short + low collision
+            do {
+                $code = Str::lower(Str::random(10));
+            } while (PostLink::where('code', $code)->exists());
+
+            return $code;
+        }
 
     /**
      * Returns first image data:

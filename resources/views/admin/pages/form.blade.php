@@ -63,7 +63,7 @@
                     class="mt-2 h-11 w-full rounded-xl border px-4 appearance-none"
                     style="background: var(--an-input-bg); border-color: var(--an-input-border); color: var(--an-input-text);">
                 <option value="published" @selected(old('status', $page->status) === 'published')>Published</option>
-                <option value="draft" @selected(old('status', $page->status) === 'draft')>Draft</option>
+               
             </select>
             @error('status')
                 <div class="text-sm mt-2" style="color: var(--an-danger);">{{ $message }}</div>

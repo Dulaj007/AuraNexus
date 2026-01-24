@@ -4,11 +4,11 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
-use Carbon\Carbon;
+use Illuminate\Support\Carbon;
 
-class PermissionsSeeder extends Seeder
+class PermissionSeeder extends Seeder
 {
-    public function run()
+    public function run(): void
     {
         $permissions = [
             'create_post',
@@ -16,6 +16,9 @@ class PermissionsSeeder extends Seeder
             'delete_post',
             'approve_post',
             'login_admin_panel',
+
+            // ✅ NEW
+            'edit_profile',
         ];
 
         foreach ($permissions as $permission) {
@@ -29,4 +32,3 @@ class PermissionsSeeder extends Seeder
         }
     }
 }
-

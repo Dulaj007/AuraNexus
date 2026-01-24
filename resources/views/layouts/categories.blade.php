@@ -1,142 +1,150 @@
-{{-- resources/views/layouts/categories.blade.php --}}
+@php
+    use Illuminate\Support\Facades\Cache;
+
+    // ✅ Use shared settings (from AppServiceProvider)
+    $settings = $siteSettings ?? [];
+
+    $siteName        = $settings['site_name'] ?? config('app.name', 'AuraNexus');
+    $siteDescription = $settings['site_description'] ?? ('Browse categories on ' . $siteName . '.');
+    $siteKeywords    = trim((string)($settings['site_keywords'] ?? ''));
+    $themeColor      = $settings['site_theme_color'] ?? '#FF4268';
+
+    // Theme mode (per-user)
+    $mode = request()->cookie('theme_mode', 'dark');
+    $mode = in_array($mode, ['dark','light'], true) ? $mode : 'dark';
+
+    // Per-page meta (allow overrides)
+    $pageTitle = trim($__env->yieldContent('meta_title')) ?: trim($__env->yieldContent('title')) ?: 'Categories';
+    $metaTitle = $pageTitle;
+
+    $metaDescription = trim($__env->yieldContent('meta_description')) ?: $siteDescription;
+    $canonical        = trim($__env->yieldContent('canonical')) ?: url()->current();
+    $ogType           = trim($__env->yieldContent('og_type')) ?: 'website';
+
+    // ✅ Keywords (page override -> settings -> none)
+    $keywordsOverride = trim($__env->yieldContent('meta_keywords', ''));
+    $keywords = $keywordsOverride !== '' ? $keywordsOverride : $siteKeywords;
+
+    // ✅ Robots (page override -> settings -> default)
+    $robotsOverride = trim($__env->yieldContent('meta_robots', ''));
+    $robotsSaved    = trim((string)($settings['meta_robots'] ?? ''));
+    $robotsDefault  = 'index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1';
+    $robots         = $robotsOverride !== '' ? $robotsOverride : ($robotsSaved !== '' ? $robotsSaved : $robotsDefault);
+
+    // OG image (page override -> logo fallback)
+    $ogImage = trim($__env->yieldContent('og_image')) ?: asset(config('app.logo'));
+    $logoUrl = asset(config('app.logo'));
+
+    // ✅ Community head script (same method everywhere)
+    $adsMap = null;
+
+    if (!function_exists('ad')) {
+        $adsMap = Cache::remember('ads.placements', 300, function () {
+            return \App\Models\AdPlacement::query()
+                ->where('is_enabled', true)
+                ->whereNotNull('html')
+                ->pluck('html', 'key')
+                ->toArray();
+        });
+    }
+
+    $headCommunity = function_exists('ad')
+        ? ad('head_community')
+        : ($adsMap['head_community'] ?? null);
+
+    $headCommunity = (is_string($headCommunity) && trim($headCommunity) !== '') ? $headCommunity : null;
+@endphp
+
 <!doctype html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" data-theme="{{ $mode }}">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
-    {{-- Primary SEO --}}
-    @php
-        $appName = config('app.name', 'AuraNexus');
-        $metaTitle = trim($__env->yieldContent('meta_title')) ?: trim($__env->yieldContent('title')) ?: $appName;
-        $metaDescription = trim($__env->yieldContent('meta_description')) ?: ('Browse categories on ' . $appName . '.');
-        $canonical = trim($__env->yieldContent('canonical')) ?: url()->current();
-        $ogType = trim($__env->yieldContent('og_type')) ?: 'website';
-        $ogImage = trim($__env->yieldContent('og_image')); // optional per-page
-    @endphp
+    <title>{{ $metaTitle }} • {{ $siteName }}</title>
 
-    <title>{{ $metaTitle }} - {{ $appName }}</title>
-    <meta name="description" content="{{ $metaDescription }}">
     <link rel="canonical" href="{{ $canonical }}">
+    <meta name="description" content="{{ $metaDescription }}">
+    <meta name="robots" content="{{ $robots }}">
+    <meta name="theme-color" content="{{ $themeColor }}">
 
-    {{-- Robots (optional override per page) --}}
-    @hasSection('meta_robots')
-        <meta name="robots" content="@yield('meta_robots')">
-    @else
-        <meta name="robots" content="index,follow">
+    @if($keywords !== '')
+        <meta name="keywords" content="{{ $keywords }}">
     @endif
 
+    {{-- App identity --}}
+    <meta name="application-name" content="{{ $siteName }}">
+    <meta name="apple-mobile-web-app-title" content="{{ $siteName }}">
+
+    {{-- Favicon / app icons --}}
+    <link rel="icon" href="{{ $logoUrl }}">
+    <link rel="apple-touch-icon" href="{{ $logoUrl }}">
+
     {{-- Open Graph --}}
-    <meta property="og:site_name" content="{{ $appName }}">
+    <meta property="og:site_name" content="{{ $siteName }}">
     <meta property="og:title" content="{{ $metaTitle }}">
     <meta property="og:description" content="{{ $metaDescription }}">
     <meta property="og:type" content="{{ $ogType }}">
     <meta property="og:url" content="{{ $canonical }}">
-    @if($ogImage)
-        <meta property="og:image" content="{{ $ogImage }}">
-    @endif
+    <meta property="og:image" content="{{ $ogImage }}">
+    <meta property="og:image:alt" content="{{ $siteName }}">
 
     {{-- Twitter --}}
     <meta name="twitter:card" content="{{ $ogImage ? 'summary_large_image' : 'summary' }}">
     <meta name="twitter:title" content="{{ $metaTitle }}">
     <meta name="twitter:description" content="{{ $metaDescription }}">
-    @if($ogImage)
-        <meta name="twitter:image" content="{{ $ogImage }}">
-    @endif
+    <meta name="twitter:image" content="{{ $ogImage }}">
 
     {{-- JSON-LD --}}
     @hasSection('json_ld')
         <script type="application/ld+json">
-            @yield('json_ld')
+{!! trim($__env->yieldContent('json_ld')) !!}
         </script>
     @endif
 
-    {{-- Your styles/scripts --}}
     @vite(['resources/css/app.css','resources/js/app.js'])
 
-    {{-- Extra head slot (ads/seo later) --}}
+    @inject('theme', \App\Services\ThemeService::class)
+    <style>
+        {!! $theme->css($mode) !!}
+    </style>
+
+    <script>
+        (function () {
+            document.documentElement.setAttribute('data-theme', @json($mode));
+        })();
+    </script>
+
+    @if($headCommunity)
+        {!! $headCommunity !!}
+    @endif
+
     @stack('head')
 </head>
 
-<body class="min-h-screen bg-gray-50 text-gray-900">
-    {{-- Simple top bar (separate from public layout) --}}
-    <header class="border-b bg-white">
-        <div class="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
-            <a href="{{ url('/') }}" class="font-bold text-lg">
-                {{ $appName }}
-            </a>
 
-            <nav class="flex items-center gap-4 text-sm">
-                <a class="hover:underline" href="{{ route('forums.index') }}">Forums</a>
-                <a class="hover:underline" href="{{ route('categories.index') }}">Categories</a>
+<body class="min-h-screen bg-[var(--an-bg)] text-[var(--an-text)] overflow-x-hidden">
 
-                @auth
-                    <a class="hover:underline" href="{{ route('posting.create') }}">Create Post</a>
-                    <form method="POST" action="{{ route('logout') }}">
-                        @csrf
-                        <button type="submit" class="hover:underline text-gray-700">Logout</button>
-                    </form>
-                @else
-                    <a class="hover:underline" href="{{ route('login') }}">Login</a>
-                    <a class="hover:underline" href="{{ route('register') }}">Register</a>
-                @endauth
-            </nav>
-        </div>
-    </header>
+    {{-- Ambient glows (subtle) --}}
+    <div class="pointer-events-none fixed inset-0 -z-10 overflow-hidden opacity-60">
+        <div class="absolute -top-40 -left-40 h-[520px] w-[520px] rounded-full blur-3xl opacity-15 bg-[var(--an-link)]"></div>
+        <div class="absolute top-24 -right-48 h-[620px] w-[620px] rounded-full blur-3xl opacity-12 bg-[var(--an-primary)]"></div>
+        <div class="absolute bottom-[-220px] left-[25%] h-[520px] w-[520px] rounded-full blur-[140px] opacity-10 bg-[var(--an-info)]"></div>
+    </div>
 
-    <main class="max-w-7xl mx-auto px-4 py-6">
-        {{-- Header area (categories branding) --}}
-        <div class="mb-6 flex items-start justify-between gap-4">
-            <div>
-                <p class="text-xs text-gray-500">Community</p>
-                <h1 class="text-2xl font-bold">@yield('page_title', 'Categories')</h1>
-                <p class="text-sm text-gray-600">@yield('page_subtitle', 'Browse categories and forums')</p>
-            </div>
+    {{-- Public navbar --}}
+    @include('partials.nav')
 
-            {{-- Top ad slot (optional) --}}
-            @hasSection('ad_top')
-                <div class="min-w-[260px]">
-                    @yield('ad_top')
-                </div>
-            @endif
-        </div>
-
+    <main class="max-w-7xl mx-auto">
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            {{-- Main --}}
-            <div class="lg:col-span-9">
+            <div class="lg:col-span-12 space-y-6">
                 @yield('categories_content')
             </div>
-
-            {{-- Sidebar --}}
-            <aside class="lg:col-span-3 space-y-4">
-                @hasSection('sidebar')
-                    @yield('sidebar')
-                @else
-                    <div class="bg-white border rounded-xl p-4">
-                        <p class="text-sm font-semibold">Categories</p>
-                        <p class="text-xs text-gray-600 mt-1">
-                            Ads/widgets can be placed here later.
-                        </p>
-                        <div class="mt-3 text-sm space-y-2">
-                            <a class="underline" href="{{ route('categories.index') }}">All Categories</a><br>
-                            <a class="underline" href="{{ route('forums.index') }}">All Forums</a>
-                        </div>
-                    </div>
-                @endif
-
-                @hasSection('ad_sidebar')
-                    @yield('ad_sidebar')
-                @endif
-            </aside>
         </div>
     </main>
 
-    <footer class="border-t bg-white">
-        <div class="max-w-7xl mx-auto px-4 py-6 text-xs text-gray-500 flex items-center justify-between">
-            <span>© {{ date('Y') }} {{ $appName }}</span>
-            <span class="hidden sm:inline">Categories</span>
-        </div>
-    </footer>
+    {{-- Public footer --}}
+    @include('partials.footer')
 
     @stack('scripts')
 </body>

@@ -77,6 +77,7 @@ return [
     | set to any locale for which you plan to have translation strings.
     |
     */
+    'logo' => env('APP_LOGO', 'logo/AuraNexusLogo.png'),
 
     'locale' => env('APP_LOCALE', 'en'),
 

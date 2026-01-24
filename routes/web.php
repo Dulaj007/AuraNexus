@@ -8,6 +8,7 @@ use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\Auth\VerifyController;
 
 // PUBLIC
+use App\Http\Controllers\Public\HomeController;
 use App\Http\Controllers\Public\CategoryController;
 use App\Http\Controllers\Public\ForumController;
 use App\Http\Controllers\Public\TagController;
@@ -17,6 +18,7 @@ use App\Http\Controllers\Public\LatestController;
 use App\Http\Controllers\Public\PopularController;
 use App\Http\Controllers\Public\PostPinController;
 use App\Http\Controllers\Public\PagesController as PublicPagesController;
+use App\Http\Controllers\Public\LinkController;
 
 // USER
 use App\Http\Controllers\User\PostController;
@@ -38,8 +40,11 @@ use App\Http\Controllers\Admin\CustomizationController;
 use App\Http\Controllers\Admin\ReportsController;
 use App\Http\Controllers\Admin\RemovalReportController;
 use App\Http\Controllers\Admin\ThemeController;
-use App\Http\Controllers\ThemeModeController;
+use App\Http\Controllers\Admin\AdsController;
+use App\Http\Controllers\Admin\HomeTagCardController;
 use App\Http\Controllers\Admin\PagesController as AdminPagesController;
+use App\Http\Controllers\Admin\SettingsController;
+use App\Http\Controllers\ThemeModeController;
 
 /*
 |--------------------------------------------------------------------------
@@ -50,7 +55,6 @@ use App\Http\Controllers\Admin\PagesController as AdminPagesController;
 | - Otherwise you'll get redirect loop.
 */
 Route::get('/restricted', function () {
-    // You will create: resources/views/errors/restricted.blade.php
     return response()->view('errors.restricted', [], 403);
 })->middleware('auth')->name('account.restricted');
 
@@ -60,6 +64,9 @@ Route::get('/restricted', function () {
 |--------------------------------------------------------------------------
 | Keep logout OUTSIDE the account.status group (optional but safest).
 | So suspended/banned users can still logout.
+|
+| NOTE: 419 happens if you trigger this via <a href=""> (GET).
+| Must be a POST form with @csrf in Blade.
 */
 Route::post('/logout', [LoginController::class, 'logout'])
     ->middleware('auth')
@@ -69,8 +76,6 @@ Route::post('/logout', [LoginController::class, 'logout'])
 |--------------------------------------------------------------------------
 | EVERYTHING ELSE (wrapped)
 |--------------------------------------------------------------------------
-| This ensures: as soon as user hits the domain (any page),
-| middleware runs and redirects to /restricted.
 */
 Route::middleware(['account.status'])->group(function () {
 
@@ -79,19 +84,24 @@ Route::middleware(['account.status'])->group(function () {
     | HOME
     |--------------------------------------------------------------------------
     */
-    Route::get('/', function () {
-        return view('home');
-    })->name('home');
+    Route::get('/', [HomeController::class, 'index'])->name('home');
 
     /*
     |--------------------------------------------------------------------------
     | AUTH
     |--------------------------------------------------------------------------
+    | - Login always available
+    | - Register protected by registrations.open middleware
     */
     Route::middleware('guest')->group(function () {
-        Route::get('/register', [RegisterController::class, 'show'])->name('register');
-        Route::post('/register', [RegisterController::class, 'store'])->name('register.store');
 
+        // ✅ Register (blocked when admin disables registrations)
+        Route::middleware('registrations.open')->group(function () {
+            Route::get('/register', [RegisterController::class, 'show'])->name('register');
+            Route::post('/register', [RegisterController::class, 'store'])->name('register.store');
+        });
+
+        // Login
         Route::get('/login', [LoginController::class, 'show'])->name('login');
         Route::post('/login', [LoginController::class, 'authenticate'])->name('login.store');
     });
@@ -101,7 +111,7 @@ Route::middleware(['account.status'])->group(function () {
 
     /*
     |--------------------------------------------------------------------------
-    | ADMIN
+    | ADMIN (all under admin10nexus)
     |--------------------------------------------------------------------------
     */
     Route::prefix('admin10nexus')
@@ -111,6 +121,10 @@ Route::middleware(['account.status'])->group(function () {
 
             // Dashboard
             Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
+
+            // ✅ Settings (Admin)
+            Route::get('/settings', [SettingsController::class, 'index'])->name('settings.index');
+            Route::post('/settings', [SettingsController::class, 'update'])->name('settings.update');
 
             // Users
             Route::prefix('users')->group(function () {
@@ -143,6 +157,19 @@ Route::middleware(['account.status'])->group(function () {
                 Route::put('/paragraph-templates/{paragraph_template}', [CustomizationController::class, 'updateParagraphTemplate'])->name('paragraph_templates.update');
                 Route::delete('/paragraph-templates/{paragraph_template}', [CustomizationController::class, 'destroyParagraphTemplate'])->name('paragraph_templates.destroy');
             });
+
+            // UI Presets (Home Tag Cards)
+            Route::prefix('ui')->as('ui.')->group(function () {
+                Route::get('/home-tag-cards', [HomeTagCardController::class, 'index'])->name('home-tag-cards.index');
+                Route::post('/home-tag-cards', [HomeTagCardController::class, 'store'])->name('home-tag-cards.store');
+                Route::patch('/home-tag-cards/{card}/toggle', [HomeTagCardController::class, 'toggle'])->name('home-tag-cards.toggle');
+                Route::patch('/home-tag-cards/{card}/order', [HomeTagCardController::class, 'updateOrder'])->name('home-tag-cards.order');
+                Route::delete('/home-tag-cards/{card}', [HomeTagCardController::class, 'destroy'])->name('home-tag-cards.destroy');
+            });
+
+            // Ads
+            Route::get('/ads', [AdsController::class, 'index'])->name('ads.index');
+            Route::post('/ads', [AdsController::class, 'update'])->name('ads.update');
 
             // Reports
             Route::get('/reports', [ReportsController::class, 'index'])->name('reports');
@@ -196,9 +223,13 @@ Route::middleware(['account.status'])->group(function () {
             ->name('tags.show.page');
     });
 
-
-Route::post('/theme/mode', [ThemeModeController::class, 'update'])
-    ->name('theme.mode');
+    /*
+    |--------------------------------------------------------------------------
+    | THEME MODE TOGGLE
+    |--------------------------------------------------------------------------
+    | NOTE: 419 here means your form/button posting to this route is missing @csrf.
+    */
+    Route::post('/theme/mode', [ThemeModeController::class, 'update'])->name('theme.mode');
 
     /*
     |--------------------------------------------------------------------------
@@ -206,8 +237,7 @@ Route::post('/theme/mode', [ThemeModeController::class, 'update'])
     |--------------------------------------------------------------------------
     */
     Route::prefix('user')->group(function () {
-        Route::get('/{user:username}', [ProfileController::class, 'show'])
-            ->name('profile.show');
+        Route::get('/{user:username}', [ProfileController::class, 'show'])->name('profile.show');
 
         Route::get('/{user:username}/{page}', [ProfileController::class, 'show'])
             ->whereNumber('page')
@@ -364,6 +394,14 @@ Route::post('/theme/mode', [ThemeModeController::class, 'update'])
     Route::get('/{page:slug}', [PublicPagesController::class, 'show'])
         ->whereIn('page', ['terms', 'privacy', 'dmca', 'contact']);
 });
+
+
+
+Route::get('/link/{code}', [LinkController::class, 'show'])->name('link.show');
+Route::post('/link/{code}/start', [LinkController::class, 'start'])->name('link.start');
+Route::post('/unlock/{token}/ping', [LinkController::class, 'ping'])->name('link.ping');
+Route::get('/unlock/{token}/status', [LinkController::class, 'status'])->name('link.status');
+Route::get('/unlock/{token}/go', [LinkController::class, 'go'])->name('link.go');
 
 /*
 |--------------------------------------------------------------------------

@@ -1,28 +1,83 @@
+{{-- resources/views/search/index.blade.php --}}
 @extends('layouts.search')
 
 @php
     use Illuminate\Support\Str;
+    use Illuminate\Support\Facades\Cache;
 
-    $siteName = config('app.name', 'AuraNexus');
+    $siteSettings = \App\Support\SiteSettings::public();
+    $siteName = $siteSettings['site_name'] ?? config('app.name', 'AuraNexus');
 
-    $pageParam = request()->route('page'); // if you ever name param "page" on route
-    $pageFromPath = (int) (request()->route('page') ?? request()->route('pageNumber') ?? 1); // safe
     $page = (int) (request()->route('page') ?? 1);
 
-    // canonical url (supports /search/{slug} and /search/{slug}/{page})
-    if (!empty($slug)) {
-        $canonicalUrl = url('/search/' . $slug . ($page > 1 ? '/' . $page : ''));
-    } else {
-        $canonicalUrl = url('/search');
-    }
+    $q = $q ?? request('q', '');
+    $slug = $slug ?? ($q !== '' ? Str::slug($q) : null);
 
-    $titleText = $q
+    $canonicalUrl = !empty($slug)
+        ? url('/search/' . $slug . ($page > 1 ? '/' . $page : ''))
+        : url('/search');
+
+    $titleText = $q !== ''
         ? 'Search: ' . $q . ' — ' . $siteName
         : 'Search — ' . $siteName;
 
-    $metaDesc = $q
+    $metaDesc = $q !== ''
         ? 'Search results for "' . $q . '" on ' . $siteName . '.'
         : 'Search posts on ' . $siteName . '.';
+
+    // ------------------------------------------------------------
+    // ✅ Ads (same proven method used in forums/show)
+    // - Uses helper ad() if exists
+    // - Else cached DB map
+    // ------------------------------------------------------------
+    $adsMap = null;
+
+    if (!function_exists('ad')) {
+        $adsMap = Cache::remember('ads.placements', 300, function () {
+            return \App\Models\AdPlacement::query()
+                ->where('is_enabled', true)
+                ->whereNotNull('html')
+                ->pluck('html', 'key')
+                ->toArray();
+        });
+    }
+
+    $ad = function (string $key) use (&$adsMap): ?string {
+        $html = null;
+
+        if (function_exists('ad')) {
+            $html = ad($key);
+        } else {
+            $html = $adsMap[$key] ?? null;
+        }
+
+        return (is_string($html) && trim($html) !== '') ? $html : null;
+    };
+
+    // ✅ Search placements (NEW KEYS you will add in config)
+    $topA         = $ad('search_top_a');
+    $topB         = $ad('search_top_b');
+
+    $afterSearchA = $ad('search_after_box_a');
+    $afterSearchB = $ad('search_after_box_b');
+
+    $after6A      = $ad('search_after_6_a');
+    $after6B      = $ad('search_after_6_b');
+
+    $bottomA      = $ad('search_bottom_a');
+    $bottomB      = $ad('search_bottom_b');
+
+    // ✅ Theme tokens (AuraNexus)
+    $glass = 'sm:rounded-3xl border border-[var(--an-border)]
+              bg-[color:var(--an-card)]/65 backdrop-blur-xl';
+
+    $muted  = 'color: color-mix(in srgb, var(--an-text) 70%, transparent);';
+    $muted2 = 'color: color-mix(in srgb, var(--an-text) 55%, transparent);';
+
+    $btn = 'inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-2 text-sm font-extrabold
+            border border-[var(--an-border)]
+            bg-[color:var(--an-primary)]/25 hover:bg-[color:var(--an-primary)]/35
+            transition focus:outline-none focus:ring-2 focus:ring-[var(--an-ring)]';
 @endphp
 
 @section('title', $titleText)
@@ -30,172 +85,172 @@
 @section('canonical', $canonicalUrl)
 
 @section('content')
-<div class="mx-auto max-w-6xl px-4 py-10 space-y-6">
+<div class="max-w-7xl mx-auto px-1 sm:px-6 lg:px-8  sm:py-6 space-y-3 sm:space-y-6">
+
+    {{-- ✅ TOP ADS (before everything) --}}
+    @if($topA || $topB)
+        <div class="flex flex-row justify-center items-center">
+            @if($topA)
+                <div class="flex">
+                    {!! $topA !!}
+                </div>
+            @endif
+
+            @if($topB)
+                <div class="hidden lg:flex">
+                    {!! $topB !!}
+                </div>
+            @endif
+        </div>
+    @endif
 
     {{-- Search Box --}}
-    <div class="rounded-2xl border border-gray-200/70 dark:border-white/10 bg-white/70 dark:bg-white/5 p-6">
-        <h1 class="text-xl font-semibold">Search</h1>
-        <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
-            Find posts by title, tags, and content.
-        </p>
+    <div class="{{ $glass }} p-4 sm:p-6">
+        <h1 class="text-xl sm:text-2xl font-extrabold tracking-tight text-[var(--an-text)]">Search</h1>
+        <p class="mt-1 text-sm" style="{{ $muted }}">Find posts by title, tags, and content.</p>
 
         <form method="GET" action="{{ route('search.go') }}" class="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end">
             <div class="w-full">
-                <label class="text-sm font-medium text-gray-700 dark:text-gray-200">Keyword</label>
+                <label class="text-sm font-extrabold"
+                       style="color: color-mix(in srgb, var(--an-text) 85%, transparent);">
+                    Keyword
+                </label>
+
                 <input
                     type="text"
                     name="q"
                     value="{{ $q }}"
-                    placeholder="Try: update, gameplay, bug fix…"
-                    class="mt-2 w-full rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 px-4 py-3
-                           text-gray-900 dark:text-gray-100 outline-none focus:ring-2 focus:ring-indigo-500/40"
+                    placeholder="Try: new, collection, videos…"
                     maxlength="120"
+                    class="mt-2 w-full rounded-2xl border border-[var(--an-border)]
+                           bg-[color:var(--an-card)]/55 px-4 py-3
+                           text-[var(--an-text)] outline-none
+                           focus:ring-2 focus:ring-[var(--an-ring)]"
                 />
             </div>
 
-            <button
-                type="submit"
-                class="rounded-xl px-5 py-3 font-medium bg-indigo-600 text-white hover:bg-indigo-500 transition"
-            >
+            <button type="submit" class="{{ $btn }}">
                 Search
             </button>
         </form>
-
-        @if($q !== '')
-            <div class="mt-3 text-xs text-gray-500 dark:text-gray-400">
-                Showing SEO URL: <span class="font-mono">{{ '/search/' . ($slug ?? Str::slug($q)) . ($page > 1 ? '/' . $page : '') }}</span>
-            </div>
-        @endif
     </div>
 
-    {{-- Results header --}}
-    @if(!is_null($resultsCount))
-        <div class="text-sm text-gray-600 dark:text-gray-300">
-            Results for <span class="font-semibold">{{ $q }}</span>:
-            <span class="font-semibold">{{ number_format((int) $resultsCount) }}</span>
+    {{-- ✅ ADS AFTER SEARCH BOX --}}
+    @if($afterSearchA || $afterSearchB)
+        <div class="flex flex-row justify-center items-center">
+            @if($afterSearchA)
+                <div class="flex">
+                    {!! $afterSearchA !!}
+                </div>
+            @endif
+
+            @if($afterSearchB)
+                <div class="hidden lg:flex">
+                    {!! $afterSearchB !!}
+                </div>
+            @endif
         </div>
     @endif
 
-    {{-- Results --}}
-    @if($q !== '')
-        @if($posts instanceof \Illuminate\Contracts\Pagination\LengthAwarePaginator && $posts->count() > 0)
+    <div class="px-2">
 
-            <div class="grid gap-4 md:grid-cols-2">
-                @foreach($posts as $post)
-                    @php
-                        // Use your production-proven Post::firstImage() logic (from $post->content parsing)
-                        $imgData = method_exists($post, 'firstImage') ? $post->firstImage() : null;
-
-                        // Prefer thumb first to reduce hotlink blocking
-                        $cover = $imgData['thumb'] ?? null;
-                        $fallback = $imgData['full'] ?? null;
-
-                        $date = $post->created_at?->format('Y-m-d');
-                    @endphp
-
-                    <a href="{{ route('post.show', ['post' => $post->slug]) }}"
-                       class="group rounded-2xl border border-gray-200/70 dark:border-white/10 bg-white/70 dark:bg-white/5
-                              overflow-hidden hover:shadow-lg hover:-translate-y-0.5 transition">
-
-                        {{-- Cover --}}
-                        <div class="aspect-[16/9] bg-gray-100 dark:bg-white/5 relative overflow-hidden">
-                            @if($cover || $fallback)
-                                <img
-                                    src="{{ $cover ?: $fallback }}"
-                                    data-fallback="{{ $fallback ?: '' }}"
-                                    alt="{{ $imgData['alt'] ?? $post->title }}"
-                                    title="{{ $imgData['title'] ?? $post->title }}"
-                                    loading="lazy"
-                                    class="absolute inset-0 h-full w-full object-cover group-hover:scale-[1.02] transition"
-                                    onerror="
-                                        if (this.dataset.fallback && this.src !== this.dataset.fallback) { this.src = this.dataset.fallback; return; }
-                                        this.onerror=null;
-                                        this.closest('div').innerHTML='<div class=&quot;h-full w-full grid place-items-center text-sm text-gray-500 dark:text-gray-400&quot;>No preview image</div>';
-                                    "
-                                >
-                            @else
-                                <div class="h-full w-full grid place-items-center text-sm text-gray-500 dark:text-gray-400">
-                                    No preview image
-                                </div>
-                            @endif
-                        </div>
-
-                        {{-- Content --}}
-                        <div class="p-4 space-y-2">
-                            <div class="text-sm text-gray-500 dark:text-gray-400">
-                                {{ $date }}
-                            </div>
-
-                            <div class="font-semibold text-gray-900 dark:text-gray-100 group-hover:underline line-clamp-2">
-                                {{ $post->title }}
-                            </div>
-
-                            {{-- Tags --}}
-                            <div class="flex flex-wrap gap-2 pt-1">
-                                @forelse(($post->tags ?? []) as $tag)
-                                    <a
-                                        href="{{ route('tags.show', $tag) }}"
-                                        class="text-xs px-2 py-1 rounded-full border border-gray-200 dark:border-white/10
-                                               text-gray-700 dark:text-gray-200 bg-white/60 dark:bg-white/5 hover:bg-white dark:hover:bg-white/10 transition"
-                                        onclick="event.stopPropagation();"
-                                    >
-                                        #{{ $tag->name }}
-                                    </a>
-                                @empty
-                                    <span class="text-xs text-gray-500 dark:text-gray-400">No tags</span>
-                                @endforelse
-                            </div>
-                        </div>
-                    </a>
-                @endforeach
-            </div>
-
-            {{-- Pagination (SEO paths) --}}
-            @php
-                $current = (int) $posts->currentPage();
-                $last = (int) $posts->lastPage();
-
-                $base = url('/search/' . $slug);
-                $qParam = '?q=' . urlencode($q);
-
-                $prevUrl = $current > 2
-                    ? ($base . '/' . ($current - 1) . $qParam)
-                    : ($current === 2 ? ($base . $qParam) : null);
-
-                $nextUrl = $current < $last
-                    ? ($base . '/' . ($current + 1) . $qParam)
-                    : null;
-            @endphp
-
-            <div class="pt-4 flex items-center gap-2">
-                @if($prevUrl)
-                    <a class="px-3 py-2 rounded-lg border border-gray-200 dark:border-white/10 hover:bg-white/60 dark:hover:bg-white/10 transition"
-                       href="{{ $prevUrl }}">
-                        Prev
-                    </a>
-                @endif
-
-                <span class="text-sm text-gray-600 dark:text-gray-300 px-2">
-                    Page {{ $current }} / {{ $last }}
-                </span>
-
-                @if($nextUrl)
-                    <a class="px-3 py-2 rounded-lg border border-gray-200 dark:border-white/10 hover:bg-white/60 dark:hover:bg-white/10 transition"
-                       href="{{ $nextUrl }}">
-                        Next
-                    </a>
-                @endif
-            </div>
-
-        @else
-            <div class="rounded-2xl border border-gray-200/70 dark:border-white/10 bg-white/70 dark:bg-white/5 p-6">
-                <div class="font-semibold">No results</div>
-                <div class="mt-1 text-sm text-gray-600 dark:text-gray-300">
-                    Try a different keyword.
-                </div>
+        {{-- Results header --}}
+        @if(!is_null($resultsCount ?? null) && $q !== '')
+            <div class="text-sm mb-2" style="{{ $muted }}">
+                Results for
+                <span class="font-extrabold" style="color: var(--an-text);">{{ $q }}</span>:
+                <span class="font-extrabold" style="color: var(--an-text);">{{ number_format((int) $resultsCount) }}</span>
             </div>
         @endif
-    @endif
 
+        {{-- Results --}}
+        @if($q !== '')
+            @if($posts instanceof \Illuminate\Contracts\Pagination\LengthAwarePaginator && $posts->count() > 0)
+
+                <div class="grid grid-cols-2 md:grid-cols-3 2xl:grid-cols-4 gap-1 sm:gap-4">
+                    @foreach($posts as $post)
+                        @php $i = $loop->iteration; @endphp
+
+                        {{-- ✅ same card component as forums/saved --}}
+                        <x-forum.post-card :post="$post" />
+
+                        {{-- ✅ ADS AFTER 6 RESULTS (insert once) --}}
+                        @if($i === 6 && ($after6A || $after6B))
+                            <div class="col-span-2 md:col-span-3 2xl:col-span-4 py-2 sm:py-4 flex justify-center items-center">
+                                @if($after6A)
+                                    <div class="flex">
+                                        {!! $after6A !!}
+                                    </div>
+                                @endif
+
+                                @if($after6B)
+                                    <div class="hidden lg:flex">
+                                        {!! $after6B !!}
+                                    </div>
+                                @endif
+                            </div>
+                        @endif
+                    @endforeach
+                </div>
+
+                {{-- Pagination (SEO paths) --}}
+                @php
+                    $current = (int) $posts->currentPage();
+                    $last = (int) $posts->lastPage();
+
+                    $base = url('/search/' . $slug);
+                    $qParam = '?q=' . urlencode($q);
+
+                    $prevUrl = $current > 2
+                        ? ($base . '/' . ($current - 1) . $qParam)
+                        : ($current === 2 ? ($base . $qParam) : null);
+
+                    $nextUrl = $current < $last
+                        ? ($base . '/' . ($current + 1) . $qParam)
+                        : null;
+                @endphp
+
+                <div class="pt-4 flex items-center gap-2">
+                    @if($prevUrl)
+                        <a class="{{ $btn }}" href="{{ $prevUrl }}">Prev</a>
+                    @endif
+
+                    <span class="text-sm px-2" style="{{ $muted }}">
+                        Page <span class="font-extrabold" style="color: var(--an-text);">{{ $current }}</span>
+                        /
+                        <span class="font-extrabold" style="color: var(--an-text);">{{ $last }}</span>
+                    </span>
+
+                    @if($nextUrl)
+                        <a class="{{ $btn }}" href="{{ $nextUrl }}">Next</a>
+                    @endif
+                </div>
+
+            @else
+                <div class="{{ $glass }} p-6">
+                    <div class="font-extrabold text-[var(--an-text)]">No results</div>
+                    <div class="mt-1 text-sm" style="{{ $muted }}">Try a different keyword.</div>
+                </div>
+            @endif
+        @endif
+
+        {{-- ✅ BOTTOM ADS (before footer / end of content) --}}
+        @if($bottomA || $bottomB)
+            <div class="pt-2 sm:pt-4 flex flex-row justify-center items-center">
+                @if($bottomA)
+                    <div class="flex">
+                        {!! $bottomA !!}
+                    </div>
+                @endif
+
+                @if($bottomB)
+                    <div class="hidden lg:flex">
+                        {!! $bottomB !!}
+                    </div>
+                @endif
+            </div>
+        @endif
+
+    </div>
 </div>
 @endsection

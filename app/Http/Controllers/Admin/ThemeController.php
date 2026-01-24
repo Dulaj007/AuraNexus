@@ -11,7 +11,9 @@ class ThemeController extends Controller
     public function edit(Request $request)
     {
         $user = $request->user();
-        if (!$user || !$user->hasRole('admin')) abort(403);
+              if (!$user || (!$user->hasRole('admin') && !$user->hasPermission('login_admin_panel'))) {
+            abort(403);
+        }
 
         // 3 priority accents (admin-controlled, global)
         $primary   = Setting::get('theme_primary',   '#8B5CF6'); // main theme
@@ -33,7 +35,9 @@ class ThemeController extends Controller
     public function update(Request $request)
     {
         $user = $request->user();
-        if (!$user || !$user->hasRole('admin')) abort(403);
+              if (!$user || (!$user->hasRole('admin') && !$user->hasPermission('login_admin_panel'))) {
+            abort(403);
+        }
 
         $data = $request->validate([
             'theme_primary'   => ['required', 'string', 'max:16'],
@@ -58,7 +62,9 @@ class ThemeController extends Controller
     public function reset(Request $request)
     {
         $user = $request->user();
-        if (!$user || !$user->hasRole('admin')) abort(403);
+              if (!$user || (!$user->hasRole('admin') && !$user->hasPermission('login_admin_panel'))) {
+            abort(403);
+        }
 
         Setting::set('theme_primary', '#8B5CF6');
         Setting::set('theme_secondary', '#22D3EE');

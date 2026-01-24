@@ -1,12 +1,73 @@
+{{-- resources/views/tags/show.blade.php --}}
 @extends('layouts.search')
 
 @php
-    $siteName = config('app.name', 'AuraNexus');
+    use Illuminate\Support\Facades\Cache;
+
+    $siteSettings = \App\Support\SiteSettings::public();
+    $siteName = $siteSettings['site_name'] ?? config('app.name', 'AuraNexus');
+
     $page = (int) (request()->route('page') ?? 1);
     $canonicalUrl = url('/tag/' . $tag->slug . ($page > 1 ? '/' . $page : ''));
 
     $titleText = 'Tag: ' . $tag->name . ' — ' . $siteName;
-    $metaDesc = 'Posts tagged "' . $tag->name . '" on ' . $siteName . '.';
+    $metaDesc  = 'Posts tagged "' . $tag->name . '" on ' . $siteName . '.';
+
+    // ------------------------------------------------------------
+    // ✅ Ads (same proven method used in forums/show)
+    // - Uses helper ad() if exists
+    // - Else cached DB map
+    // ------------------------------------------------------------
+    $adsMap = null;
+
+    if (!function_exists('ad')) {
+        $adsMap = Cache::remember('ads.placements', 300, function () {
+            return \App\Models\AdPlacement::query()
+                ->where('is_enabled', true)
+                ->whereNotNull('html')
+                ->pluck('html', 'key')
+                ->toArray();
+        });
+    }
+
+    $ad = function (string $key) use (&$adsMap): ?string {
+        $html = null;
+
+        if (function_exists('ad')) {
+            $html = ad($key);
+        } else {
+            $html = $adsMap[$key] ?? null;
+        }
+
+        return (is_string($html) && trim($html) !== '') ? $html : null;
+    };
+
+    // ✅ Tags placements (shared set with Search if you want, but separate keys is cleaner)
+
+
+    $topA         = $ad('search_top_a');
+    $topB         = $ad('search_top_b');
+
+   $afterHeaderA = $ad('search_after_box_a');
+    $afterHeaderB = $ad('search_after_box_b');
+
+    $after6A      = $ad('search_after_6_a');
+    $after6B      = $ad('search_after_6_b');
+
+    $bottomA      = $ad('search_bottom_a');
+    $bottomB      = $ad('search_bottom_b');
+
+    // ✅ AuraNexus theme styles
+    $glass = 'rounded-3xl border border-[var(--an-border)]
+              bg-[color:var(--an-card)]/65 backdrop-blur-xl';
+
+    $muted  = 'color: color-mix(in srgb, var(--an-text) 70%, transparent);';
+    $muted2 = 'color: color-mix(in srgb, var(--an-text) 55%, transparent);';
+
+    $btn = 'inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-2 text-sm font-extrabold
+            border border-[var(--an-border)]
+            bg-[color:var(--an-card)]/55 hover:bg-[color:var(--an-card)]/75
+            transition focus:outline-none focus:ring-2 focus:ring-[var(--an-ring)]';
 @endphp
 
 @section('title', $titleText)
@@ -14,130 +75,149 @@
 @section('canonical', $canonicalUrl)
 
 @section('content')
-<div class="mx-auto max-w-6xl px-4 py-10 space-y-6">
+<div class="max-w-7xl mx-auto px-1 sm:px-6 lg:px-8 sm:py-6 space-y-3 sm:space-y-6">
+
+    {{-- ✅ TOP ADS (before everything) --}}
+    @if($topA || $topB)
+        <div class="flex flex-row justify-center items-center">
+            @if($topA)
+                <div class="flex">
+                    {!! $topA !!}
+                </div>
+            @endif
+
+            @if($topB)
+                <div class="hidden lg:flex">
+                    {!! $topB !!}
+                </div>
+            @endif
+        </div>
+    @endif
 
     {{-- Header --}}
-    <div class="rounded-2xl border border-gray-200/70 dark:border-white/10 bg-white/70 dark:bg-white/5 p-6">
+    <div class="{{ $glass }} p-4 sm:p-6">
         <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
             <div>
-                <h1 class="text-xl font-semibold">
+                <h1 class="text-xl sm:text-2xl font-extrabold tracking-tight text-[var(--an-text)]">
                     Tag: <span class="font-mono">#{{ $tag->name }}</span>
                 </h1>
-                <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
+                <p class="mt-1 text-sm" style="{{ $muted }}">
                     Showing posts with this tag.
                 </p>
             </div>
 
-            <div class="text-xs text-gray-500 dark:text-gray-400">
-                Views: <span class="font-semibold">{{ number_format((int) ($tag->views ?? 0)) }}</span>
+            <div class="text-xs" style="{{ $muted2 }}">
+                Views:
+                <span class="font-extrabold" style="color: var(--an-text);">
+                    {{ number_format((int) ($tag->views ?? 0)) }}
+                </span>
             </div>
         </div>
     </div>
 
-    <div class="text-sm text-gray-600 dark:text-gray-300">
+    {{-- ✅ ADS AFTER HEADER --}}
+    @if($afterHeaderA || $afterHeaderB)
+        <div class="flex flex-row justify-center items-center">
+            @if($afterHeaderA)
+                <div class="flex">
+                    {!! $afterHeaderA !!}
+                </div>
+            @endif
+
+            @if($afterHeaderB)
+                <div class="hidden lg:flex">
+                    {!! $afterHeaderB !!}
+                </div>
+            @endif
+        </div>
+    @endif
+
+    <div class="px-2 text-sm" style="{{ $muted }}">
         Results:
-        <span class="font-semibold">{{ number_format((int) ($resultsCount ?? 0)) }}</span>
+        <span class="font-extrabold" style="color: var(--an-text);">
+            {{ number_format((int) ($resultsCount ?? 0)) }}
+        </span>
     </div>
 
     @if($posts->count() > 0)
 
-        <div class="grid gap-4 md:grid-cols-2">
-            @foreach($posts as $post)
-                @php
-                    $imgData = method_exists($post, 'firstImage') ? $post->firstImage() : null;
-                    $cover = $imgData['thumb'] ?? null;
-                    $fallback = $imgData['full'] ?? null;
-                    $date = $post->created_at?->format('Y-m-d');
-                @endphp
+        <div class="px-2">
+            <div class="grid grid-cols-2 md:grid-cols-3 2xl:grid-cols-4 gap-1 sm:gap-4">
+                @foreach($posts as $post)
+                    @php $i = $loop->iteration; @endphp
 
-                <a href="{{ route('post.show', ['post' => $post->slug]) }}"
-                   class="group rounded-2xl border border-gray-200/70 dark:border-white/10 bg-white/70 dark:bg-white/5
-                          overflow-hidden hover:shadow-lg hover:-translate-y-0.5 transition">
+                    {{-- ✅ Use the same cards as forums/saved --}}
+                    <x-forum.post-card :post="$post" />
 
-                    <div class="aspect-[16/9] bg-gray-100 dark:bg-white/5 relative overflow-hidden">
-                        @if($cover || $fallback)
-                            <img
-                                src="{{ $cover ?: $fallback }}"
-                                data-fallback="{{ $fallback ?: '' }}"
-                                alt="{{ $imgData['alt'] ?? $post->title }}"
-                                title="{{ $imgData['title'] ?? $post->title }}"
-                                loading="lazy"
-                                class="absolute inset-0 h-full w-full object-cover group-hover:scale-[1.02] transition"
-                                onerror="
-                                    if (this.dataset.fallback && this.src !== this.dataset.fallback) { this.src = this.dataset.fallback; return; }
-                                    this.onerror=null;
-                                    this.closest('div').innerHTML='<div class=&quot;h-full w-full grid place-items-center text-sm text-gray-500 dark:text-gray-400&quot;>No preview image</div>';
-                                "
-                            >
-                        @else
-                            <div class="h-full w-full grid place-items-center text-sm text-gray-500 dark:text-gray-400">
-                                No preview image
-                            </div>
-                        @endif
-                    </div>
+                    {{-- ✅ ADS AFTER 6 RESULTS (insert once) --}}
+                    @if($i === 6 && ($after6A || $after6B))
+                        <div class="col-span-2 md:col-span-3 2xl:col-span-4 py-2 sm:py-4 flex justify-center items-center">
+                            @if($after6A)
+                                <div class="flex">
+                                    {!! $after6A !!}
+                                </div>
+                            @endif
 
-                    <div class="p-4 space-y-2">
-                        <div class="text-sm text-gray-500 dark:text-gray-400">{{ $date }}</div>
-
-                        <div class="font-semibold text-gray-900 dark:text-gray-100 group-hover:underline line-clamp-2">
-                            {{ $post->title }}
+                            @if($after6B)
+                                <div class="hidden lg:flex">
+                                    {!! $after6B !!}
+                                </div>
+                            @endif
                         </div>
-
-                        <div class="flex flex-wrap gap-2 pt-1">
-                            @forelse(($post->tags ?? []) as $t)
-                                <a
-                                    href="{{ route('tags.show', $t) }}"
-                                    class="text-xs px-2 py-1 rounded-full border border-gray-200 dark:border-white/10
-                                           text-gray-700 dark:text-gray-200 bg-white/60 dark:bg-white/5 hover:bg-white dark:hover:bg-white/10 transition"
-                                    onclick="event.stopPropagation();"
-                                >
-                                    #{{ $t->name }}
-                                </a>
-                            @empty
-                                <span class="text-xs text-gray-500 dark:text-gray-400">No tags</span>
-                            @endforelse
-                        </div>
-                    </div>
-                </a>
-            @endforeach
+                    @endif
+                @endforeach
+            </div>
         </div>
 
         {{-- SEO path pagination --}}
         @php
             $current = (int) $posts->currentPage();
-            $last = (int) $posts->lastPage();
-            $base = url('/tag/' . $tag->slug);
+            $last    = (int) $posts->lastPage();
+            $base    = url('/tag/' . $tag->slug);
 
             $prevUrl = $current > 2 ? ($base . '/' . ($current - 1)) : ($current === 2 ? $base : null);
             $nextUrl = $current < $last ? ($base . '/' . ($current + 1)) : null;
         @endphp
 
-        <div class="pt-4 flex items-center gap-2">
+        <div class="px-2 pt-4 flex items-center gap-2">
             @if($prevUrl)
-                <a class="px-3 py-2 rounded-lg border border-gray-200 dark:border-white/10 hover:bg-white/60 dark:hover:bg-white/10 transition"
-                   href="{{ $prevUrl }}">
-                    Prev
-                </a>
+                <a class="{{ $btn }}" href="{{ $prevUrl }}">Prev</a>
             @endif
 
-            <span class="text-sm text-gray-600 dark:text-gray-300 px-2">
-                Page {{ $current }} / {{ $last }}
+            <span class="text-sm px-2" style="{{ $muted }}">
+                Page <span class="font-extrabold" style="color: var(--an-text);">{{ $current }}</span>
+                /
+                <span class="font-extrabold" style="color: var(--an-text);">{{ $last }}</span>
             </span>
 
             @if($nextUrl)
-                <a class="px-3 py-2 rounded-lg border border-gray-200 dark:border-white/10 hover:bg-white/60 dark:hover:bg-white/10 transition"
-                   href="{{ $nextUrl }}">
-                    Next
-                </a>
+                <a class="{{ $btn }}" href="{{ $nextUrl }}">Next</a>
             @endif
         </div>
 
     @else
-        <div class="rounded-2xl border border-gray-200/70 dark:border-white/10 bg-white/70 dark:bg-white/5 p-6">
-            <div class="font-semibold">No posts</div>
-            <div class="mt-1 text-sm text-gray-600 dark:text-gray-300">
+        <div class="{{ $glass }} p-6">
+            <div class="font-extrabold text-[var(--an-text)]">No posts</div>
+            <div class="mt-1 text-sm" style="{{ $muted }}">
                 There are no published posts with this tag yet.
             </div>
+        </div>
+    @endif
+
+    {{-- ✅ BOTTOM ADS (before footer / end of content) --}}
+    @if($bottomA || $bottomB)
+        <div class="pt-2 sm:pt-4 flex flex-row justify-center items-center">
+            @if($bottomA)
+                <div class="flex">
+                    {!! $bottomA !!}
+                </div>
+            @endif
+
+            @if($bottomB)
+                <div class="hidden lg:flex">
+                    {!! $bottomB !!}
+                </div>
+            @endif
         </div>
     @endif
 

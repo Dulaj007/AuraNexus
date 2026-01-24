@@ -2,6 +2,8 @@
 @extends('layouts.post')
 
 @php
+    use Illuminate\Support\Str;
+
     // ✅ Safety fallbacks (avoid undefined variable crashes)
     $post = $post ?? request()->route('post');
 
@@ -15,51 +17,73 @@
 
     $jsonLd = $jsonLd ?? [];
 
-    $comments = $comments ?? [];
-    $pendingComments = $pendingComments ?? [];
+    $comments = $comments ?? collect();
+    $pendingComments = $pendingComments ?? collect();
 
     $reactionCount = $reactionCount ?? ($post->reactions_count ?? 0);
     $userReacted = $userReacted ?? false;
 
     $isSaved = $isSaved ?? false;
+
+    // Theme helpers (match categories/forums)
+    $glass  = 'bg-[color:var(--an-card)]/72 backdrop-blur-xl border border-[var(--an-border)]';
+    $shadow = 'shadow-[0_16px_55px_rgba(0,0,0,0.28)]';
 @endphp
 
 @section('title', ($post?->title ?? 'Post') . ' • ' . config('app.name'))
 
-@section('meta')
-    @php
-        // ✅ Include paragraph text too (more SEO)
-        $metaText = ($rendered['plainText'] ?? '');
-        if (!empty($paragraph?->content)) {
-            $metaText .= ' ' . $paragraph->content;
+{{-- ✅ Feed meta into the NEW post layout sections --}}
+@php
+    $metaText = ($rendered['plainText'] ?? '');
+    if (!empty($paragraph?->content)) {
+        $metaText .= ' ' . $paragraph->content;
+    }
+
+    $desc = Str::limit(strip_tags($metaText), 160);
+    $url = url()->current();
+    // ✅ Prefer first image THUMB (img69) for OG/Twitter (direct asset URL)
+    $firstPostImage = null;
+
+    foreach (($rendered['sections'] ?? []) as $block) {
+        if (($block['type'] ?? null) === 'image') {
+            $thumb = trim((string)($block['thumb'] ?? ''));
+            $full  = trim((string)($block['full'] ?? ''));
+
+            // Prefer thumb if it's a direct http(s) URL (img69...)
+            if ($thumb !== '' && Str::startsWith($thumb, ['http://','https://'])) {
+                $firstPostImage = $thumb;
+                break;
+            }
+
+            // Fallback to full if thumb missing
+            if ($full !== '' && Str::startsWith($full, ['http://','https://'])) {
+                $firstPostImage = $full;
+                break;
+            }
         }
+    }
 
-        $desc = \Illuminate\Support\Str::limit(strip_tags($metaText), 160);
-        $url = url()->current();
+    $ogImage = $firstPostImage;
+@endphp
 
-        // optional image for OG (first image)
-        $ogImage = $rendered['images'][0] ?? null;
-    @endphp
+@section('meta_title', $post?->title ?? 'Post')
+@section('meta_description', $desc)
+@section('meta_keywords', implode(', ', collect($post->tags)->pluck('name')->take(12)->all()))
 
-    <meta name="description" content="{{ $desc }}">
-    <link rel="canonical" href="{{ $url }}">
+@section('canonical', $url)
+@section('og_type', 'article')
+@if($ogImage)
+    @section('og_image', $ogImage)
+@endif
 
-    <meta property="og:type" content="article">
-    <meta property="og:title" content="{{ $post?->title }}">
-    <meta property="og:description" content="{{ $desc }}">
-    <meta property="og:url" content="{{ $url }}">
-    @if($ogImage)
-        <meta property="og:image" content="{{ $ogImage }}">
-    @endif
-
-    {{-- JSON-LD --}}
-    <script type="application/ld+json">
-        {!! json_encode($jsonLd, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) !!}
-    </script>
+@section('json_ld')
+{!! json_encode($jsonLd, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) !!}
 @endsection
 
 @section('content')
 @php
+    $appName = config('app.name','AuraNexus');
+
     $category = $post->forum?->category;
     $forum = $post->forum;
     $author = $post->user;
@@ -78,23 +102,87 @@
     // Pending flag
     $isPending = $isPending ?? ($post->status !== 'published');
 
-    // Reaction data passed by controller (fallbacks already set above)
+    // Reaction data passed by controller
     $reactionCount = $reactionCount ?? ($post->reactions_count ?? 0);
     $reactedByMe = $userReacted ?? false;
 
     // Report message (admin editable) passed by controller
     $reportMessage = $reportMessage ?? 'Please explain what is wrong with this post. Reports are reviewed by moderators.';
+
+    $shareCount = $shareCount ?? 0;
+
+    // UI helpers
+    $pill = 'inline-flex items-center gap-1.5 px-2 py-1.5 rounded-full
+             border border-[var(--an-border)] bg-[color:var(--an-card)]/60
+             text-[11px] sm:text-xs text-[var(--an-text-muted)]';
+    $pillStrong = 'font-semibold text-[var(--an-text)]';
+
+    $btnBase = 'inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-2 text-sm font-semibold
+                border transition focus:outline-none focus:ring-2 focus:ring-[var(--an-ring)] active:scale-[0.98]';
+
+    // ✅ Post ads (new helper-based setup)
+    $adHtml = function (string $key) {
+        if (function_exists('ad_html')) return ad_html($key);
+        if (function_exists('ad')) return ad($key); // fallback if your helper name is "ad"
+        return null;
+    };
+
+    $adTopM  = $adHtml('post_show_top_a');
+    $adTopD1 = $adHtml('post_show_top_b');
+    $adTopD2 = $adHtml('post_show_top_c');
+
+    $adMid1M  = $adHtml('post_show_mid1_a');
+    $adMid1D1 = $adHtml('post_show_mid1_b');
+    $adMid1D2 = $adHtml('post_show_mid1_c');
+
+    $adMid2M  = $adHtml('post_show_mid2_a');
+    $adMid2D1 = $adHtml('post_show_mid2_b');
+    $adMid2D2 = $adHtml('post_show_mid2_c');
+
+    $adEndM  = $adHtml('post_show_end_a');
+    $adEndD1 = $adHtml('post_show_end_b');
+    $adEndD2 = $adHtml('post_show_end_c');
 @endphp
 
-<div class="space-y-6">
+<div class="max-w-7xl mx-auto  sm:py-6 space-y-3 sm:space-y-6">
+
+    {{-- ✅ Post Ads: TOP (between nav and title) --}}
+    <div class="">
+        {{-- Mobile (1) --}}
+        @if($adTopM)
+            <div class="block lg:hidden">
+                <div class="flex justify-center">
+                    {!! $adTopM !!}
+                </div>
+            </div>
+        @endif
+
+        {{-- Desktop (2) --}}
+        @if($adTopD1 || $adTopD2)
+            <div class="hidden  flex-row lg:flex justify-center">
+                @if($adTopD1)
+                    <div class="flex ">
+                        {!! $adTopD1 !!}
+                    </div>
+                @endif
+                @if($adTopD2)
+                    <div class="flex ">
+                        {!! $adTopD2 !!}
+                    </div>
+                @endif
+            </div>
+        @endif
+    </div>
 
     {{-- Pending banner --}}
     @if($isPending)
-        <x-post.card class="border-amber-400/20 bg-amber-400/5">
-            <div class="flex items-center justify-between gap-4">
+        <x-post.card class="{{ $glass }} {{ $shadow }} rounded-3xl overflow-hidden">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
-                    <div class="text-sm font-semibold text-amber-200">Pending Approval</div>
-                    <div class="text-xs text-white/60">
+                    <div class="text-sm font-semibold" style="color: color-mix(in srgb, var(--an-text) 85%, #f59e0b);">
+                        Pending Approval
+                    </div>
+                    <div class="text-xs text-[var(--an-text-muted)] mt-1">
                         This post is not published yet.
                         @if(!$canApprove)
                             Only moderators/admins can view full content until it’s approved.
@@ -105,7 +193,10 @@
                 @if($canApprove)
                     <form method="POST" action="{{ route('post.approve', $post) }}">
                         @csrf
-                        <button class="rounded-lg bg-amber-400 px-4 py-2 text-sm font-semibold text-black hover:bg-amber-300">
+                        <button class="{{ $btnBase }}"
+                                style="border-color: color-mix(in srgb, #f59e0b 35%, var(--an-border));
+                                       background: color-mix(in srgb, #f59e0b 18%, transparent);
+                                       color: var(--an-text);">
                             Publish
                         </button>
                     </form>
@@ -114,186 +205,372 @@
         </x-post.card>
     @endif
 
-    {{-- Header --}}
-    <x-post.card class="{{ $isPending ? 'opacity-80' : '' }}">
-        <div class="text-xs text-white/50 mb-2">
-            @if($category)
-                <a href="{{ route('categories.show', $category) }}" class="hover:text-white">{{ $category->name }}</a>
-            @else
-                <span class="text-white/40">Uncategorized</span>
-            @endif
+    <div class="px-3 space-y-1 ">
+        <div>
+            <h1 class="text-[18px]  sm:text-2xl md:text-3xl font-extrabold tracking-normal leading-[1.3] text-[var(--an-text)]">
+                {{ $post->title }}
+            </h1>
 
-            <span class="mx-2">›</span>
+            {{-- Breadcrumb --}}
+            <div class="text-[10px] my-1 sm:text-sm text-[var(--an-text-muted)] ">
+                @if($category)
+                    <a class="underline underline-offset-4 hover:no-underline" style="color: var(--an-link)"
+                       href="{{ route('categories.show', $category) }}">
+                        {{ $category->name }}
+                    </a>
+                @else
+                    <span class="text-white/40">Uncategorized</span>
+                @endif
 
-            @if($forum)
-                <a href="{{ route('forums.show', $forum) }}" class="hover:text-white">{{ $forum->name }}</a>
-            @else
-                <span class="text-white/40">Unknown Forum</span>
-            @endif
+                <span class="mx-1">/</span>
+
+                @if($forum)
+                    <a class="underline underline-offset-4 hover:no-underline" style="color: var(--an-link)"
+                       href="{{ route('forums.show', $forum) }}">
+                        {{ $forum->name }}
+                    </a>
+                @else
+                    <span class="text-white/40">Unknown Forum</span>
+                @endif
+            </div>
         </div>
 
-        <h1 class="text-2xl md:text-3xl font-bold tracking-tight">
-            {{ $post->title }}
-        </h1>
+        {{-- Header --}}
+        <div>
+            <div class="flex flex-col gap-2 my-5 pt-2">
+                <div class="flex items-start justify-between ">
+                    <div class="min-w-0">
+                    <div class="flex items-center gap-2">
+                        @php
+                            $authorAvatarUrl = null;
 
-        <div class="mt-3 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-            <div class="flex items-center gap-3">
-                <div class="h-10 w-10 overflow-hidden rounded-full border border-white/10 bg-white/5">
-                    @if($author?->avatar)
-                        <img src="{{ $author->avatar }}" alt="{{ $author->username }} avatar" class="h-full w-full object-cover">
-                    @else
-                        <div class="h-full w-full flex items-center justify-center text-xs text-white/50">
-                            {{ strtoupper(substr($author?->username ?? 'U', 0, 1)) }}
+                            if ($author?->avatar) {
+                                $authorAvatarUrl = \Illuminate\Support\Str::startsWith($author->avatar, ['http://','https://'])
+                                    ? $author->avatar
+                                    : asset('storage/' . ltrim($author->avatar, '/'));
+                            }
+                        @endphp
+
+                        {{-- ✅ clickable author (avatar + name) --}}
+                        <a href="{{ route('profile.show', $author->username) }}"
+                        class="flex items-center gap-2 min-w-0 hover:opacity-90 transition"
+                        aria-label="View profile: {{ $author?->username ?? 'Member' }}">
+
+                            <div class="h-14 w-14 overflow-hidden rounded-xl border border-[var(--an-border)] bg-[color:var(--an-card)]/60">
+                                @if($authorAvatarUrl)
+                                    <img src="{{ $authorAvatarUrl }}"
+                                        alt="{{ $author->username }} avatar"
+                                        class="h-full w-full object-cover"
+                                        loading="lazy">
+                                @else
+                                    <div class="h-full w-full flex items-center justify-center text-xs text-[var(--an-text-muted)]">
+                                        {{ strtoupper(substr($author?->username ?? 'U', 0, 1)) }}
+                                    </div>
+                                @endif
+                            </div>
+
+                            <div class="min-w-0">
+                                <div class="text-sm font-semibold text-[var(--an-text)] truncate">
+                                    {{ $author?->name ?? $author?->username ?? 'Member' }}
+                                </div>
+                                <div class="text-xs text-[var(--an-text-muted)]">
+                                    Posted {{ optional($post->created_at)->diffForHumans() }}
+                                </div>
+                            </div>
+
+                        </a>
+
+                        <div class="shrink-0">
+                            <span class="{{ $pill }} bg-[var(--an-primary)]/20">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none"
+                                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                                    style="color: var(--an-text-muted)">
+                                    <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/>
+                                    <circle cx="12" cy="12" r="3"/>
+                                </svg>
+                                <span class="{{ $pillStrong }}">{{ number_format((int)($post->views ?? 0)) }}</span>
+                            </span>
                         </div>
+                    </div>
+
+                    </div>
+                </div>
+
+                {{-- Tags --}}
+                <div class="flex flex-wrap gap-2 mb-1">
+                    @if($post->highlightTag)
+                        <x-post.tag :href="route('tags.show', $post->highlightTag->slug) ?? '#'" variant="highlight" >
+                            {{ $post->highlightTag->name }}
+                        </x-post.tag>
                     @endif
-                </div>
 
-                <div>
-                    <div class="text-sm font-semibold">
-                        {{ $author?->name ?? $author?->username ?? 'Member' }}
-                    </div>
-                    <div class="text-xs text-white/50">
-                        Posted {{ optional($post->created_at)->diffForHumans() }} • {{ optional($post->created_at)->toFormattedDateString() }}
-                    </div>
+                    @foreach($post->tags as $t)
+                        @continue($post->highlightTag && $t->id === $post->highlightTag->id)
+                        <x-post.tag :href="route('tags.show', $t->slug) ?? '#'">
+                            {{ $t->name }}
+                        </x-post.tag>
+                    @endforeach
                 </div>
-            </div>
-
-            <div class="text-xs text-white/50">
-                Views: {{ $post->views ?? 0 }}
             </div>
         </div>
 
-        {{-- Tags --}}
-        <div class="mt-4 flex flex-wrap gap-2">
-            @if($post->highlightTag)
-                <x-post.tag :href="route('tags.show', $post->highlightTag->slug) ?? '#'" variant="highlight">
-                    {{ $post->highlightTag->name }}
-                </x-post.tag>
+        <div class ="flex flex-row gap-1 justify-start w-full">
+            {{-- ❤️ Like (keep count as usual inside your component) --}}
+            <x-post.reaction-button
+                :post="$post"
+                :count="$reactionCount"
+                :reacted="$userReacted"
+                :can-react="$isLoggedIn"
+            />
+
+            {{-- 💾 Save --}}
+            @if($isLoggedIn)
+                <form method="POST" action="{{ route('post.save.toggle', $post) }}">
+                    @csrf
+                    <button type="submit"
+                            class="{{ $btnBase }} !px-3 !py-2"
+                            title="{{ $isSaved ? 'Saved' : 'Save' }}"
+                            aria-label="{{ $isSaved ? 'Saved' : 'Save' }}"
+                            style="
+                                border-color: var(--an-border);
+                                color: {{ $isSaved ? 'var(--an-success)' : 'var(--an-info)' }};
+                                background: color-mix(in srgb, currentColor 16%, transparent);
+                            ">
+                        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+                            <path fill-rule="evenodd" clip-rule="evenodd"
+                                  d="M6.75 6L7.5 5.25H16.5L17.25 6V19.3162L12 16.2051L6.75 19.3162V6ZM8.25 6.75V16.6838L12 14.4615L15.75 16.6838V6.75H8.25Z"
+                                  fill="currentColor"/>
+                        </svg>
+                    </button>
+                </form>
+            @else
+                <a href="{{ route('login') }}"
+                   class="{{ $btnBase }} !px-3 !py-2"
+                   title="Save"
+                   aria-label="Save"
+                   style="
+                        border-color: var(--an-border);
+                        color: var(--an-info);
+                        background: color-mix(in srgb, currentColor 16%, transparent);
+                   ">
+                    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+                        <path fill-rule="evenodd" clip-rule="evenodd"
+                              d="M6.75 6L7.5 5.25H16.5L17.25 6V19.3162L12 16.2051L6.75 19.3162V6ZM8.25 6.75V16.6838L12 14.4615L15.75 16.6838V6.75H8.25Z"
+                              fill="currentColor"/>
+                    </svg>
+                </a>
             @endif
 
-            @foreach($post->tags as $t)
-                @continue($post->highlightTag && $t->id === $post->highlightTag->id)
-                <x-post.tag :href="route('tags.show', $t->slug) ?? '#'" >
-                    {{ $t->name }}
-                </x-post.tag>
-            @endforeach
+            {{-- 🔗 Share (no count) --}}
+            <button type="button"
+                    class="{{ $btnBase }} !px-3 !py-2"
+                    title="Share"
+                    aria-label="Share"
+                    style="
+                        border-color: var(--an-border);
+                        color: var(--an-primary);
+                        background: color-mix(in srgb, currentColor 14%, transparent);
+                    "
+                    onclick="sharePost()">
+                <svg class="w-5 h-5" viewBox="0 0 512 512" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M512,230.431L283.498,44.621v94.807C60.776,141.244-21.842,307.324,4.826,467.379
+                             c48.696-99.493,149.915-138.677,278.672-143.14v92.003L512,230.431z"
+                          fill="currentColor"/>
+                </svg>
+            </button>
         </div>
-    </x-post.card>
+    </div>
+
+    {{-- ✅ Post Ads: AFTER FIRST ACTION BUTTONS (between like/save/share and content) --}}
+    <div class="px-3">
+        {{-- Mobile (1) --}}
+        @if($adMid1M)
+            <div class="block lg:hidden">
+                <div class="flex justify-center">
+                    {!! $adMid1M !!}
+                </div>
+            </div>
+        @endif
+
+        {{-- Desktop (2) --}}
+        @if($adMid1D1 || $adMid1D2)
+            <div class="hidden  flex-row lg:flex justify-center">
+                @if($adMid1D1)
+                    <div class="flex ">
+                        {!! $adMid1D1 !!}
+                    </div>
+                @endif
+                @if($adMid1D2)
+                    <div class="flex ">
+                        {!! $adMid1D2 !!}
+                    </div>
+                @endif
+            </div>
+        @endif
+    </div>
 
     {{-- Content (only show if published OR approver) --}}
     @if(!$isPending || $canApprove)
-        <x-post.card class="{{ $isPending ? 'opacity-80' : '' }}">
+
+        <x-post.card class="{{ $glass }} {{ $shadow }} overflow-hidden {{ $isPending ? 'opacity-90' : '' }}">
             <div class="prose prose-invert max-w-none">
                 @php $imgIndex = 0; @endphp
 
                 @foreach(($rendered['sections'] ?? []) as $block)
-                    @if($block['type'] === 'heading')
+
+                    @if(($block['type'] ?? null) === 'heading')
                         @php $heading = trim($block['text'] ?? ''); @endphp
 
                         @if(strtolower($heading) === 'download links')
-                            <h2 class="mt-2">Download Links</h2>
+                            <h2 class="pt-3 pl-3 font-semibold">Download Links</h2>
                         @elseif(strtolower($heading) === 'watch online')
-                            <h2 class="mt-6">Watch Online</h2>
+                            <h2 class="pt-3 pl-3 font-semibold">Watch Online Links</h2>
                         @else
-                            <h3>{{ $heading }}</h3>
+                            <h3  class="mx-2">{{ $heading }}</h3>
                         @endif
 
-                    @elseif($block['type'] === 'link')
-                        <div class="not-prose my-2">
-                            <x-post.link-card :url="$block['url']" :label="$block['label'] ?? null" />
-                        </div>
+                        @elseif(($block['type'] ?? null) === 'link')
+                            <div class="not-prose my-2 mx-2">
+                                @php
+                                    // If gate_url exists, use it. Otherwise fallback to original url.
+                                    $href = $block['gate_url'] ?? $block['url'];
+                                    $label = $block['label'] ?? null;
 
-                    @elseif($block['type'] === 'image')
+                                    // If display exists, show masked text. Otherwise show the host.
+                                    $display = $block['display'] ?? (parse_url($block['url'] ?? '', PHP_URL_HOST) ? (parse_url($block['url'], PHP_URL_HOST) . '/…') : 'link');
+                                @endphp
+
+                                <x-post.link-card
+                                :url="$block['gate_url'] ?? $block['url']"
+                                :label="$block['label'] ?? null"
+                                :display="$block['display'] ?? null"
+                            />
+
+                            </div>
+
+
+                    @elseif(($block['type'] ?? null) === 'image')
                         @php $imgIndex++; @endphp
                         <div class="not-prose my-4">
                             <a href="{{ $block['full'] }}" target="_blank" rel="nofollow noopener">
                                 <img
                                     src="{{ $block['thumb'] }}"
                                     alt="{{ $post->title }} - Image {{ $imgIndex }}"
-                                    class="w-full max-w-3xl rounded-xl border border-white/10 bg-black/30"
+                                    class="w-full max-w-3xl rounded-xl border border-[var(--an-border)] bg-[color:var(--an-card)]/40"
                                     loading="lazy"
                                 >
                             </a>
-                            <div class="text-xs text-white/50 mt-2">
+                            <div class="text-xs text-[var(--an-text-muted)] mt-2">
                                 Click image to view in high quality
                             </div>
                         </div>
 
-                    @elseif($block['type'] === 'text')
-                        <p>{{ $block['text'] }}</p>
+                    @elseif(($block['type'] ?? null) === 'text')
+                        <p class="mx-2 text-sm">{{ $block['text'] }}</p>
                     @endif
+
                 @endforeach
             </div>
 
             {{-- Extra paragraph saved (SEO-friendly) --}}
             @if($paragraph && $paragraph->content)
-                <div class="mt-6 border-t border-white/10 pt-4 text-white/80">
+                <div class="mt-6 mx-2 text-sm border-t border-[var(--an-border)] pt-4 text-[var(--an-text)]/80">
                     <p>{{ $paragraph->content }}</p>
                 </div>
             @endif
         </x-post.card>
 
-        {{-- ✅ ACTIONS (React + Save + Report + Edit + Remove) --}}
-        <x-post.card class="{{ $isPending ? 'opacity-80' : '' }}">
-            <div class="flex flex-wrap items-center gap-3">
-
-                <x-post.reaction-button
-                    :post-id="$post->id"
-                    :count="$reactionCount"
-                    :reacted="$reactedByMe"
-                    :can-react="$isLoggedIn"
-                />
-
-                {{-- ✅ SAVE --}}
-                @if($isLoggedIn)
-                    <form method="POST" action="{{ route('post.save.toggle', $post) }}">
-                        @csrf
-                        <button
-                            type="submit"
-                            class="rounded-lg px-4 py-2 text-sm font-semibold text-black
-                                   {{ $isSaved ? 'bg-emerald-400 hover:bg-emerald-300' : 'bg-sky-400 hover:bg-sky-300' }}"
-                        >
-                            {{ $isSaved ? 'Saved' : 'Save' }}
-                        </button>
-                    </form>
-                @else
-                    <a
-                        href="{{ route('login') }}"
-                        class="rounded-lg bg-sky-400 px-4 py-2 text-sm font-semibold text-black hover:bg-sky-300"
-                    >
-                        Save
-                    </a>
-                @endif
-
+        {{-- Actions --}}
+        <div class ="flex flex-row gap-1 justify-between p-2 my-4 w-full">
+            <div class ="flex   ">
                 <x-post.report-button
                     :post="$post"
                     :message="$reportMessage"
-                />
+                    class="{{ $btnBase }} "
+                    title="Report"
+                    aria-label="Report"> </x-post.report-button>
+            </div>
 
+            <div class ="flex flex-row gap-1  ">
+                {{-- ✏️ Edit --}}
                 @if($canEditPost)
-                    <a
-                        href="{{ route('post.edit', $post->slug) }}"
-                        class="rounded-lg bg-white/10 border border-white/10 px-4 py-2 text-sm font-semibold text-white hover:border-white/20"
-                    >
-                        Edit
+                    <a href="{{ route('post.edit', $post->slug) }}"
+                       class="{{ $btnBase }} !px-3 !py-2"
+                       title="Edit"
+                       aria-label="Edit"
+                       style="
+                           border-color: var(--an-border);
+                           color: var(--an-link);
+                           background: color-mix(in srgb, currentColor 12%, transparent);
+                       ">
+                        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M20,16v4a2,2,0,0,1-2,2H4a2,2,0,0,1-2-2V6A2,2,0,0,1,4,4H8"
+                                  stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+                            <polygon points="12.5 15.8 22 6.2 17.8 2 8.3 11.5 8 16 12.5 15.8"
+                                     stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" fill="none"/>
+                        </svg>
                     </a>
                 @endif
 
+                {{-- 🗑️ Remove --}}
                 @if($canDeletePost)
-                    <button
-                        type="button"
-                        class="rounded-lg bg-red-500 px-4 py-2 text-sm font-semibold text-black hover:bg-red-400"
-                        onclick="openRemovePostModal()"
-                    >
-                        Remove Post
+                    <button type="button"
+                            class="{{ $btnBase }} !px-3 !py-2"
+                            title="Remove"
+                            aria-label="Remove"
+                            style="
+                                border-color: color-mix(in srgb, var(--an-danger) 35%, var(--an-border));
+                                color: var(--an-danger);
+                                background: color-mix(in srgb, currentColor 12%, transparent);
+                            "
+                            onclick="openRemovePostModal()">
+                        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M10 12V17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M14 12V17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M4 7H20" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M6 10V18C6 19.6569 7.34315 21 9 21H15C16.6569 21 18 19.6569 18 18V10"
+                                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M9 5C9 3.89543 9.89543 3 11 3H13C14.1046 3 15 3.89543 15 5V7H9V5Z"
+                                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
                     </button>
                 @endif
             </div>
-        </x-post.card>
+        </div>
 
-        {{-- ✅ COMMENTS --}}
-        <x-post.card class="{{ $isPending ? 'opacity-80' : '' }}">
+        {{-- ✅ Post Ads: AFTER REPORT/EDIT/REMOVE (before comments box) --}}
+        <div class="px-3">
+            {{-- Mobile (1) --}}
+            @if($adMid2M)
+                <div class="block lg:hidden">
+                    <div class="flex justify-center">
+                        {!! $adMid2M !!}
+                    </div>
+                </div>
+            @endif
+
+            {{-- Desktop (2) --}}
+            @if($adMid2D1 || $adMid2D2)
+                 <div class="hidden  flex-row lg:flex justify-center">
+                    @if($adMid2D1)
+                        <div class="flex ">
+                            {!! $adMid2D1 !!}
+                        </div>
+                    @endif
+                    @if($adMid2D2)
+                        <div class="flex">
+                            {!! $adMid2D2 !!}
+                        </div>
+                    @endif
+                </div>
+            @endif
+        </div>
+<x-post.related-posts :posts="$relatedPosts" />
+
+        {{-- Comments --}}
+        <x-post.card class="{{ $glass }} {{ $shadow }} overflow-hidden {{ $isPending ? 'opacity-90' : '' }}">
             <x-post.comments
+                :post="$post"
                 :post-id="$post->id"
                 :is-logged-in="$isLoggedIn"
                 :can-approve="$canApprove"
@@ -303,41 +580,58 @@
             />
         </x-post.card>
 
+        {{-- ✅ Post Ads: END (after comments, before footer) --}}
+        <div class="px-3">
+            {{-- Mobile (1) --}}
+            @if($adEndM)
+                <div class="block lg:hidden">
+                    <div class="flex justify-center">
+                        {!! $adEndM !!}
+                    </div>
+                </div>
+            @endif
+
+            {{-- Desktop (2) --}}
+            @if($adEndD1 || $adEndD2)
+                 <div class="hidden  flex-row lg:flex justify-center">
+                    @if($adEndD1)
+                        <div class="flex ">
+                            {!! $adEndD1 !!}
+                        </div>
+                    @endif
+                    @if($adEndD2)
+                        <div class="flex ">
+                            {!! $adEndD2 !!}
+                        </div>
+                    @endif
+                </div>
+            @endif
+        </div>
+
     @else
         {{-- Not allowed to see content --}}
-        <x-post.card class="opacity-80">
-            <div class="text-sm text-white/70">
+        <x-post.card class="{{ $glass }} {{ $shadow }} rounded-3xl overflow-hidden opacity-90">
+            <div class="text-sm text-[var(--an-text-muted)]">
                 This post is currently pending approval.
             </div>
         </x-post.card>
     @endif
 
 </div>
-<button
-    type="button"
-    class="rounded-lg bg-white/10 border border-white/10 px-4 py-2 text-sm font-semibold text-white hover:border-white/20"
-    onclick="sharePost()"
->
-    Share <span class="text-white/60">({{ $shareCount ?? 0 }})</span>
-</button>
 
 <script>
 async function sharePost() {
     const url = @json(url()->current());
     const title = @json($post->title);
 
-    // try native share
     if (navigator.share) {
         try {
             await navigator.share({ title, url });
             await trackShare('native');
             return;
-        } catch (e) {
-            // user cancelled -> do nothing
-        }
+        } catch (e) {}
     }
 
-    // fallback: copy
     try {
         await navigator.clipboard.writeText(url);
         alert('Link copied!');
@@ -358,7 +652,6 @@ async function trackShare(channel) {
             },
             body: JSON.stringify({ channel }),
         });
-        // (optional) update count via reload or DOM increment
     } catch (e) {}
 }
 </script>
@@ -366,13 +659,15 @@ async function trackShare(channel) {
 {{-- ✅ Remove Post Modal --}}
 @if($canDeletePost)
 <div id="removePostModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/70 p-4">
-    <div class="w-full max-w-lg rounded-2xl border border-white/10 bg-[#0b0f1a] p-5">
+    <div class="w-full max-w-lg rounded-3xl border border-[var(--an-border)] bg-[color:var(--an-card)]/90 backdrop-blur-xl p-5">
         <div class="flex items-start justify-between gap-4">
             <div>
-                <div class="text-sm font-semibold text-white">Remove Post</div>
-                <div class="text-xs text-white/60 mt-1">Add a reason. This will permanently remove the post from public view.</div>
+                <div class="text-sm font-semibold text-[var(--an-text)]">Remove Post</div>
+                <div class="text-xs text-[var(--an-text-muted)] mt-1">
+                    Add a reason. This will permanently remove the post from public view.
+                </div>
             </div>
-            <button type="button" class="text-white/60 hover:text-white" onclick="closeRemovePostModal()">✕</button>
+            <button type="button" class="text-[var(--an-text-muted)] hover:text-[var(--an-text)]" onclick="closeRemovePostModal()">✕</button>
         </div>
 
         <form method="POST" action="{{ route('post.remove', $post) }}" class="mt-4 space-y-3">
@@ -384,19 +679,26 @@ async function trackShare(channel) {
                 minlength="3"
                 maxlength="500"
                 rows="4"
-                class="w-full rounded-lg bg-black/40 border border-white/10 p-3 text-sm text-white focus:border-red-400 focus:outline-none"
+                class="w-full rounded-2xl bg-[color:var(--an-bg)]/40 border border-[var(--an-border)]
+                       p-3 text-sm text-[var(--an-text)]
+                       focus:outline-none focus:ring-2 focus:ring-[var(--an-danger)]/30"
                 placeholder="Reason for removal..."
             ></textarea>
 
             <div class="flex justify-end gap-2">
                 <button
                     type="button"
-                    class="rounded-lg border border-white/10 px-4 py-2 text-sm text-white/80 hover:bg-white/5"
+                    class="rounded-2xl border border-[var(--an-border)] px-4 py-2 text-sm
+                           text-[var(--an-text)]/80 hover:bg-[color:var(--an-card)]/60"
                     onclick="closeRemovePostModal()"
                 >
                     Cancel
                 </button>
-                <button type="submit" class="rounded-lg bg-red-500 px-4 py-2 text-sm font-semibold text-black hover:bg-red-400">
+                <button type="submit"
+                        class="rounded-2xl px-4 py-2 text-sm font-semibold"
+                        style="background: color-mix(in srgb, var(--an-danger) 22%, transparent);
+                               border: 1px solid color-mix(in srgb, var(--an-danger) 35%, var(--an-border));
+                               color: var(--an-text);">
                     Remove
                 </button>
             </div>
@@ -417,5 +719,4 @@ function closeRemovePostModal() {
 }
 </script>
 @endif
-
 @endsection

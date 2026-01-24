@@ -1,125 +1,159 @@
+{{-- resources/views/layouts/forums.blade.php --}}
+@php
+    use Illuminate\Support\Facades\Cache;
+
+    // ✅ Use shared settings (from AppServiceProvider)
+    $settings = $siteSettings ?? [];
+
+    $siteName        = $settings['site_name'] ?? config('app.name', 'AuraNexus');
+    $siteDescription = $settings['site_description'] ?? ('Browse discussions by forum on ' . $siteName . '.');
+    $siteKeywords    = trim((string)($settings['site_keywords'] ?? ''));
+    $themeColor      = $settings['site_theme_color'] ?? '#FF4268';
+
+    // Theme mode (per-user)
+    $mode = request()->cookie('theme_mode', 'dark');
+    $mode = in_array($mode, ['dark','light'], true) ? $mode : 'dark';
+
+    // Per-page meta (allow overrides)
+    $pageTitle = trim($__env->yieldContent('meta_title')) ?: trim($__env->yieldContent('title')) ?: 'Forums';
+    $metaTitle = $pageTitle;
+
+    $metaDescription = trim($__env->yieldContent('meta_description')) ?: $siteDescription;
+    $canonical        = trim($__env->yieldContent('canonical')) ?: url()->current();
+    $ogType           = trim($__env->yieldContent('og_type')) ?: 'website';
+
+    // ✅ Keywords (page override -> settings -> none)
+    $keywordsOverride = trim($__env->yieldContent('meta_keywords', ''));
+    $keywords = $keywordsOverride !== '' ? $keywordsOverride : $siteKeywords;
+
+    // ✅ Robots (page override -> settings -> default)
+    $robotsOverride = trim($__env->yieldContent('meta_robots', ''));
+    $robotsSaved    = trim((string)($settings['meta_robots'] ?? ''));
+    $robotsDefault  = 'index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1';
+    $robots         = $robotsOverride !== '' ? $robotsOverride : ($robotsSaved !== '' ? $robotsSaved : $robotsDefault);
+
+    // OG image (page override -> logo fallback)
+    $ogImage = trim($__env->yieldContent('og_image')) ?: asset(config('app.logo'));
+    $logoUrl = asset(config('app.logo'));
+
+    /**
+     * ✅ Community head script (prefer helper, fallback to cached DB map)
+     */
+    $headCommunity = null;
+
+    if (function_exists('ad')) {
+        $headCommunity = ad('head_community');
+    }
+
+    if (!is_string($headCommunity) || trim($headCommunity) === '') {
+        $adsHtml = Cache::remember('ads.placements', 300, function () {
+            return \App\Models\AdPlacement::query()
+                ->where('is_enabled', true)
+                ->whereNotNull('html')
+                ->pluck('html', 'key')
+                ->toArray();
+        });
+
+        $headCommunity = $adsHtml['head_community'] ?? null;
+    }
+
+    $headCommunity = (is_string($headCommunity) && trim($headCommunity) !== '') ? $headCommunity : null;
+@endphp
+
 <!doctype html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" data-theme="{{ $mode }}">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
-    {{-- Title --}}
-    <title>@yield('title', 'Forums') - {{ config('app.name', 'AuraNexus') }}</title>
+    <title>{{ $metaTitle }} • {{ $siteName }}</title>
 
-    {{-- Basic SEO --}}
-    @php
-        // These get passed from the child views
-        $metaTitle = trim($__env->yieldContent('meta_title', $__env->yieldContent('title', 'Forums')));
-        $metaDescription = trim($__env->yieldContent('meta_description', 'Browse discussions by forum.'));
-        $canonical = trim($__env->yieldContent('canonical', url()->current()));
-        $metaRobots = trim($__env->yieldContent('meta_robots', 'index,follow'));
-        $ogImage = trim($__env->yieldContent('og_image', asset('images/og-default.jpg'))); // change if you have one
-    @endphp
-
-    <meta name="description" content="{{ $metaDescription }}">
-    <meta name="robots" content="{{ $metaRobots }}">
     <link rel="canonical" href="{{ $canonical }}">
+    <meta name="description" content="{{ $metaDescription }}">
+    <meta name="robots" content="{{ $robots }}">
+    <meta name="theme-color" content="{{ $themeColor }}">
+
+    @if($keywords !== '')
+        <meta name="keywords" content="{{ $keywords }}">
+    @endif
+
+    {{-- App identity --}}
+    <meta name="application-name" content="{{ $siteName }}">
+    <meta name="apple-mobile-web-app-title" content="{{ $siteName }}">
+
+    {{-- Favicon / app icons --}}
+    <link rel="icon" href="{{ $logoUrl }}">
+    <link rel="apple-touch-icon" href="{{ $logoUrl }}">
 
     {{-- Open Graph --}}
-    <meta property="og:site_name" content="{{ config('app.name', 'AuraNexus') }}">
-    <meta property="og:type" content="@yield('og_type','website')">
+    <meta property="og:site_name" content="{{ $siteName }}">
     <meta property="og:title" content="{{ $metaTitle }}">
     <meta property="og:description" content="{{ $metaDescription }}">
+    <meta property="og:type" content="{{ $ogType }}">
     <meta property="og:url" content="{{ $canonical }}">
     <meta property="og:image" content="{{ $ogImage }}">
+    <meta property="og:image:alt" content="{{ $siteName }}">
 
     {{-- Twitter --}}
-    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:card" content="{{ $ogImage ? 'summary_large_image' : 'summary' }}">
     <meta name="twitter:title" content="{{ $metaTitle }}">
     <meta name="twitter:description" content="{{ $metaDescription }}">
     <meta name="twitter:image" content="{{ $ogImage }}">
 
-    {{-- Assets --}}
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
-
-    {{-- Per-page head additions --}}
-    @stack('head')
-
-    {{-- JSON-LD (child views can override/append) --}}
+    {{-- JSON-LD --}}
     @hasSection('json_ld')
         <script type="application/ld+json">
 {!! trim($__env->yieldContent('json_ld')) !!}
         </script>
     @endif
+
+    {{-- ✅ Shared head ad/script for community pages --}}
+    @if($headCommunity)
+        {!! $headCommunity !!}
+    @endif
+
+    {{-- App assets --}}
+    @vite(['resources/css/app.css','resources/js/app.js'])
+
+    {{-- Theme CSS (generated by ThemeService) --}}
+    @inject('theme', \App\Services\ThemeService::class)
+    <style>
+        {!! $theme->css($mode) !!}
+    </style>
+
+    {{-- Ensure attribute is synced early --}}
+    <script>
+        (function () {
+            document.documentElement.setAttribute('data-theme', @json($mode));
+        })();
+    </script>
+
+    @stack('head')
 </head>
 
-<body class="bg-gray-50 text-gray-900">
-    {{-- Simple top nav just for forums area (separate from public layout) --}}
-    <header class="border-b bg-white">
-        <div class="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
-            <a href="{{ route('forums.index') }}" class="font-bold text-lg">
-                {{ config('app.name', 'AuraNexus') }} <span class="text-gray-400 font-normal">/ Forums</span>
-            </a>
+<body class="min-h-screen bg-[var(--an-bg)] text-[var(--an-text)] overflow-x-hidden">
 
-            <nav class="text-sm flex items-center gap-4">
-                <a class="hover:underline" href="{{ route('home') }}">Home</a>
-                <a class="hover:underline" href="{{ route('categories.index') }}">Categories</a>
-                <a class="hover:underline" href="{{ route('forums.index') }}">Forums</a>
-                @auth
-                    <a class="hover:underline" href="{{ route('posting.create') }}">+ New Post</a>
-                @endauth
-            </nav>
-        </div>
-    </header>
+    {{-- Ambient glows (subtle) --}}
+    <div class="pointer-events-none fixed inset-0 -z-10 overflow-hidden opacity-60">
+        <div class="absolute -top-40 -left-40 h-[520px] w-[520px] rounded-full blur-3xl opacity-15 bg-[var(--an-link)]"></div>
+        <div class="absolute top-24 -right-48 h-[620px] w-[620px] rounded-full blur-3xl opacity-12 bg-[var(--an-primary)]"></div>
+        <div class="absolute bottom-[-220px] left-[25%] h-[520px] w-[520px] rounded-full blur-[140px] opacity-10 bg-[var(--an-info)]"></div>
+    </div>
 
-    <main>
-        <div class="max-w-7xl mx-auto px-4 py-6">
+    {{-- Public navbar --}}
+    @include('partials.nav')
 
-            {{-- Header area --}}
-            <div class="mb-6 flex items-start justify-between gap-4">
-                <div>
-                    <p class="text-xs text-gray-500">Community</p>
-                    <h1 class="text-2xl font-bold">@yield('page_title', 'Forums')</h1>
-                    <p class="text-sm text-gray-600">@yield('page_subtitle', 'Browse discussions by forum')</p>
-                </div>
-
-                @hasSection('ad_top')
-                    <div class="min-w-[260px]">
-                        @yield('ad_top')
-                    </div>
-                @endif
+    <main class="max-w-7xl mx-auto">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <div class="lg:col-span-12 space-y-6">
+                @yield('forums_content')
             </div>
-
-            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                <div class="lg:col-span-9">
-                    @yield('forums_content')
-                </div>
-
-                <aside class="lg:col-span-3 space-y-4">
-                    @hasSection('sidebar')
-                        @yield('sidebar')
-                    @else
-                        <div class="bg-white border rounded-2xl p-4">
-                            <p class="text-sm font-semibold">Forums</p>
-                            <p class="text-xs text-gray-600 mt-1">
-                                Browse categories & forums.
-                            </p>
-                            <div class="mt-3 text-sm space-y-2">
-                                <a class="underline" href="{{ route('forums.index') }}">All Forums</a><br>
-                                <a class="underline" href="{{ route('categories.index') }}">All Categories</a>
-                            </div>
-                        </div>
-                    @endif
-
-                    @hasSection('ad_sidebar')
-                        @yield('ad_sidebar')
-                    @endif
-                </aside>
-            </div>
-
         </div>
     </main>
 
-    <footer class="border-t bg-white">
-        <div class="max-w-7xl mx-auto px-4 py-6 text-xs text-gray-500">
-            © {{ date('Y') }} {{ config('app.name', 'AuraNexus') }}. Forums.
-        </div>
-    </footer>
+    {{-- Public footer --}}
+    @include('partials.footer')
+
+    @stack('scripts')
 </body>
 </html>

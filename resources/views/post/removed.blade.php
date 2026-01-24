@@ -12,11 +12,11 @@
 <div class="space-y-6">
 
     {{-- Removed notice --}}
-    <x-post.card class="border-red-500/20 bg-red-500/10">
-        <div class="text-sm font-semibold text-red-200">
+    <x-post.card class="border-[var(--an-danger)] bg-[var(--an-danger)]/10">
+        <div class="text-sm font-semibold text-[var(--an-danger)]">
             This post has been permanently removed
         </div>
-        <div class="text-xs text-white/60 mt-1">
+        <div class="text-xs text-[var(--an-text)] mt-1">
             The content is no longer available on {{ config('app.name') }}.
         </div>
     </x-post.card>

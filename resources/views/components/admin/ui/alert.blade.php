@@ -8,7 +8,7 @@
     // Allow both "tone" and "variant"
     $tone = $tone ?? $variant;
 
-    $base = 'rounded-2xl border p-4 backdrop-blur-xl';
+    $base = 'rounded-2xl border p-4 backdrop-blur-xl mb-3';
 
     $variants = [
         'default' => 'bg-[var(--an-card)] border-[var(--an-border)] text-[var(--an-text)]',

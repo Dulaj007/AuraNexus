@@ -8,14 +8,17 @@
 
     <input type="hidden" name="mode" value="{{ $isDark ? 'light' : 'dark' }}">
 
-    <button
+   <x-ui.glow-button href="{{ route('posting.create') }}"
+                                        bgcolor="var(--an-primary)"
+                                        color="var(--an-primary)"
         type="submit"
         title="{{ $isDark ? 'Switch to light mode' : 'Switch to dark mode' }}"
-        class="group flex items-center justify-center h-10 w-10 rounded-lg border transition
-               hover:bg-[var(--an-card-2)]"
+        class="group flex items-center justify-center scale-120 h-8 w-8 rounded-lg
+     
+       "
         style="
-            border-color: var(--an-border);
-            background: var(--an-card);
+            ;
+            ;
             color: var(--an-text);
         "
     >
@@ -55,5 +58,5 @@
 
 
         @endif
-    </button>
+    </x-ui.glow-button>
 </form>

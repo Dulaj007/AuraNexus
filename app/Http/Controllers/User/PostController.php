@@ -1,6 +1,7 @@
 <?php
 
 namespace App\Http\Controllers\User;
+use App\Services\PostLinkifier;
 
 use App\Http\Controllers\Controller;
 use App\Models\Comment;
@@ -32,11 +33,11 @@ class PostController extends Controller
 
         $isOwner    = $user && (int) $user->id === (int) $post->user_id;
         $canApprove = $user?->hasPermission('approve_post') ?? false;
-if ($post->status === Post::STATUS_REMOVED) {
-    // custom removed page (you control the design)
-    return response()
-        ->view('post.removed', ['post' => $post], 410); // 410 Gone is ideal
-}
+        if ($post->status === Post::STATUS_REMOVED) {
+            // custom removed page (you control the design)
+            return response()
+                ->view('post.removed', ['post' => $post], 410); // 410 Gone is ideal
+        }
 
         // ✅ removed posts -> custom removed page
         if ($post->status === 'removed') {
@@ -69,6 +70,12 @@ if ($post->status === Post::STATUS_REMOVED) {
 
         // ✅ parse post content
         $rendered = $post->parsedContent();
+
+
+        // ✅ Convert outbound links into /link/{code} (download gate) + add masked display
+        $rendered = app(PostLinkifier::class)->linkifySections($post->id, $rendered);
+
+
 
         // ✅ optional SEO paragraph
         $paragraph = PostParagraph::where('post_id', $post->id)->latest()->first();
@@ -140,9 +147,37 @@ if ($post->status === Post::STATUS_REMOVED) {
                 ->where('user_id', $user->id)
                 ->get();
         }
+        // ✅ RELATED POSTS (tag overlap score, then most recent)
+        $tagIds = $post->tags->pluck('id')->values();
+
+        $relatedPosts = collect();
+
+        if ($tagIds->isNotEmpty()) {
+            $relatedPosts = Post::query()
+                ->where('status', 'published')
+                ->where('id', '!=', $post->id)
+                ->whereHas('tags', fn ($q) => $q->whereIn('tags.id', $tagIds))
+                ->with([
+                    'forum:id,name,slug,category_id',
+                    'forum.category:id,name,slug',
+                    'tags:id,name,slug',
+                    'highlightTag:id,name,slug',
+                    'user:id,username,name,avatar',
+                ])
+                ->withCount([
+                    // overlap score: how many of THIS post's tags each candidate shares
+                    'tags as overlap_count' => fn ($q) => $q->whereIn('tags.id', $tagIds),
+                ])
+                ->orderByDesc('overlap_count')   // best matches first
+                ->orderByDesc('created_at')      // tie-break: most recent
+                ->limit(4)
+                ->get();
+        }
 
         return view('post.show', [
             'post'            => $post,
+            'relatedPosts' => $relatedPosts,
+
             'isPending'       => $isPending,
             'canApprove'      => $canApprove,
             'rendered'        => $rendered,
