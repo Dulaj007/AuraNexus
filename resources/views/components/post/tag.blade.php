@@ -5,7 +5,7 @@
 
 @php
     $base = 'inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold border transition
-             focus:outline-none focus:ring-2 focus:ring-[var(--an-ring)] an-gradient-animated';
+             focus:outline-none focus:ring-2 focus:ring-[var(--an-ring)]';
 
     $styles = $variant === 'highlight'
         ? 'bg-gradient-to-r from-[var(--an-primary)]/5 k via-[var(--an-primary)]/55 to-[var(--an-primary)]/5 
