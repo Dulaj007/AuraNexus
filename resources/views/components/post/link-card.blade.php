@@ -31,7 +31,7 @@
    rel="nofollow noopener"
    class="block rounded-2xl border border-[var(--an-border)]
           bg-gradient-to-r from-[var(--an-link)]/15 via-[var(--an-link)]/55 to-[var(--an-link)]/15
-          an-gradient-animated-link backdrop-blur
+         backdrop-blur
           hover:bg-[color:var(--an-card-2)]/60 hover:border-[color:var(--an-border)]/80
           transition p-2 shadow-2xl">
 
