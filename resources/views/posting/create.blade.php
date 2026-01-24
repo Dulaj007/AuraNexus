@@ -90,6 +90,21 @@
                             @endforeach
                         </select>
                     </div>
+                    <div class="mt-4">
+                        <div class="{{ $label }}">Model / Actress name (optional)</div>
+                        <div class="{{ $hint }}">Leave empty if unknown.</div>
+
+                        <input
+                            name="model_name"
+                            class="{{ $inputBase }} mt-3"
+                            placeholder="Type model/actress name..."
+                            value="{{ old('model_name', $isEdit ? ($post->model?->name ?? '') : '') }}"
+                        />
+
+                        @error('model_name')
+                            <p class="text-red-400 text-xs mt-1">{{ $message }}</p>
+                        @enderror
+                    </div>
 
                     {{-- Tag chip input --}}
                     <div>

@@ -1,7 +1,7 @@
 <?php
 
 namespace App\Http\Controllers\User;
-
+use App\Models\Model;
 use App\Http\Controllers\Controller;
 use App\Models\DailyStat;
 use App\Models\Forum;
@@ -59,7 +59,7 @@ class PostingController extends Controller
 
         $validated = $request->validate([
             'forum_id' => ['required', 'integer', 'exists:forums,id'],
-            'title'    => ['required', 'string', 'min:5', 'max:150'],
+            'title'    => ['required', 'string', 'min:5', 'max:200'],
             'content'  => ['required', 'string', 'min:20'],
 
             // user-created tags (names)
@@ -71,6 +71,8 @@ class PostingController extends Controller
 
             'paragraph_template_id' => ['nullable', 'integer', 'exists:paragraph_templates,id'],
             'paragraph_content'     => ['nullable', 'string', 'max:5000'],
+            'model_name' => ['nullable', 'string', 'min:2', 'max:120'],
+
         ]);
 
         // ✅ normalize tag names once (lower/trim), remove empties, unique
@@ -98,7 +100,23 @@ class PostingController extends Controller
 
             $title = trim($validated['title']);
             $slug  = $this->uniqueSlug($title);
+$modelId = null;
 
+if (!empty($validated['model_name'])) {
+    $name = trim($validated['model_name']);
+
+    // normalize for slug
+    $slug = Str::slug(mb_strtolower($name));
+
+    if ($slug !== '') {
+        $model = Model::firstOrCreate(
+            ['slug' => $slug],
+            ['name' => $name]
+        );
+
+        $modelId = $model->id;
+    }
+}
             $post = Post::create([
                 'forum_id' => (int) $validated['forum_id'],
                 'user_id'  => (int) $user->id,
@@ -109,7 +127,9 @@ class PostingController extends Controller
                 'status'   => $status, // published or pending
                 'replies_count'      => 0,
                 'reputation_points'  => 0,
+                'model_id' => $modelId,
             ]);
+
 
             // ✅ tags: create on-the-fly from names
             $tagIds = [];

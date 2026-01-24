@@ -106,6 +106,10 @@ class Post extends Model
     {
         return $this->belongsTo(\App\Models\Category::class);
     }
+public function model()
+{
+    return $this->belongsTo(\App\Models\Model::class);
+}
 
     /* =========================
      | Boot (slug)

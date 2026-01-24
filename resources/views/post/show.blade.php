@@ -412,73 +412,92 @@
     {{-- Content (only show if published OR approver) --}}
     @if(!$isPending || $canApprove)
 
-        <x-post.card class="{{ $glass }} {{ $shadow }} overflow-hidden {{ $isPending ? 'opacity-90' : '' }}">
-            <div class="prose prose-invert max-w-none">
-                @php $imgIndex = 0; @endphp
+    <x-post.card class="{{ $glass }} {{ $shadow }} overflow-hidden {{ $isPending ? 'opacity-90' : '' }}">
+        <div class="prose prose-invert max-w-none">
+            @php
+                $imgIndex = 0;
+                $linksShown = false;
+                $imgHintShown = false;
+            @endphp
 
-                @foreach(($rendered['sections'] ?? []) as $block)
+            @foreach(($rendered['sections'] ?? []) as $block)
 
-                    @if(($block['type'] ?? null) === 'heading')
-                        @php $heading = trim($block['text'] ?? ''); @endphp
+                @if(($block['type'] ?? null) === 'heading')
+                    @php $heading = trim($block['text'] ?? ''); @endphp
 
-                        @if(strtolower($heading) === 'download links')
-                            <h2 class="pt-3 pl-3 font-semibold">Download Links</h2>
-                        @elseif(strtolower($heading) === 'watch online')
-                            <h2 class="pt-3 pl-3 font-semibold">Watch Online Links</h2>
-                        @else
-                            <h3  class="mx-2">{{ $heading }}</h3>
-                        @endif
-
-                        @elseif(($block['type'] ?? null) === 'link')
-                            <div class="not-prose my-2 mx-2">
-                                @php
-                                    // If gate_url exists, use it. Otherwise fallback to original url.
-                                    $href = $block['gate_url'] ?? $block['url'];
-                                    $label = $block['label'] ?? null;
-
-                                    // If display exists, show masked text. Otherwise show the host.
-                                    $display = $block['display'] ?? (parse_url($block['url'] ?? '', PHP_URL_HOST) ? (parse_url($block['url'], PHP_URL_HOST) . '/…') : 'link');
-                                @endphp
-
-                                <x-post.link-card
-                                :url="$block['gate_url'] ?? $block['url']"
-                                :label="$block['label'] ?? null"
-                                :display="$block['display'] ?? null"
-                            />
-
-                            </div>
-
-
-                    @elseif(($block['type'] ?? null) === 'image')
-                        @php $imgIndex++; @endphp
-                        <div class="not-prose my-4">
-                            <a href="{{ $block['full'] }}" target="_blank" rel="nofollow noopener">
-                                <img
-                                    src="{{ $block['thumb'] }}"
-                                    alt="{{ $post->title }} - Image {{ $imgIndex }}"
-                                    class="w-full max-w-3xl rounded-xl border border-[var(--an-border)] bg-[color:var(--an-card)]/40"
-                                    loading="lazy"
-                                >
-                            </a>
-                            <div class="text-xs text-[var(--an-text-muted)] mt-2">
-                                Click image to view in high quality
-                            </div>
-                        </div>
-
-                    @elseif(($block['type'] ?? null) === 'text')
-                        <p class="mx-2 text-sm">{{ $block['text'] }}</p>
+                    @if(strtolower($heading) === 'download links')
+                        <h2 class="pt-3 pl-3 font-semibold">Download Links</h2>
+                    @elseif(strtolower($heading) === 'watch online')
+                        <h2 class="pt-3 pl-3 font-semibold">Watch Online Links</h2>
+                    @else
+                        <h3 class="mx-2">{{ $heading }}</h3>
                     @endif
 
-                @endforeach
-            </div>
+                @elseif(($block['type'] ?? null) === 'link')
+                    @php $linksShown = true; @endphp
 
-            {{-- Extra paragraph saved (SEO-friendly) --}}
-            @if($paragraph && $paragraph->content)
-                <div class="mt-6 mx-2 text-sm border-t border-[var(--an-border)] pt-4 text-[var(--an-text)]/80">
-                    <p>{{ $paragraph->content }}</p>
-                </div>
-            @endif
-        </x-post.card>
+                    <div class="not-prose my-2 mx-2">
+                        @php
+                            // If gate_url exists, use it. Otherwise fallback to original url.
+                            $href = $block['gate_url'] ?? $block['url'];
+                            $label = $block['label'] ?? null;
+
+                            // If display exists, show masked text. Otherwise show the host.
+                            $display = $block['display'] ?? (parse_url($block['url'] ?? '', PHP_URL_HOST) ? (parse_url($block['url'], PHP_URL_HOST) . '/…') : 'link');
+                        @endphp
+
+                        <x-post.link-card
+                            :url="$block['gate_url'] ?? $block['url']"
+                            :label="$block['label'] ?? null"
+                            :display="$block['display'] ?? null"
+                        />
+                    </div>
+
+                @elseif(($block['type'] ?? null) === 'image')
+                    {{-- Show this once: after links and before first image --}}
+                    @if($linksShown && !$imgHintShown)
+                        @php $imgHintShown = true; @endphp
+                        <div class="text-xs text-[var(--an-text-muted)] mt-4 mx-[3vh]">
+                            Click image to view in high quality
+                        </div>
+                    @endif
+
+                    @php
+                        $imgIndex++;
+
+                        $src = (string)($block['thumb'] ?? $block['full'] ?? '');
+                        $path = parse_url($src, PHP_URL_PATH) ?? '';
+                        $isGif = \Illuminate\Support\Str::endsWith(strtolower($path), '.gif');
+
+                        $imgWidthClass = $isGif ? 'w-[15vh]' : 'w-full';
+                    @endphp
+
+                    <div class="not-prose my-4 mx-[3vh]">
+                        <a href="{{ $block['full'] }}" target="_blank" rel="nofollow noopener">
+                            <img
+                                src="{{ $block['thumb'] }}"
+                                alt="{{ $post->title }} - Image {{ $imgIndex }}"
+                                class="{{ $imgWidthClass }} max-w-3xl rounded-xl border border-[var(--an-border)] bg-[color:var(--an-card)]/40"
+                                loading="lazy"
+                            >
+                        </a>
+                    </div>
+
+                @elseif(($block['type'] ?? null) === 'text')
+                    <p class="mx-2 text-sm">{{ $block['text'] }}</p>
+                @endif
+
+            @endforeach
+        </div>
+
+        {{-- Extra paragraph saved (SEO-friendly) --}}
+        @if($paragraph && $paragraph->content)
+            <div class="mt-6 mx-2 text-sm border-t border-[var(--an-border)] pt-4 text-[var(--an-text)]/80">
+                <p>{{ $paragraph->content }}</p>
+            </div>
+        @endif
+    </x-post.card>
+
 
         {{-- Actions --}}
         <div class ="flex flex-row gap-1 justify-between p-2 my-4 w-full">

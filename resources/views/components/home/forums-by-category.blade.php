@@ -1,13 +1,56 @@
-{{-- resources/views/components/home/forums-by-category.blade.php --}}
-@props([
-    'categories' => collect(), // each category has forums[] loaded
-])
-
 @php
-    $glass = 'sm:rounded-3xl border border-[var(--an-border)]
-              bg-[color:var(--an-card)]/65 backdrop-blur-xl';
-    $muted = 'color: color-mix(in srgb, var(--an-text) 65%, transparent);';
+    $previewPost = $forum->latestPublishedPost ?? null;
+
+    $imgData = ($previewPost && method_exists($previewPost, 'firstImage'))
+        ? $previewPost->firstImage()
+        : null;
+
+    // If you ever return these from firstImage(), we will use them:
+    // thumb_sm (≈120-200px), thumb_md (≈320-480px), thumb_lg (≈640px)
+    $thumbSm = $imgData['thumb_sm'] ?? null;
+    $thumbMd = $imgData['thumb_md'] ?? null;
+    $thumbLg = $imgData['thumb_lg'] ?? null;
+
+    // Existing keys (your current method)
+    $thumb   = $imgData['thumb'] ?? null;
+    $full    = $imgData['full'] ?? null;
+
+    // Optional: if you can return a static poster for gifs
+    $poster  = $imgData['poster'] ?? null;
+
+    // Pick a "src" that is never huge if possible
+    $img = $thumbSm ?? $thumbMd ?? $thumbLg ?? $thumb ?? $poster ?? null;
+
+    $alt = $imgData['alt'] ?? ($previewPost?->title ?? $forum->name);
+    $titleAttr = $imgData['title'] ?? ($previewPost?->title ?? $forum->name);
+
+    // Detect gif (avoid using gifs as card previews)
+    $candidateForGifCheck = $full ?? $img ?? '';
+    $isGif = $candidateForGifCheck
+        && (
+            \Illuminate\Support\Str::endsWith(\Illuminate\Support\Str::lower($candidateForGifCheck), '.gif')
+            || str_contains(\Illuminate\Support\Str::lower($candidateForGifCheck), 'image/gif')
+        );
+
+    // If it's a gif and we don't have a poster/non-gif thumb, don't show it.
+    if ($isGif && !$poster && !$thumb && !$thumbSm && !$thumbMd && !$thumbLg) {
+        $img = null;
+    }
+
+    $postsCount = (int) ($forum->posts_count ?? 0);
+    $viewsCount = (int) ($forum->views ?? 0);
+
+    // Sizes hint: mobile uses ~28vw (your left column), desktop fixed ~260px+
+    $sizesAttr = '(max-width: 640px) 28vw, (max-width: 1024px) 260px, 300px';
+
+    // Build srcset only if we have multiple sizes
+    $srcset = collect([
+        $thumbSm ? $thumbSm.' 200w' : null,
+        $thumbMd ? $thumbMd.' 480w' : null,
+        $thumbLg ? $thumbLg.' 800w' : null,
+    ])->filter()->implode(', ');
 @endphp
+
 
 <div class="space-y-2 py-1">
     @foreach(($categories ?? collect()) as $cat)
@@ -73,29 +116,34 @@
                             <div class="shrink-0 w-[28%] sm:w-[260px] md:w-[300px]">
                                 <div class="relative aspect-[10/11] sm:aspect-[16/9] overflow-hidden rounded-lg
                                             border border-[var(--an-border)] bg-[color:var(--an-card)]/55">
-                                    @if($img)
-                                        <img
-                                            src="{{ $img }}"
-                                            alt="{{ $alt }}"
-                                            title="{{ $titleAttr }}"
-                                            loading="lazy"
-                                            class="absolute inset-0 h-full w-full object-cover"
-                                            data-fallback="{{ $full ?? '' }}"
-                                            onerror="
-                                                if (this.dataset.fallback && this.src !== this.dataset.fallback) { this.src = this.dataset.fallback; return; }
-                                                this.onerror=null;
-                                                this.closest('div').innerHTML =
-                                                  '<div class=&quot;h-full w-full flex items-center justify-center text-[10px]&quot; style=&quot;color: var(--an-text-muted)&quot;>No preview</div>';
-                                            "
-                                        >
-                                    @else
-                                        <div class="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.12),transparent_60%)]"></div>
-                                        <div class="absolute inset-0 bg-gradient-to-br from-[var(--an-primary)]/18 via-transparent to-[var(--an-secondary)]/12"></div>
+                            @if($img)
+                                <img
+                                    src="{{ $img }}"
+                                    @if($srcset) srcset="{{ $srcset }}" sizes="{{ $sizesAttr }}" @endif
+                                    alt="{{ $alt }}"
+                                    title="{{ $titleAttr }}"
+                                    loading="lazy"
+                                    decoding="async"
+                                    width="300"
+                                    height="300"
+                                    class="absolute inset-0 h-full w-full object-cover"
+                                    data-fallback="{{ $thumb ?? $poster ?? $full ?? '' }}"
+                                    onerror="
+                                        if (this.dataset.fallback && this.src !== this.dataset.fallback) { this.src = this.dataset.fallback; return; }
+                                        this.onerror=null;
+                                        this.closest('div').innerHTML =
+                                        '<div class=&quot;h-full w-full flex items-center justify-center text-[10px]&quot; style=&quot;color: var(--an-text-muted)&quot;>No preview</div>';
+                                    "
+                                >
+                            @else
+                                <div class="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.12),transparent_60%)]"></div>
+                                <div class="absolute inset-0 bg-gradient-to-br from-[var(--an-primary)]/18 via-transparent to-[var(--an-secondary)]/12"></div>
 
-                                        <div class="absolute bottom-2 left-2 right-2 text-[10px] font-extrabold text-white/85 line-clamp-2">
-                                            {{ $previewPost?->title ?? 'Latest from this forum' }}
-                                        </div>
-                                    @endif
+                                <div class="absolute bottom-2 left-2 right-2 text-[10px] font-extrabold text-white/85 line-clamp-2">
+                                    {{ $previewPost?->title ?? 'Latest from this forum' }}
+                                </div>
+                            @endif
+
                                 </div>
                             </div>
 
