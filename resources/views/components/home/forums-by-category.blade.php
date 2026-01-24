@@ -1,55 +1,49 @@
-@php
-    $previewPost = $forum->latestPublishedPost ?? null;
+@foreach(($cat->forums ?? collect()) as $forum)
+    @php
+        $previewPost = $forum->latestPublishedPost ?? null;
 
-    $imgData = ($previewPost && method_exists($previewPost, 'firstImage'))
-        ? $previewPost->firstImage()
-        : null;
+        $imgData = ($previewPost && method_exists($previewPost, 'firstImage'))
+            ? $previewPost->firstImage()
+            : null;
 
-    // If you ever return these from firstImage(), we will use them:
-    // thumb_sm (≈120-200px), thumb_md (≈320-480px), thumb_lg (≈640px)
-    $thumbSm = $imgData['thumb_sm'] ?? null;
-    $thumbMd = $imgData['thumb_md'] ?? null;
-    $thumbLg = $imgData['thumb_lg'] ?? null;
+        $thumbSm = $imgData['thumb_sm'] ?? null;
+        $thumbMd = $imgData['thumb_md'] ?? null;
+        $thumbLg = $imgData['thumb_lg'] ?? null;
 
-    // Existing keys (your current method)
-    $thumb   = $imgData['thumb'] ?? null;
-    $full    = $imgData['full'] ?? null;
+        $thumb   = $imgData['thumb'] ?? null;
+        $full    = $imgData['full'] ?? null;
+        $poster  = $imgData['poster'] ?? null;
 
-    // Optional: if you can return a static poster for gifs
-    $poster  = $imgData['poster'] ?? null;
+        $img = $thumbSm ?? $thumbMd ?? $thumbLg ?? $thumb ?? $poster ?? null;
 
-    // Pick a "src" that is never huge if possible
-    $img = $thumbSm ?? $thumbMd ?? $thumbLg ?? $thumb ?? $poster ?? null;
+        $alt       = $imgData['alt'] ?? ($previewPost?->title ?? $forum->name);
+        $titleAttr = $imgData['title'] ?? ($previewPost?->title ?? $forum->name);
 
-    $alt = $imgData['alt'] ?? ($previewPost?->title ?? $forum->name);
-    $titleAttr = $imgData['title'] ?? ($previewPost?->title ?? $forum->name);
+        $candidateForGifCheck = $full ?? $img ?? '';
+        $isGif = $candidateForGifCheck
+            && (
+                \Illuminate\Support\Str::endsWith(\Illuminate\Support\Str::lower($candidateForGifCheck), '.gif')
+                || str_contains(\Illuminate\Support\Str::lower($candidateForGifCheck), 'image/gif')
+            );
 
-    // Detect gif (avoid using gifs as card previews)
-    $candidateForGifCheck = $full ?? $img ?? '';
-    $isGif = $candidateForGifCheck
-        && (
-            \Illuminate\Support\Str::endsWith(\Illuminate\Support\Str::lower($candidateForGifCheck), '.gif')
-            || str_contains(\Illuminate\Support\Str::lower($candidateForGifCheck), 'image/gif')
-        );
+        if ($isGif && !$poster && !$thumb && !$thumbSm && !$thumbMd && !$thumbLg) {
+            $img = null;
+        }
 
-    // If it's a gif and we don't have a poster/non-gif thumb, don't show it.
-    if ($isGif && !$poster && !$thumb && !$thumbSm && !$thumbMd && !$thumbLg) {
-        $img = null;
-    }
+        $postsCount = (int) ($forum->posts_count ?? 0);
+        $viewsCount = (int) ($forum->views ?? 0);
 
-    $postsCount = (int) ($forum->posts_count ?? 0);
-    $viewsCount = (int) ($forum->views ?? 0);
+        $sizesAttr = '(max-width: 640px) 28vw, (max-width: 1024px) 260px, 300px';
 
-    // Sizes hint: mobile uses ~28vw (your left column), desktop fixed ~260px+
-    $sizesAttr = '(max-width: 640px) 28vw, (max-width: 1024px) 260px, 300px';
+        $srcset = collect([
+            $thumbSm ? $thumbSm.' 200w' : null,
+            $thumbMd ? $thumbMd.' 480w' : null,
+            $thumbLg ? $thumbLg.' 800w' : null,
+        ])->filter()->implode(', ');
+    @endphp
 
-    // Build srcset only if we have multiple sizes
-    $srcset = collect([
-        $thumbSm ? $thumbSm.' 200w' : null,
-        $thumbMd ? $thumbMd.' 480w' : null,
-        $thumbLg ? $thumbLg.' 800w' : null,
-    ])->filter()->implode(', ');
-@endphp
+    {{-- your <a> card markup --}}
+@endforeach
 
 
 <div class="space-y-2 py-1">
