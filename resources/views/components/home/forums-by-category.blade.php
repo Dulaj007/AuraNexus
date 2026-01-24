@@ -164,7 +164,7 @@
                                         </span>
 
                                         {{-- Views --}}
-                                        <span class="inline-flex items-center gap-1">
+                                       <!-- <span class="inline-flex items-center gap-1">
                                             <svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2">
                                                 <path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7Z"/>
                                                 <circle cx="12" cy="12" r="3"/>
@@ -172,7 +172,7 @@
                                             <span class="font-extrabold" style="color: var(--an-text);">
                                                 {{ number_format($viewsCount) }}
                                             </span>
-                                        </span>
+                                        </span>-->
 
                                     </div>
 
