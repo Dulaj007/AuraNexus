@@ -11,7 +11,8 @@ class FeaturedPinnedController extends Controller
 {
     /**
      * Fetch latest pinned posts across forums (most recent pinned_at first),
-     * only published posts, with forum + tags loaded.
+     * only published posts, with forum + tags loaded. name chnaged
+     * 
      */
     public function get(int $limit = 6): Collection
     {
