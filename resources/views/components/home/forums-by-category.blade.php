@@ -1,50 +1,8 @@
-@foreach(($cat->forums ?? collect()) as $forum)
-    @php
-        $previewPost = $forum->latestPublishedPost ?? null;
-
-        $imgData = ($previewPost && method_exists($previewPost, 'firstImage'))
-            ? $previewPost->firstImage()
-            : null;
-
-        $thumbSm = $imgData['thumb_sm'] ?? null;
-        $thumbMd = $imgData['thumb_md'] ?? null;
-        $thumbLg = $imgData['thumb_lg'] ?? null;
-
-        $thumb   = $imgData['thumb'] ?? null;
-        $full    = $imgData['full'] ?? null;
-        $poster  = $imgData['poster'] ?? null;
-
-        $img = $thumbSm ?? $thumbMd ?? $thumbLg ?? $thumb ?? $poster ?? null;
-
-        $alt       = $imgData['alt'] ?? ($previewPost?->title ?? $forum->name);
-        $titleAttr = $imgData['title'] ?? ($previewPost?->title ?? $forum->name);
-
-        $candidateForGifCheck = $full ?? $img ?? '';
-        $isGif = $candidateForGifCheck
-            && (
-                \Illuminate\Support\Str::endsWith(\Illuminate\Support\Str::lower($candidateForGifCheck), '.gif')
-                || str_contains(\Illuminate\Support\Str::lower($candidateForGifCheck), 'image/gif')
-            );
-
-        if ($isGif && !$poster && !$thumb && !$thumbSm && !$thumbMd && !$thumbLg) {
-            $img = null;
-        }
-
-        $postsCount = (int) ($forum->posts_count ?? 0);
-        $viewsCount = (int) ($forum->views ?? 0);
-
-        $sizesAttr = '(max-width: 640px) 28vw, (max-width: 1024px) 260px, 300px';
-
-        $srcset = collect([
-            $thumbSm ? $thumbSm.' 200w' : null,
-            $thumbMd ? $thumbMd.' 480w' : null,
-            $thumbLg ? $thumbLg.' 800w' : null,
-        ])->filter()->implode(', ');
-    @endphp
-
-    {{-- your <a> card markup --}}
-@endforeach
-
+@php
+    // ✅ Safe defaults (prevents 500 if parent doesn't pass them)
+    $glass = $glass ?? 'rounded-3xl border border-[var(--an-border)] bg-[color:var(--an-card)]/65 backdrop-blur-xl';
+    $muted = $muted ?? 'color: color-mix(in srgb, var(--an-text) 65%, transparent);';
+@endphp
 
 <div class="space-y-2 py-1">
     @foreach(($categories ?? collect()) as $cat)
@@ -84,14 +42,47 @@
                             ? $previewPost->firstImage()
                             : null;
 
-                        $img = $imgData['thumb'] ?? ($imgData['full'] ?? null);
-                        $full = $imgData['full'] ?? null;
+                        // Optional multi-size thumbs (if your firstImage returns them)
+                        $thumbSm = $imgData['thumb_sm'] ?? null;
+                        $thumbMd = $imgData['thumb_md'] ?? null;
+                        $thumbLg = $imgData['thumb_lg'] ?? null;
 
-                        $alt = $imgData['alt'] ?? ($previewPost?->title ?? $forum->name);
+                        // Existing keys
+                        $thumb  = $imgData['thumb'] ?? null;
+                        $full   = $imgData['full'] ?? null;
+                        $poster = $imgData['poster'] ?? null;
+
+                        // Pick best preview
+                        $img = $thumbSm ?? $thumbMd ?? $thumbLg ?? $thumb ?? $poster ?? null;
+
+                        $alt       = $imgData['alt'] ?? ($previewPost?->title ?? $forum->name);
                         $titleAttr = $imgData['title'] ?? ($previewPost?->title ?? $forum->name);
+
+                        // Avoid GIF previews if no non-gif fallback exists
+                        $candidateForGifCheck = $full ?? $img ?? '';
+                        $isGif = $candidateForGifCheck
+                            && (
+                                \Illuminate\Support\Str::endsWith(\Illuminate\Support\Str::lower($candidateForGifCheck), '.gif')
+                                || str_contains(\Illuminate\Support\Str::lower($candidateForGifCheck), 'image/gif')
+                            );
+
+                        if ($isGif && !$poster && !$thumb && !$thumbSm && !$thumbMd && !$thumbLg) {
+                            $img = null;
+                        }
 
                         $postsCount = (int) ($forum->posts_count ?? 0);
                         $viewsCount = (int) ($forum->views ?? 0);
+
+                        $sizesAttr = '(max-width: 640px) 28vw, (max-width: 1024px) 260px, 300px';
+
+                        $srcset = collect([
+                            $thumbSm ? $thumbSm.' 200w' : null,
+                            $thumbMd ? $thumbMd.' 480w' : null,
+                            $thumbLg ? $thumbLg.' 800w' : null,
+                        ])->filter()->implode(', ');
+
+                        // Fallback order for broken images
+                        $fallback = $thumb ?? $poster ?? $full ?? '';
                     @endphp
 
                     <a href="{{ route('forums.show', $forum) }}"
@@ -110,34 +101,33 @@
                             <div class="shrink-0 w-[28%] sm:w-[260px] md:w-[300px]">
                                 <div class="relative aspect-[10/11] sm:aspect-[16/9] overflow-hidden rounded-lg
                                             border border-[var(--an-border)] bg-[color:var(--an-card)]/55">
-                            @if($img)
-                                <img
-                                    src="{{ $img }}"
-                                    @if($srcset) srcset="{{ $srcset }}" sizes="{{ $sizesAttr }}" @endif
-                                    alt="{{ $alt }}"
-                                    title="{{ $titleAttr }}"
-                                    loading="lazy"
-                                    decoding="async"
-                                    width="300"
-                                    height="300"
-                                    class="absolute inset-0 h-full w-full object-cover"
-                                    data-fallback="{{ $thumb ?? $poster ?? $full ?? '' }}"
-                                    onerror="
-                                        if (this.dataset.fallback && this.src !== this.dataset.fallback) { this.src = this.dataset.fallback; return; }
-                                        this.onerror=null;
-                                        this.closest('div').innerHTML =
-                                        '<div class=&quot;h-full w-full flex items-center justify-center text-[10px]&quot; style=&quot;color: var(--an-text-muted)&quot;>No preview</div>';
-                                    "
-                                >
-                            @else
-                                <div class="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.12),transparent_60%)]"></div>
-                                <div class="absolute inset-0 bg-gradient-to-br from-[var(--an-primary)]/18 via-transparent to-[var(--an-secondary)]/12"></div>
+                                    @if($img)
+                                        <img
+                                            src="{{ $img }}"
+                                            @if(!empty($srcset)) srcset="{{ $srcset }}" sizes="{{ $sizesAttr }}" @endif
+                                            alt="{{ $alt }}"
+                                            title="{{ $titleAttr }}"
+                                            loading="lazy"
+                                            decoding="async"
+                                            width="300"
+                                            height="300"
+                                            class="absolute inset-0 h-full w-full object-cover"
+                                            data-fallback="{{ $fallback }}"
+                                            onerror="
+                                                if (this.dataset.fallback && this.src !== this.dataset.fallback) { this.src = this.dataset.fallback; return; }
+                                                this.onerror=null;
+                                                this.closest('div').innerHTML =
+                                                '<div class=&quot;h-full w-full flex items-center justify-center text-[10px]&quot; style=&quot;color: var(--an-text-muted)&quot;>No preview</div>';
+                                            "
+                                        >
+                                    @else
+                                        <div class="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.12),transparent_60%)]"></div>
+                                        <div class="absolute inset-0 bg-gradient-to-br from-[var(--an-primary)]/18 via-transparent to-[var(--an-secondary)]/12"></div>
 
-                                <div class="absolute bottom-2 left-2 right-2 text-[10px] font-extrabold text-white/85 line-clamp-2">
-                                    {{ $previewPost?->title ?? 'Latest from this forum' }}
-                                </div>
-                            @endif
-
+                                        <div class="absolute bottom-2 left-2 right-2 text-[10px] font-extrabold text-white/85 line-clamp-2">
+                                            {{ $previewPost?->title ?? 'Latest from this forum' }}
+                                        </div>
+                                    @endif
                                 </div>
                             </div>
 
@@ -156,7 +146,7 @@
 
                                 <div class="mt-2 flex items-center justify-between gap-2">
 
-                                    {{-- Stats (unchanged for mobile, just slightly bigger spacing on desktop) --}}
+                                    {{-- Stats --}}
                                     <div class="flex items-center gap-3 sm:gap-5 text-[11px] sm:text-sm" style="{{ $muted }}">
 
                                         {{-- Posts --}}
@@ -186,7 +176,7 @@
 
                                     </div>
 
-                                    {{-- Arrow (keep mobile exactly, add button feel on desktop only) --}}
+                                    {{-- Arrow --}}
                                     <div class="shrink-0 sm:rounded-xl sm:border sm:border-[var(--an-border)]
                                                 sm:bg-[color:var(--an-card)]/50 sm:hover:bg-[color:var(--an-card)]/80
                                                 sm:px-2 sm:py-1 transition">
@@ -200,7 +190,6 @@
                                     </div>
 
                                 </div>
-
                             </div>
 
                         </div>
