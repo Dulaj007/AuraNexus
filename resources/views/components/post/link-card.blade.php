@@ -30,10 +30,10 @@
    @if($openTarget) target="{{ $openTarget }}" @endif
    rel="nofollow noopener"
    class="block rounded-2xl border border-[var(--an-border)]
-          bg-gradient-to-r from-[var(--an-link)]/15 via-[var(--an-link)]/55 to-[var(--an-link)]/15
-         backdrop-blur
+          bg-[var(--an-link)]/25 
+          an-gradient-animated-link backdrop-blur
           hover:bg-[color:var(--an-card-2)]/60 hover:border-[color:var(--an-border)]/80
-          transition p-2 shadow-2xl">
+          transition p-1 shadow-2xl w-auto mr-[5vh]">
 
     <div class="flex items-center gap-2 mr-2 ml-1">
 
