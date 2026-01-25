@@ -123,7 +123,10 @@
 <div class="pt-1">
     <div class="justify-center flex items-center overflow-hidden w-full">
         <div class="scale-90">
-            <div class="g-recaptcha" data-sitekey="{{ env('NOCAPTCHA_SITEKEY') }}"></div>
+            <div class="g-recaptcha"
+            data-sitekey="{{ config('services.nocaptcha.sitekey') }}">
+        </div>
+
         </div>
     </div>
 

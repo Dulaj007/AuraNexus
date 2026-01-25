@@ -30,7 +30,7 @@
    @if($openTarget) target="{{ $openTarget }}" @endif
    rel="nofollow noopener"
    class="block rounded-2xl border border-[var(--an-border)]
-          bg-[var(--an-link)]/25 
+          bg-[var(--an-link)]/35 
           an-gradient-animated-link backdrop-blur
           hover:bg-[color:var(--an-card-2)]/60 hover:border-[color:var(--an-border)]/80
           transition p-1 shadow-2xl w-auto mr-[5vh]">
