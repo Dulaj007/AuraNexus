@@ -29,11 +29,11 @@
 <a href="{{ $href }}"
    @if($openTarget) target="{{ $openTarget }}" @endif
    rel="nofollow noopener"
-   class="block rounded-2xl border border-[var(--an-border)]
-          bg-[var(--an-link)]/35 
+   class="block rounded-2xl border border-[var(--an-primary)]/50
+         
           backdrop-blur
           hover:bg-[color:var(--an-card-2)]/60 hover:border-[color:var(--an-border)]/80
-          transition p-1 px-2 shadow-2xl w-auto mr-[5vh]">
+          transition p-2 shadow-2xl w-auto mr-[5vh]">
 
     <div class="flex items-center gap-2 mr-2 ml-1">
 
