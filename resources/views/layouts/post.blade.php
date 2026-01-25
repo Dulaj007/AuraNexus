@@ -35,7 +35,7 @@
         }
     } else {
         // fallback asset (change if needed)
-        $logoUrl = asset('logo/AuraNexusLogo.png');
+      
     }
 
     // Page meta (allow overrides from views)
