@@ -42,9 +42,6 @@
                 {{ $titleText }}
             </div>
 
-            <div class="mt-0 text-xs text-[var(--an-text-muted)] break-all">
-                {{ $displayText }}
-            </div>
         </div>
 
         <span class="inline-flex h-5 w-5 items-center justify-center text-[var(--an-text-muted)]">
