@@ -46,13 +46,13 @@
 
 @section('content')
 <div class="max-w-7xl mx-auto space-y-4 sm:space-y-6">
-
+<x-home.featured-pinned :posts="$featuredPinnedPosts" />
 <center>
 <script async type="application/javascript" src="https://a.magsrv.com/ad-provider.js"></script> 
  <ins class="eas6a97888e10" data-zoneid="5839376"></ins> 
  <script>(AdProvider = window.AdProvider || []).push({"serve": {}});</script>
 </center>
-    <x-home.featured-pinned :posts="$featuredPinnedPosts" />
+    
 
     <x-home.forums-by-category :categories="$homeCategories" />
     <center>
