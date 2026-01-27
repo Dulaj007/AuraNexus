@@ -1,8 +1,9 @@
-@php
-    // ✅ Safe defaults (prevents 500 if parent doesn't pass them)
-    $glass = $glass ?? 'rounded-3xl border border-[var(--an-border)] bg-[color:var(--an-card)]/65 backdrop-blur-xl';
-    $muted = $muted ?? 'color: color-mix(in srgb, var(--an-text) 65%, transparent);';
-@endphp
+@props([
+    'categories' => collect(),
+    'glass' => 'rounded-3xl border border-[var(--an-border)] bg-[color:var(--an-card)]/65 backdrop-blur-xl',
+    'muted' => 'color: color-mix(in srgb, var(--an-text) 65%, transparent);',
+])
+
 
 <div class="space-y-2 py-1">
     @foreach(($categories ?? collect()) as $cat)
