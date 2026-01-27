@@ -46,7 +46,7 @@
 
 @section('content')
 <div class="max-w-7xl mx-auto space-y-4 sm:space-y-6">
-<x-home.featured-pinned :posts="$featuredPinnedPosts" />
+<!--<x-home.featured-pinned :posts="$featuredPinnedPosts" />-->
 <center>
 <script async type="application/javascript" src="https://a.magsrv.com/ad-provider.js"></script> 
  <ins class="eas6a97888e10" data-zoneid="5839376"></ins> 
@@ -60,7 +60,7 @@
  <ins class="eas6a97888e10" data-zoneid="5839380"></ins> 
  <script>(AdProvider = window.AdProvider || []).push({"serve": {}});</script>
  </center>
-    <x-home.tag-cards :cards="$homeTagCards" />
+    <!--<x-home.tag-cards :cards="$homeTagCards" />-->
     <center>
 <script>
   atOptions = {
