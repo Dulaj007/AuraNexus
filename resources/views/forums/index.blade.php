@@ -171,20 +171,20 @@
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 ">
                     @foreach($forums as $forum)
                         @php
-                            $latest = $forum->posts->first();
+                            $latest = $forum->latestPublishedPost ?? null;
 
-                            $imgData = $latest && method_exists($latest, 'firstImage')
-                                ? $latest->firstImage()
-                                : null;
+                            // ✅ New: use thumbnail_url only (fast + consistent)
+                            $cover = $latest?->thumbnail_url;
 
-                            $cover     = $imgData['thumb'] ?? ($imgData['url'] ?? null);
-                            $coverFull = $imgData['url'] ?? null;
+                            // optional: if you store full image separately, set it here
+                            $coverFull = $cover;
 
                             $categoryName = $forum->category?->name ?? '—';
                             $postsCount = (int) ($forum->posts_count ?? 0);
                             $viewsCount = (int) ($forum->views ?? 0);
                             $replies    = (int) ($forum->replies_count ?? 0);
                         @endphp
+
 
                         <a href="{{ route('forums.show', $forum) }}"
                            class="group relative overflow-hidden

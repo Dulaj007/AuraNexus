@@ -73,6 +73,9 @@ class PostingController extends Controller
             'paragraph_content'     => ['nullable', 'string', 'max:5000'],
             'model_name' => ['nullable', 'string', 'min:2', 'max:120'],
 
+            'thumbnail_url' => ['nullable', 'url', 'max:1024'],
+
+
         ]);
 
         // ✅ normalize tag names once (lower/trim), remove empties, unique
@@ -123,11 +126,13 @@ if (!empty($validated['model_name'])) {
                 'title'    => $title,
                 'slug'     => $slug,
                 'content'  => $validated['content'],
+                'thumbnail_url' => $validated['thumbnail_url'] ?? null,
                 'views'    => 0,
                 'status'   => $status, // published or pending
                 'replies_count'      => 0,
                 'reputation_points'  => 0,
                 'model_id' => $modelId,
+                
             ]);
 
 

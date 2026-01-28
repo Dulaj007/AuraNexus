@@ -39,52 +39,15 @@
                     @php
                         $previewPost = $forum->latestPublishedPost ?? null;
 
-                        $imgData = ($previewPost && method_exists($previewPost, 'firstImage'))
-                            ? $previewPost->firstImage()
-                            : null;
+                        // ✅ New simple thumbnail source (NO parsing)
+                        $img = $previewPost?->thumbnail_url;
 
-                        // Optional multi-size thumbs (if your firstImage returns them)
-                        $thumbSm = $imgData['thumb_sm'] ?? null;
-                        $thumbMd = $imgData['thumb_md'] ?? null;
-                        $thumbLg = $imgData['thumb_lg'] ?? null;
-
-                        // Existing keys
-                        $thumb  = $imgData['thumb'] ?? null;
-                        $full   = $imgData['full'] ?? null;
-                        $poster = $imgData['poster'] ?? null;
-
-                        // Pick best preview
-                        $img = $thumbSm ?? $thumbMd ?? $thumbLg ?? $thumb ?? $poster ?? null;
-
-                        $alt       = $imgData['alt'] ?? ($previewPost?->title ?? $forum->name);
-                        $titleAttr = $imgData['title'] ?? ($previewPost?->title ?? $forum->name);
-
-                        // Avoid GIF previews if no non-gif fallback exists
-                        $candidateForGifCheck = $full ?? $img ?? '';
-                        $isGif = $candidateForGifCheck
-                            && (
-                                \Illuminate\Support\Str::endsWith(\Illuminate\Support\Str::lower($candidateForGifCheck), '.gif')
-                                || str_contains(\Illuminate\Support\Str::lower($candidateForGifCheck), 'image/gif')
-                            );
-
-                        if ($isGif && !$poster && !$thumb && !$thumbSm && !$thumbMd && !$thumbLg) {
-                            $img = null;
-                        }
+                        $alt       = $previewPost?->title ?? $forum->name;
+                        $titleAttr = $previewPost?->title ?? $forum->name;
 
                         $postsCount = (int) ($forum->posts_count ?? 0);
-                        $viewsCount = (int) ($forum->views ?? 0);
-
-                        $sizesAttr = '(max-width: 640px) 28vw, (max-width: 1024px) 260px, 300px';
-
-                        $srcset = collect([
-                            $thumbSm ? $thumbSm.' 200w' : null,
-                            $thumbMd ? $thumbMd.' 480w' : null,
-                            $thumbLg ? $thumbLg.' 800w' : null,
-                        ])->filter()->implode(', ');
-
-                        // Fallback order for broken images
-                        $fallback = $thumb ?? $poster ?? $full ?? '';
                     @endphp
+
 
                     <a href="{{ route('forums.show', $forum) }}"
                        class="block p-1 py-[5px] sm:p-4 hover:bg-white/5 transition bg-[var(--an-primary)]/5 ">
@@ -102,33 +65,31 @@
                             <div class="shrink-0 w-[28%] sm:w-[260px] md:w-[300px]">
                                 <div class="relative aspect-[10/11] sm:aspect-[16/9] overflow-hidden rounded-lg
                                             border border-[var(--an-border)] bg-[color:var(--an-card)]/55">
-                                    @if($img)
-                                        <img
-                                            src="{{ $img }}"
-                                            @if(!empty($srcset)) srcset="{{ $srcset }}" sizes="{{ $sizesAttr }}" @endif
-                                            alt="{{ $alt }}"
-                                            title="{{ $titleAttr }}"
-                                            loading="lazy"
-                                            decoding="async"
-                                            width="300"
-                                            height="300"
-                                            class="absolute inset-0 h-full w-full object-cover"
-                                            data-fallback="{{ $fallback }}"
-                                            onerror="
-                                                if (this.dataset.fallback && this.src !== this.dataset.fallback) { this.src = this.dataset.fallback; return; }
-                                                this.onerror=null;
-                                                this.closest('div').innerHTML =
-                                                '<div class=&quot;h-full w-full flex items-center justify-center text-[10px]&quot; style=&quot;color: var(--an-text-muted)&quot;>No preview</div>';
-                                            "
-                                        >
-                                    @else
-                                        <div class="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.12),transparent_60%)]"></div>
-                                        <div class="absolute inset-0 bg-gradient-to-br from-[var(--an-primary)]/18 via-transparent to-[var(--an-secondary)]/12"></div>
+                                @if($img)
+                                    <img
+                                        src="{{ $img }}"
+                                        alt="{{ $alt }}"
+                                        title="{{ $titleAttr }}"
+                                        loading="lazy"
+                                        decoding="async"
+                                        width="300"
+                                        height="300"
+                                        class="absolute inset-0 h-full w-full object-cover"
+                                        onerror="
+                                            this.onerror=null;
+                                            this.closest('div').innerHTML =
+                                            '<div class=&quot;h-full w-full flex items-center justify-center text-[10px]&quot; style=&quot;color: var(--an-text-muted)&quot;>No preview</div>';
+                                        "
+                                    >
+                                @else
+                                    <div class="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.12),transparent_60%)]"></div>
+                                    <div class="absolute inset-0 bg-gradient-to-br from-[var(--an-primary)]/18 via-transparent to-[var(--an-secondary)]/12"></div>
 
-                                        <div class="absolute bottom-2 left-2 right-2 text-[10px] font-extrabold text-white/85 line-clamp-2">
-                                            {{ $previewPost?->title ?? 'Latest from this forum' }}
-                                        </div>
-                                    @endif
+                                    <div class="absolute bottom-2 left-2 right-2 text-[10px] font-extrabold text-white/85 line-clamp-2">
+                                        {{ $previewPost?->title ?? 'Latest from this forum' }}
+                                    </div>
+                                @endif
+
                                 </div>
                             </div>
 
@@ -164,16 +125,6 @@
                                             </span>
                                         </span>
 
-                                        {{-- Views --}}
-                                       <!-- <span class="inline-flex items-center gap-1">
-                                            <svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2">
-                                                <path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7Z"/>
-                                                <circle cx="12" cy="12" r="3"/>
-                                            </svg>
-                                            <span class="font-extrabold" style="color: var(--an-text);">
-                                                {{ number_format($viewsCount) }}
-                                            </span>
-                                        </span>-->
 
                                     </div>
 

@@ -11,15 +11,14 @@ class FeaturedPinnedController extends Controller
 {
     /**
      * Fetch latest pinned posts across forums (most recent pinned_at first),
-     * only published posts, with forum + tags loaded. name chnaged
-     * 
+     * only published posts, with forum + tags loaded.
      */
     public function get(int $limit = 6): Collection
     {
         // Pull pinned post_ids first (ordered by pinned_at)
         $postIds = PinnedPost::query()
             ->orderByDesc('pinned_at')
-            ->limit($limit * 3) // buffer in case some posts are not published/missing
+            ->limit($limit * 3) // buffer in case some posts are missing/unpublished
             ->pluck('post_id')
             ->filter()
             ->unique()
@@ -30,6 +29,16 @@ class FeaturedPinnedController extends Controller
         }
 
         $posts = Post::query()
+            ->select([
+                'id',
+                'forum_id',
+                'user_id',
+                'title',
+                'slug',
+                'thumbnail_url',   // ✅ important
+                'status',
+                'created_at',
+            ])
             ->whereIn('id', $postIds)
             ->where('status', 'published')
             ->with([

@@ -90,6 +90,7 @@
                             @endforeach
                         </select>
                     </div>
+
                     <div class="mt-4">
                         <div class="{{ $label }}">Model / Actress name (optional)</div>
                         <div class="{{ $hint }}">Leave empty if unknown.</div>
@@ -155,6 +156,25 @@
                             </div>
                         </div>
                     </div>
+
+                    <div class="mt-4">
+                        <label class="block text-sm font-medium text-[var(--an-text)]">
+                            Thumbnail Image (hotlink)
+                        </label>
+
+                        <input
+                            type="url"
+                            name="thumbnail_url"
+                            value="{{ old('thumbnail_url', $post->thumbnail_url ?? '') }}"
+                            placeholder="https://example.com/thumb.jpg"
+                            class="mt-1 w-full rounded-xl border border-[var(--an-border)] bg-[color:var(--an-card)]/60 px-3 py-2 text-sm text-[var(--an-text)] outline-none"
+                        >
+
+                        <div class="mt-1 text-xs text-[var(--an-text-muted)]">
+                            Paste a direct image link (jpg/png/webp/gif). Used for previews on home/forums.
+                        </div>
+                    </div>
+
 
                 </div>
             </div>

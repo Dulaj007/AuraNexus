@@ -49,16 +49,14 @@
 
                 @foreach($posts->take(10) as $post)
                     @php
-                        $imgData = method_exists($post, 'firstImage') ? $post->firstImage() : null;
-                        $img  = $imgData['thumb'] ?? ($imgData['full'] ?? null);
-                        $full = $imgData['full'] ?? null;
-
-                        $alt       = $imgData['alt'] ?? $post->title;
-                        $titleAttr = $imgData['title'] ?? $post->title;
+                        $img  = $post->thumbnail_url;   // ✅ new field
+                        $alt  = $post->title;
+                        $titleAttr = $post->title;
 
                         $forum = $post->forum;
                         $forumUrl = $forum ? route('forums.show', $forum) : '#';
                     @endphp
+
 
                     <div class="shrink-0 w-[38%] sm:w-[40%] md:w-[32%] lg:w-[24%] snap-start">
                         <a href="{{ $forumUrl }}"
@@ -79,13 +77,12 @@
                                         loading="lazy"
                                         class="absolute inset-0 h-full w-full object-cover
                                                group-hover:scale-[1.06] transition duration-300"
-                                        data-fallback="{{ $full ?? '' }}"
                                         onerror="
-                                            if (this.dataset.fallback && this.src !== this.dataset.fallback) { this.src = this.dataset.fallback; return; }
-                                            this.onerror=null;
-                                            this.closest('div').innerHTML =
-                                              '<div class=&quot;h-full w-full flex items-center justify-center text-[10px]&quot; style=&quot;color: var(--an-text-muted)&quot;>Image unavailable</div>';
+                                        this.onerror=null;
+                                        this.closest('div').innerHTML =
+                                            '<div class=&quot;h-full w-full flex items-center justify-center text-[10px]&quot; style=&quot;color: var(--an-text-muted)&quot;>Image unavailable</div>';
                                         "
+
                                     >
                                 @else
                                     <div class="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.12),transparent_60%)]"></div>

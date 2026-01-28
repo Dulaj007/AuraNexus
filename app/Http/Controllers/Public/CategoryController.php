@@ -16,7 +16,16 @@ class CategoryController extends Controller
                   ->withCount(['posts as posts_count' => function ($qq) {
                       $qq->where('status', 'published');
                   }])
-                  ->with('latestPublishedPost') // ✅ do NOT limit columns here
+                  ->with(['latestPublishedPost' => function ($pq) {
+                $pq->select([
+                'posts.id',
+                'posts.forum_id',
+                'posts.title',
+                'posts.slug',
+                'posts.thumbnail_url',
+                'posts.created_at',
+                ])->where('posts.status', 'published');
+                  }])
                   ->orderBy('name');
             }])
             ->orderBy('name')
@@ -33,7 +42,16 @@ class CategoryController extends Controller
             $q->withCount(['posts as posts_count' => function ($qq) {
                 $qq->where('status', 'published');
             }])
-            ->with('latestPublishedPost') // ✅ do NOT limit columns here
+            ->with(['latestPublishedPost' => function ($pq) {
+                $pq->select([
+                'posts.id',
+                'posts.forum_id',
+                'posts.title',
+                'posts.slug',
+                'posts.thumbnail_url',
+                'posts.created_at',
+                ])->where('posts.status', 'published');
+            }])
             ->orderBy('name');
         }]);
 

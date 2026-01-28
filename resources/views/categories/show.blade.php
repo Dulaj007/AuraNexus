@@ -201,10 +201,9 @@
                 <div class="grid grid-cols-1 sm:grid-cols-2">
                     @foreach($forums as $forum)
                         @php
-                            $latest  = $forum->latestPublishedPost;
-                            $imgData = $latest && method_exists($latest, 'firstImage') ? $latest->firstImage() : null;
-                            $cover     = $imgData['thumb'] ?? ($imgData['url'] ?? null);
-                            $coverFull = $imgData['url'] ?? null;
+                            $latest = $forum->latestPublishedPost;
+                            $cover  = $latest?->thumbnail_url;  // ✅ simple
+
 
                             $postsCount = (int) ($forum->posts_count ?? 0);
                             $viewsCount = (int) ($forum->views ?? 0);
@@ -231,13 +230,11 @@
                                         title="{{ $forum->name }}"
                                         loading="lazy"
                                         class="absolute inset-0 h-full w-full object-cover
-                                               group-hover:scale-[1.06] transition duration-300"
+                                            group-hover:scale-[1.06] transition duration-300"
                                         onerror="
-                                            if (this.dataset.fallback && this.src !== this.dataset.fallback) { this.src = this.dataset.fallback; return; }
                                             this.onerror=null;
                                             this.closest('div').innerHTML='<div class=&quot;h-full w-full flex items-center justify-center text-[10px]&quot; style=&quot;color: var(--an-text-muted)&quot;>No cover</div>';
                                         "
-                                        data-fallback="{{ $coverFull ?? '' }}"
                                     >
                                 @else
                                     <div class="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.12),transparent_60%)]"></div>
