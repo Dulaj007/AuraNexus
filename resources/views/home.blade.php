@@ -35,8 +35,8 @@
 @endsection
 
 @section('content')
-<div class="max-w-7xl mx-auto p-6">
-    <h1 class="text-2xl font-extrabold">SEO TEST OK</h1>
-    <p class="mt-2 text-sm opacity-80">No components, no ads, only meta + JSON-LD.</p>
+<div class="max-w-7xl mx-auto space-y-6">
+    <x-home.featured-pinned :posts="$featuredPinnedPosts" />
 </div>
 @endsection
+
