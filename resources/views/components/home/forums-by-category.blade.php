@@ -1,11 +1,11 @@
 @props([
     'categories' => collect(),
-    'glass' => 'rounded-3xl border border-[var(--an-border)] bg-[color:var(--an-card)]/65 backdrop-blur-xl',
+    'glass' => 'sm:rounded-3xl border border-[var(--an-border)] bg-[color:var(--an-card)]/65 backdrop-blur-xl',
     'muted' => 'color: color-mix(in srgb, var(--an-text) 65%, transparent);',
 ])
 
 
-<div class="space-y-2 py-1">
+<div class="space-y-2">
     @foreach(($categories ?? collect()) as $cat)
         <section class="{{ $glass }} overflow-hidden">
 
