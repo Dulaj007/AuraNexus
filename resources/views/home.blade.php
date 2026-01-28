@@ -46,8 +46,8 @@
 
 @section('content')
 <div class="max-w-7xl mx-auto space-y-4 sm:space-y-6">
-<!--<x-home.featured-pinned :posts="$featuredPinnedPosts" />-->
-<center>
+<!--<x-home.featured-pinned :posts="$featuredPinnedPosts" />
+ <center>
 <script async type="application/javascript" src="https://a.magsrv.com/ad-provider.js"></script> 
  <ins class="eas6a97888e10" data-zoneid="5839376"></ins> 
  <script>(AdProvider = window.AdProvider || []).push({"serve": {}});</script>
@@ -60,7 +60,7 @@
  <ins class="eas6a97888e10" data-zoneid="5839380"></ins> 
  <script>(AdProvider = window.AdProvider || []).push({"serve": {}});</script>
  </center>
-    <!--<x-home.tag-cards :cards="$homeTagCards" />-->
+    <x-home.tag-cards :cards="$homeTagCards" />
     <center>
 <script>
   atOptions = {
@@ -72,6 +72,6 @@
   };
 </script>
 <script src="https://hardypistol.com/7f5180870e4380a39ed3e068f8ff3447/invoke.js"></script>
-</center>
+</center>-->
 </div>
 @endsection
