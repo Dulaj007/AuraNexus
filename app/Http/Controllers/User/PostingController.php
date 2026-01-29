@@ -101,39 +101,40 @@ class PostingController extends Controller
 
         $post = DB::transaction(function () use ($validated, $user, $request, $status, $normTagNames, $highlightName) {
 
-            $title = trim($validated['title']);
-            $slug  = $this->uniqueSlug($title);
-$modelId = null;
+        $title    = trim($validated['title']);
+        $postSlug = $this->uniqueSlug($title);
 
-if (!empty($validated['model_name'])) {
-    $name = trim($validated['model_name']);
+        $modelId = null;
 
-    // normalize for slug
-    $slug = Str::slug(mb_strtolower($name));
+        if (!empty($validated['model_name'])) {
+            $name = trim($validated['model_name']);
 
-    if ($slug !== '') {
-        $model = Model::firstOrCreate(
-            ['slug' => $slug],
-            ['name' => $name]
-        );
+            $modelSlug = Str::slug(mb_strtolower($name));
 
-        $modelId = $model->id;
-    }
-}
-            $post = Post::create([
-                'forum_id' => (int) $validated['forum_id'],
-                'user_id'  => (int) $user->id,
-                'title'    => $title,
-                'slug'     => $slug,
-                'content'  => $validated['content'],
-                'thumbnail_url' => $validated['thumbnail_url'] ?? null,
-                'views'    => 0,
-                'status'   => $status, // published or pending
-                'replies_count'      => 0,
-                'reputation_points'  => 0,
-                'model_id' => $modelId,
-                
-            ]);
+            if ($modelSlug !== '') {
+                $model = Model::firstOrCreate(
+                    ['slug' => $modelSlug],
+                    ['name' => $name]
+                );
+
+                $modelId = $model->id;
+            }
+        }
+
+        $post = Post::create([
+            'forum_id' => (int) $validated['forum_id'],
+            'user_id'  => (int) $user->id,
+            'title'    => $title,
+            'slug'     => $postSlug,   // ✅ always title-based
+            'content'  => $validated['content'],
+            'thumbnail_url' => $validated['thumbnail_url'] ?? null,
+            'views'    => 0,
+            'status'   => $status,
+            'replies_count'      => 0,
+            'reputation_points'  => 0,
+            'model_id' => $modelId,
+        ]);
+
 
 
             // ✅ tags: create on-the-fly from names
