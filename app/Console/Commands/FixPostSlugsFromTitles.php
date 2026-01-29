@@ -19,12 +19,16 @@ class FixPostSlugsFromTitles extends Command
         // Find "bad" posts: posts.slug == models.slug (and model_id exists)
         // Assumes your models table is named "models" with a "slug" column.
         $badPosts = Post::query()
-            ->join('models', 'posts.model_id', '=', 'models.id')
-            ->whereNotNull('posts.model_id')
-            ->whereColumn('posts.slug', 'models.slug')
-            ->select('posts.id', 'posts.title', 'posts.slug')
-            ->orderBy('posts.id')
-            ->get();
+    ->join('models', 'posts.slug', '=', 'models.slug')   // ✅ match by slug itself
+    ->whereNotNull('posts.slug')
+    ->select('posts.id', 'posts.title', 'posts.slug')
+    ->orderBy('posts.id')
+    ->get()
+    ->filter(function ($row) {
+        $expected = Str::slug(trim((string) $row->title));
+        return $expected !== '' && $expected !== (string) $row->slug; // ✅ only truly wrong ones
+    })
+    ->values();
 
         if ($badPosts->isEmpty()) {
             $this->info('No bad slugs found. Nothing to fix.');
