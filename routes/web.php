@@ -19,6 +19,7 @@ use App\Http\Controllers\Public\PopularController;
 use App\Http\Controllers\Public\PostPinController;
 use App\Http\Controllers\Public\PagesController as PublicPagesController;
 use App\Http\Controllers\Public\LinkController;
+use App\Http\Controllers\SitemapController;
 
 // USER
 use App\Http\Controllers\User\PostController;
@@ -46,6 +47,8 @@ use App\Http\Controllers\Admin\PagesController as AdminPagesController;
 use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\ThemeModeController;
 
+
+Route::get('/sitemap.xml', [SitemapController::class, 'index'])->name('sitemap');
 /*
 |--------------------------------------------------------------------------
 | RESTRICTED (BANNED / SUSPENDED) PAGE
@@ -402,6 +405,7 @@ Route::post('/link/{code}/start', [LinkController::class, 'start'])->name('link.
 Route::post('/unlock/{token}/ping', [LinkController::class, 'ping'])->name('link.ping');
 Route::get('/unlock/{token}/status', [LinkController::class, 'status'])->name('link.status');
 Route::get('/unlock/{token}/go', [LinkController::class, 'go'])->name('link.go');
+
 
 /*
 |--------------------------------------------------------------------------
