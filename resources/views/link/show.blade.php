@@ -64,7 +64,7 @@
         />
     </svg>
 
-    <span class="js-unlock-label">Unlock</span>
+    <span class="js-unlock-label">Start</span>
 </button>
 
 {{-- LINK BUTTON (LOCKED INITIALLY) --}}

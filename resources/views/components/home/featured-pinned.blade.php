@@ -96,7 +96,7 @@
                                     {{-- ✅ Replace text arrow with requested SVG --}}
                                     <div class="font-extrabold pl-1 mb-1 text-[11px] sm:text-sm leading-snug text-white line-clamp-3 opacity-95
                                                 flex items-center gap-2">
-                                        <span>See Full Collection</span>
+                                        <span>See Form</Form></span>
 
                                         <svg viewBox="0 0 24 24" fill="none"
                                              xmlns="http://www.w3.org/2000/svg" transform="rotate(180)"

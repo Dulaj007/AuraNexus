@@ -49,6 +49,34 @@ return [
             'desc'  => 'Injected into <head> for /link/{code} pages only. Use for ad network scripts / meta tags.',
         ],
 
+        // ✅ NEW: HOME head script (meta/ad network scripts)
+        'head_home_ads' => [
+            'group' => 'Head Scripts',
+            'label' => 'Home Page – Head Script',
+            'desc'  => 'Injected into <head> for the Home page layout. Use for ad network scripts / meta tags.',
+        ],
+
+        // ==========================================================
+        // HOME PAGE (Home layout/body placements)
+        // ==========================================================
+        'home_ads_top' => [
+            'group' => 'Home Page',
+            'label' => 'Top – Primary',
+            'desc'  => 'Top of home page (above content). Visible on all devices.',
+        ],
+
+        'home_ads_mid' => [
+            'group' => 'Home Page',
+            'label' => 'Middle – Primary',
+            'desc'  => 'Middle of home page (between sections). Visible on all devices.',
+        ],
+
+        'home_ads_bottom' => [
+            'group' => 'Home Page',
+            'label' => 'Bottom – Primary',
+            'desc'  => 'Bottom of home page (before footer). Visible on all devices.',
+        ],
+
         // ==========================================================
         // COMMUNITY PAGES (Categories + Forums: index/show)
         // Use these keys in BOTH category + forum blades.

@@ -1,68 +1,64 @@
-{{-- resources/views/layouts/link-unlock.blade.php --}}
+{{-- resources/views/layouts/home.blade.php --}}
 @php
-    use Illuminate\Support\Str;
+    use Illuminate\Support\Facades\Cache;
 
+    // ✅ Use shared settings (from AppServiceProvider)
     $settings = $siteSettings ?? [];
 
-    $siteName        = $settings['site_name']        ?? config('app.name', 'AuraNexus');
-    $siteSubtitle    = $settings['site_subtitle']    ?? (config('app.bio') ?? 'Build • Share • Learn');
-    $siteDescription = $settings['site_description'] ?? ('Unlock links securely on ' . $siteName . '.');
+    $siteName        = $settings['site_name'] ?? config('app.name', 'AuraNexus');
+    $siteDescription = $settings['site_description'] ?? ('Explore the community on ' . $siteName . '.');
+    $siteKeywords    = trim((string)($settings['site_keywords'] ?? ''));
+    $themeColor      = $settings['site_theme_color'] ?? '#FF4268';
 
-    $defaultKeywords = $siteName . ',';
-    $defaultRobots   = 'index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1';
-
-    $themeColor = $settings['site_theme_color'] ?? '#FF4268';
-
+    // Theme mode (per-user)
     $mode = request()->cookie('theme_mode', 'dark');
     $mode = in_array($mode, ['dark','light'], true) ? $mode : 'dark';
 
-    // SEO meta (allow per-page overrides)
-    $canonical = trim($__env->yieldContent('canonical', url()->current()));
-    $metaTitle = trim($__env->yieldContent('meta_title', 'Unlock Link • ' . $siteName));
-    $metaDesc  = trim($__env->yieldContent('meta_description', $siteDescription));
-    $ogType    = trim($__env->yieldContent('og_type', 'website'));
+    // Per-page meta (allow overrides)
+    $pageTitle = trim($__env->yieldContent('meta_title')) ?: trim($__env->yieldContent('title')) ?: 'Home';
+    $metaTitle = $pageTitle;
 
-    $keywordsOverride  = trim($__env->yieldContent('meta_keywords', ''));
-    $siteKeywordsSaved = trim((string)($settings['site_keywords'] ?? ''));
-    $siteKeywords = $keywordsOverride !== ''
-        ? $keywordsOverride
-        : ($siteKeywordsSaved !== '' ? $siteKeywordsSaved : $defaultKeywords);
+    $metaDescription = trim($__env->yieldContent('meta_description')) ?: $siteDescription;
+    $canonical       = trim($__env->yieldContent('canonical')) ?: url()->current();
+    $ogType          = trim($__env->yieldContent('og_type')) ?: 'website';
 
+    // ✅ Keywords (page override -> settings -> none)
+    $keywordsOverride = trim($__env->yieldContent('meta_keywords', ''));
+    $keywords = $keywordsOverride !== '' ? $keywordsOverride : $siteKeywords;
+
+    // ✅ Robots (page override -> settings -> default)
     $robotsOverride = trim($__env->yieldContent('meta_robots', ''));
     $robotsSaved    = trim((string)($settings['meta_robots'] ?? ''));
-    $robots = $robotsOverride !== ''
-        ? $robotsOverride
-        : ($robotsSaved !== '' ? $robotsSaved : $defaultRobots);
+    $robotsDefault  = 'index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1';
+    $robots         = $robotsOverride !== '' ? $robotsOverride : ($robotsSaved !== '' ? $robotsSaved : $robotsDefault);
 
-    // Images (same approach as your home layout)
-    $ogImage = asset(config('app.logo'));
+    // OG image (page override -> logo fallback)
+    $ogImage = trim($__env->yieldContent('og_image')) ?: asset(config('app.logo'));
     $logoUrl = asset(config('app.logo'));
 
-    $twitter = $settings['site_twitter'] ?? null;
+    /**
+     * ✅ Home head script (same pattern as forums)
+     * Placement key: head_home_ads
+     */
+    $headHome = null;
 
-    // Global JSON-LD
-    $globalLd = [
-        "@context" => "https://schema.org",
-        "@graph" => [
-            [
-                "@type" => "Organization",
-                "name"  => $siteName,
-                "url"   => url('/'),
-                "logo"  => $logoUrl,
-            ],
-            [
-                "@type" => "WebSite",
-                "name"  => $siteName,
-                "url"   => url('/'),
-                "description" => $siteDescription,
-                "potentialAction" => [
-                    "@type" => "SearchAction",
-                    "target" => url('/search?q={search_term_string}'),
-                    "query-input" => "required name=search_term_string",
-                ],
-            ],
-        ],
-    ];
+    if (function_exists('ad')) {
+        $headHome = ad('head_home_ads');
+    }
+
+    if (!is_string($headHome) || trim($headHome) === '') {
+        $adsHtml = Cache::remember('ads.placements', 300, function () {
+            return \App\Models\AdPlacement::query()
+                ->where('is_enabled', true)
+                ->whereNotNull('html')
+                ->pluck('html', 'key')
+                ->toArray();
+        });
+
+        $headHome = $adsHtml['head_home_ads'] ?? null;
+    }
+
+    $headHome = (is_string($headHome) && trim($headHome) !== '') ? $headHome : null;
 @endphp
 
 <!doctype html>
@@ -71,170 +67,91 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
-    {{-- Optional googlebot line (same as home) --}}
-    <meta name="googlebot" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">
+    <title>{{ $metaTitle }} • {{ $siteName }}</title>
 
-    <title>@yield('title', $metaTitle)</title>
-
-    {{-- Canonical --}}
     <link rel="canonical" href="{{ $canonical }}">
-
-    {{-- Primary Meta --}}
-    <meta name="description" content="{{ $metaDesc }}">
-    <meta name="keywords" content="{{ $siteKeywords }}">
+    <meta name="description" content="{{ $metaDescription }}">
     <meta name="robots" content="{{ $robots }}">
     <meta name="theme-color" content="{{ $themeColor }}">
+
+    @if($keywords !== '')
+        <meta name="keywords" content="{{ $keywords }}">
+    @endif
 
     {{-- App identity --}}
     <meta name="application-name" content="{{ $siteName }}">
     <meta name="apple-mobile-web-app-title" content="{{ $siteName }}">
 
+    {{-- Favicon / app icons --}}
+    <link rel="icon" href="{{ $logoUrl }}">
+    <link rel="apple-touch-icon" href="{{ $logoUrl }}">
+
     {{-- Open Graph --}}
     <meta property="og:site_name" content="{{ $siteName }}">
-    <meta property="og:type" content="{{ $ogType }}">
     <meta property="og:title" content="{{ $metaTitle }}">
-    <meta property="og:description" content="{{ $metaDesc }}">
+    <meta property="og:description" content="{{ $metaDescription }}">
+    <meta property="og:type" content="{{ $ogType }}">
     <meta property="og:url" content="{{ $canonical }}">
     <meta property="og:image" content="{{ $ogImage }}">
     <meta property="og:image:alt" content="{{ $siteName }}">
 
     {{-- Twitter --}}
     <meta name="twitter:card" content="{{ $ogImage ? 'summary_large_image' : 'summary' }}">
-    @if($twitter)
-        <meta name="twitter:site" content="{{ $twitter }}">
-    @endif
     <meta name="twitter:title" content="{{ $metaTitle }}">
-    <meta name="twitter:description" content="{{ $metaDesc }}">
-    @if($ogImage)
-        <meta name="twitter:image" content="{{ $ogImage }}">
-    @endif
+    <meta name="twitter:description" content="{{ $metaDescription }}">
+    <meta name="twitter:image" content="{{ $ogImage }}">
 
-    {{-- Favicon / app icons --}}
-    <link rel="icon" href="{{ $logoUrl }}">
-    <link rel="apple-touch-icon" href="{{ $logoUrl }}">
-
-<meta http-equiv="Delegate-CH" content="Sec-CH-UA https://s.pemsrv.com; Sec-CH-UA-Mobile https://s.pemsrv.com; Sec-CH-UA-Arch https://s.pemsrv.com; Sec-CH-UA-Model https://s.pemsrv.com; Sec-CH-UA-Platform https://s.pemsrv.com; Sec-CH-UA-Platform-Version https://s.pemsrv.com; Sec-CH-UA-Bitness https://s.pemsrv.com; Sec-CH-UA-Full-Version-List https://s.pemsrv.com; Sec-CH-UA-Full-Version https://s.pemsrv.com;">
-
-
-    {{-- JSON-LD (page specific) --}}
+    {{-- JSON-LD --}}
     @hasSection('json_ld')
         <script type="application/ld+json">
 {!! trim($__env->yieldContent('json_ld')) !!}
         </script>
     @endif
 
-    {{-- Global JSON-LD --}}
-    <script type="application/ld+json">
-{!! json_encode($globalLd, JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE|JSON_PRETTY_PRINT) !!}
-    </script>
-
-    {{-- ✅ Ad network head script for unlock pages --}}
-    @if(isset($ad) && $ad('head_link_unlock'))
-        {!! $ad('head_link_unlock') !!}
+    {{-- ✅ Shared head ad/script for HOME pages --}}
+    @if($headHome)
+        {!! $headHome !!}
     @endif
 
     {{-- App assets --}}
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @vite(['resources/css/app.css','resources/js/app.js'])
 
-    {{-- ✅ Theme CSS (generated by ThemeService) --}}
+    {{-- Theme CSS (generated by ThemeService) --}}
     @inject('theme', \App\Services\ThemeService::class)
     <style>
         {!! $theme->css($mode) !!}
         [x-cloak]{display:none !important;}
     </style>
 
-    {{-- ✅ Sync attribute early (avoids flash) --}}
+    {{-- Ensure attribute is synced early --}}
     <script>
         (function () {
             document.documentElement.setAttribute('data-theme', @json($mode));
         })();
     </script>
 
-    {{-- Per-page head additions --}}
     @stack('head')
 </head>
 
 <body class="min-h-screen bg-[var(--an-bg)] text-[var(--an-text)] overflow-x-hidden">
 
-    {{-- Ambient glows (same vibe as home) --}}
-    <div class="pointer-events-none fixed inset-0 -z-10 overflow-hidden opacity-80">
+    {{-- Ambient glows (same vibe as forums) --}}
+    <div class="pointer-events-none fixed inset-0 -z-10 overflow-hidden opacity-60">
         <div class="absolute -top-40 -left-40 h-[520px] w-[520px] rounded-full blur-3xl opacity-15 bg-[var(--an-link)]"></div>
         <div class="absolute top-24 -right-48 h-[620px] w-[620px] rounded-full blur-3xl opacity-12 bg-[var(--an-primary)]"></div>
         <div class="absolute bottom-[-220px] left-[25%] h-[520px] w-[520px] rounded-full blur-[140px] opacity-10 bg-[var(--an-info)]"></div>
     </div>
 
-    {{-- ✅ Use same public navbar/footer as the rest of the site --}}
+    {{-- Public navbar --}}
     @include('partials.nav')
 
-    <main class="max-w-7xl mx-auto sm:px-6 lg:px-8 py-2 sm:py-6">
-
-        {{-- flash alerts like home --}}
-        @if(session('success'))
-            <div class="mb-3 sm:mb-4 rounded-2xl border px-4 py-3 text-sm"
-                 style="border-color: color-mix(in srgb, var(--an-success) 35%, var(--an-border));
-                        background: color-mix(in srgb, var(--an-success) 12%, transparent);
-                        color: color-mix(in srgb, var(--an-text) 85%, var(--an-success));">
-                {{ session('success') }}
-            </div>
-        @endif
-
-        @if(session('error'))
-            <div class="mb-3 sm:mb-4 rounded-2xl border px-4 py-3 text-sm"
-                 style="border-color: color-mix(in srgb, var(--an-danger) 35%, var(--an-border));
-                        background: color-mix(in srgb, var(--an-danger) 12%, transparent);
-                        color: color-mix(in srgb, var(--an-text) 85%, var(--an-danger));">
-                {{ session('error') }}
-            </div>
-        @endif
-
+    <main class="max-w-7xl mx-auto">
         @yield('content')
     </main>
 
+    {{-- Public footer --}}
     @include('partials.footer')
 
     @stack('scripts')
-
-    {{-- Global modal handler (same as home) --}}
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            let openModalId = null;
-
-            function openModal(id) {
-                const el = document.getElementById(id);
-                if (!el) return;
-                el.classList.remove('hidden');
-                el.classList.add('flex');
-                document.body.style.overflow = 'hidden';
-                openModalId = id;
-            }
-
-            function closeModal(id) {
-                const el = document.getElementById(id);
-                if (!el) return;
-                el.classList.add('hidden');
-                el.classList.remove('flex');
-                document.body.style.overflow = '';
-                if (openModalId === id) openModalId = null;
-            }
-
-            document.addEventListener('click', (e) => {
-                const openBtn = e.target.closest('[data-modal-open]');
-                if (openBtn) {
-                    openModal(openBtn.getAttribute('data-modal-open'));
-                    return;
-                }
-
-                const closeBtn = e.target.closest('[data-modal-close]');
-                if (closeBtn) {
-                    closeModal(closeBtn.getAttribute('data-modal-close'));
-                    return;
-                }
-            });
-
-            document.addEventListener('keydown', (e) => {
-                if (e.key === 'Escape' && openModalId) closeModal(openModalId);
-            });
-        });
-    </script>
 </body>
 </html>
