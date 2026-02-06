@@ -211,15 +211,17 @@
                                 <span class="{{ $pillStrong }}">{{ number_format($postsTotal) }}</span>
                             </span>
 
+                            {{-- 
                             <span class="{{ $pill }}">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none"
-                                     stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                                     style="color: var(--an-text-muted)">
+                                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                                    style="color: var(--an-text-muted)">
                                     <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/>
                                     <circle cx="12" cy="12" r="3"/>
                                 </svg>
                                 <span class="{{ $pillStrong }}">{{ number_format($views) }}</span>
                             </span>
+                            --}}
                         </div>
 
                         <div class="flex items-center gap-2">

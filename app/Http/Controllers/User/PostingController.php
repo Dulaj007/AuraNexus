@@ -63,7 +63,7 @@ class PostingController extends Controller
             'content'  => ['required', 'string', 'min:20'],
 
             // user-created tags (names)
-            'tag_names'    => ['nullable', 'array', 'max:15'],
+            'tag_names'    => ['nullable', 'array', 'max:35'],
             'tag_names.*'  => ['string', 'min:1', 'max:30'],
 
             // highlight tag by name (must be within tag_names)

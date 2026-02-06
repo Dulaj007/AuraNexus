@@ -400,12 +400,8 @@ Route::middleware(['account.status'])->group(function () {
 
 
 
-Route::get('/link/{code}', [LinkController::class, 'show'])->name('link.show');
-Route::post('/link/{code}/start', [LinkController::class, 'start'])->name('link.start');
-Route::post('/unlock/{token}/ping', [LinkController::class, 'ping'])->name('link.ping');
-Route::get('/unlock/{token}/status', [LinkController::class, 'status'])->name('link.status');
-Route::get('/unlock/{token}/go', [LinkController::class, 'go'])->name('link.go');
-
+Route::get('/link/{code}', [\App\Http\Controllers\Public\LinkController::class, 'show'])->name('link.show');
+Route::get('/unlock/{code}/go', [\App\Http\Controllers\Public\LinkController::class, 'go'])->name('link.go');
 
 /*
 |--------------------------------------------------------------------------

@@ -1,11 +1,10 @@
 {{-- resources/views/link/show.blade.php --}}
-@extends('layouts.link-unlock') {{-- ✅ your new layout --}}
+@extends('layouts.link-unlock')
 
 @php
     $requiredSeconds = (int) ($requiredSeconds ?? 5);
-    $adUrls = $adUrls ?? [];
 
-    // ads helper
+    // Ads helper (UNCHANGED)
     $adHtml = function (string $key) {
         if (function_exists('ad_html')) return ad_html($key);
         if (function_exists('ad')) return ad($key);
@@ -21,59 +20,54 @@
 @section('title', 'Unlock Link • ' . config('app.name'))
 
 @section('content')
-<div class="max-w-2xl mx-auto px-3 py-1 ">
+<div class="max-w-2xl mx-auto px-3 py-1">
 
-    {{-- ✅ Top Ads (2) --}}
+    {{-- ✅ TOP ADS --}}
     @if($adTopA || $adTopB)
-        <div class="grid grid-cols-1 md:grid-cols-2 ">
+        <div class="grid grid-cols-1 md:grid-cols-2 mb-2">
             @if($adTopA)<div class="flex justify-center">{!! $adTopA !!}</div>@endif
             @if($adTopB)<div class="flex justify-center">{!! $adTopB !!}</div>@endif
         </div>
     @endif
 
-    <div class="rounded-3xl px-15 my-1 border items-center text-center  justify-center flex flex-col border-[var(--an-border)] bg-[color:var(--an-card)]/70 backdrop-blur-xl p-5">
-        <div class="text-lg  font-bold uppercase text-[var(--an-text)]">Unlock Link</div>
-
-        <div class="mt-2 leading-6 text-sm text-[var(--an-text-muted)]">
-         Click the unlock button and wait for    <span class="font-semibold text-[var(--an-text)]">{{ $requiredSeconds }}</span>s in ads page.
+    {{-- MAIN CARD --}}
+    <div class="">
 
 
+    {{-- ✅ TOP ADS --}}
+    @if($adTopB)
+        <div class="grid grid-cols-1">
+            @if($adTopB)<div class="flex justify-center">{!! $adTopB !!}</div>@endif
+          
         </div>
+    @endif
 
-    
 
-        {{-- status / error --}}
-        <div id="unlockMsg" class="mt-4 text-sm hidden"></div>
 
-<div class="mt-4 w-full flex flex-col  gap-2">
+
+
+        <div class="mt-4 w-full flex flex-col gap-2">
+
+{{-- UNLOCK BUTTON --}}
 <button
     id="btnUnlock"
     type="button"
-    class="inline-flex items-center justify-center gap-1 uppercase rounded-2xl px-4 py-2 text-sm font-semibold
+    class="inline-flex items-center justify-center gap-1  rounded-2xl px-4 py-2 text-sm font-semibold
            border border-[var(--an-border)] text-[var(--an-text)]
            bg-[color:var(--an-primary)]/20 hover:bg-[color:var(--an-primary)]/28 transition"
 >
-    <svg
-        viewBox="0 0 24 24"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-        class="h-4 w-4"
-        aria-hidden="true"
-    >
+    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"
+         class="h-4 w-4" aria-hidden="true">
         <path
             d="M12 14.5V16.5M7 10.0288C7.47142 10 8.05259 10 8.8 10H15.2C15.9474 10 16.5286 10 17 10.0288M7 10.0288C6.41168 10.0647 5.99429 10.1455 5.63803 10.327C5.07354 10.6146 4.6146 11.0735 4.32698 11.638C4 12.2798 4 13.1198 4 14.8V16.2C4 17.8802 4 18.7202 4.32698 19.362C4.6146 19.9265 5.07354 20.3854 5.63803 20.673C6.27976 21 7.11984 21 8.8 21H15.2C16.8802 21 17.7202 21 18.362 20.673C18.9265 20.3854 19.3854 19.9265 19.673 19.362C20 18.7202 20 17.8802 20 16.2V14.8C20 13.1198 20 12.2798 19.673 11.638C19.3854 11.0735 18.9265 10.6146 18.362 10.327C18.0057 10.1455 17.5883 10.0647 17 10.0288M7 10.0288V8C7 5.23858 9.23858 3 12 3C14.7614 3 17 5.23858 17 8V10.0288"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
         />
     </svg>
 
-    Unlock
+    <span class="js-unlock-label">Unlock</span>
 </button>
 
-
-    {{-- ✅ SINGLE download button (disabled first) --}}
+{{-- LINK BUTTON (LOCKED INITIALLY) --}}
 <a
     id="btnGo"
     href="javascript:void(0)"
@@ -83,14 +77,9 @@
            text-[var(--an-text-muted)]
            bg-[color:var(--an-success)]/10
            opacity-60 cursor-not-allowed pointer-events-none transition"
->   
-    <svg
-        viewBox="0 0 16 16"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-        class="h-3.5 w-4"
-        aria-hidden="true"
-    >
+>
+    <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"
+         class="h-3.5 w-4" aria-hidden="true">
         <path
             d="M7.05025 1.53553C8.03344 0.552348 9.36692 0 10.7574 0C13.6528 0 16 2.34721 16 5.24264C16 6.63308 15.4477 7.96656 14.4645 8.94975L12.4142 11L11 9.58579L13.0503 7.53553C13.6584 6.92742 14 6.10264 14 5.24264C14 3.45178 12.5482 2 10.7574 2C9.89736 2 9.07258 2.34163 8.46447 2.94975L6.41421 5L5 3.58579L7.05025 1.53553Z"
             fill="currentColor"
@@ -105,207 +94,130 @@
         />
     </svg>
 
- LINK
+    <span>LINK</span>
 </a>
 
-    <div class="mt-3 text-sm text-[var(--an-text-muted)]">
-            Link:
-            <span class="font-mono text-[var(--an-text)]">{{ $host ?? 'link' }}/…</span>
+            <div class="mt-3 text-center text-sm text-[var(--an-text-muted)]">
+                Link:
+                <span class="font-mono text-[var(--an-text)]">
+                    {{ $host ?? 'link' }}/…
+                </span>
+            </div>
+
         </div>
-</div>
-
-
-
-        <div class="mt-3 text-xs text-[var(--an-text-muted)]/0">
-           Wait 15s on ad page
-            <span class="font-mono text-[var(--an-text)] hidden" id="remainText">{{ $requiredSeconds }}</span>
-        </div>
-
-
     </div>
 
-    {{-- ✅ Bottom Ads (2) --}}
+    {{-- ✅ BOTTOM ADS --}}
     @if($adBotA || $adBotB)
-        <div class="grid grid-cols-1 md:grid-cols-2 ">
+        <div class="grid grid-cols-1 md:grid-cols-2 mt-2">
             @if($adBotA)<div class="flex justify-center">{!! $adBotA !!}</div>@endif
             @if($adBotB)<div class="flex justify-center">{!! $adBotB !!}</div>@endif
         </div>
     @endif
 </div>
 
+{{-- SIMPLE COUNTDOWN SCRIPT (NO ADS / NO TOKEN) --}}
 <script>
 (() => {
-    const requiredSeconds = parseInt(@json((int)$requiredSeconds), 10) || 0;
+    const requiredSeconds = parseInt(@json($requiredSeconds), 10) || 0;
 
-    const adUrls = @json($adUrls);
-
-    const btnGoDisabled = document.getElementById('btnGoDisabled');
-const btnGoLink = document.getElementById('btnGoLink');
-
-
-    const btnUnlock = document.getElementById('btnUnlock');
-
-    const unlockMsg = document.getElementById('unlockMsg');
+    const btnUnlock  = document.getElementById('btnUnlock');
+    const btnGo      = document.getElementById('btnGo');
+    const unlockMsg  = document.getElementById('unlockMsg');
     const remainText = document.getElementById('remainText');
 
-    let token = null;
-    let statusTimer = null;
-    let pingTimer = null;
+    // ✅ This is the span we added inside the Unlock button:
+    // <span class="js-unlock-label">Unlock</span>
+    const unlockLabel = btnUnlock ? btnUnlock.querySelector('.js-unlock-label') : null;
+
+    let remaining = requiredSeconds;
+    let timer = null;
 
     const showMsg = (type, text) => {
+        if (!unlockMsg) return;
         unlockMsg.classList.remove('hidden');
-        unlockMsg.className = 'mt-4 text-sm rounded-2xl border px-3 py-2 ' + (
-            type === 'error'
-                ? 'border-red-500/30 bg-red-500/10 text-red-300'
-                : type === 'success'
-                    ? 'border-green-500/30 bg-green-500/10 text-green-300'
-                    : 'border-[var(--an-border)] bg-[color:var(--an-card)]/60 text-[var(--an-text)]'
-        );
+        unlockMsg.className =
+            'mt-4 text-sm rounded-2xl border px-3 py-2 ' +
+            (type === 'success'
+                ? 'border-green-500/30 bg-green-500/10 text-green-300'
+                : 'border-[var(--an-border)] bg-[color:var(--an-card)]/60 text-[var(--an-text)]');
+
         unlockMsg.textContent = text;
     };
 
-    const pickRandomAdUrl = () => {
-        if (!Array.isArray(adUrls) || adUrls.length === 0) return null;
-        const i = Math.floor(Math.random() * adUrls.length);
-        return adUrls[i] || null;
+    const setRemaining = (sec) => {
+        sec = Math.max(0, Math.floor(Number(sec) || 0));
+        if (remainText) remainText.textContent = String(sec);
+        return sec;
     };
 
-const setRemaining = (n) => {
-    const sec = Math.max(0, Math.floor(Number(n) || 0));
-    remainText.textContent = String(sec);
-    return sec;
-};
-
-
-
-    const startPing = () => {
-        stopPing();
-        // ping only when page is visible/active
-        pingTimer = setInterval(async () => {
-            if (!token) return;
-            if (document.visibilityState !== 'visible') return;
-            try {
-                await fetch(@json(route('link.ping', ['token' => '___TOKEN___'])).replace('___TOKEN___', token), {
-                    method: 'POST',
-                    headers: { 'X-CSRF-TOKEN': @json(csrf_token()) }
-                });
-            } catch (e) {}
-        }, 1500);
+    const setUnlockLabel = (text) => {
+        // ✅ Do NOT use btnUnlock.textContent — it would remove your SVG
+        if (unlockLabel) unlockLabel.textContent = text;
     };
 
-    const stopPing = () => {
-        if (pingTimer) clearInterval(pingTimer);
-        pingTimer = null;
+    const unlockLink = () => {
+        if (!btnGo) return;
+
+        btnGo.href = @json(route('link.go', ['code' => $link->code]));
+        btnGo.classList.remove(
+            'pointer-events-none',
+            'cursor-not-allowed',
+            'opacity-60',
+            'text-[var(--an-text-muted)]',
+            'bg-[color:var(--an-success)]/10'
+        );
+        btnGo.classList.add(
+            'text-[var(--an-text)]',
+            'bg-[color:var(--an-success)]/20',
+            'hover:bg-[color:var(--an-success)]/20'
+        );
+        btnGo.removeAttribute('aria-disabled');
+
+        showMsg('success', 'Link Unlocked!');
+        setUnlockLabel('Unlocked');
     };
 
-    const pollStatus = () => {
-        if (statusTimer) clearInterval(statusTimer);
-        statusTimer = setInterval(async () => {
-            if (!token) return;
+    const startCountdown = () => {
+        if (timer) return;
 
-            try {
-                const res = await fetch(
-                    @json(route('link.status', ['token' => '___TOKEN___'])).replace('___TOKEN___', token),
-                    { headers: { 'Accept': 'application/json' } }
-                );
+        if (btnUnlock) btnUnlock.disabled = true;
 
-                if (res.status === 410) {
-                    setRemaining(requiredSeconds);
-                    showMsg('error', 'Session expired. Refresh and try again.');
-                    btnUnlock.disabled = false;
-                    return;
-                }
+        remaining = requiredSeconds;
+        setRemaining(remaining);
+        setUnlockLabel(`Wait ${remaining}s`);
+   
 
-                const data = await res.json();
-const remaining = setRemaining(data.remaining ?? requiredSeconds);
+        timer = setInterval(() => {
+            remaining--;
+            setRemaining(remaining);
 
-if (data.unlocked) {
-    showMsg('success', 'Link Unlocked!');
+            if (remaining > 0) {
+                setUnlockLabel(`Wait ${remaining}s`);
+                showMsg('info', `Please wait ${remaining}s...`);
+                return;
+            }
 
-    btnUnlock.disabled = true;
-
-    // ✅ activate SAME button
-    btnGo.href = @json(route('link.go', ['token' => '___TOKEN___'])).replace('___TOKEN___', token);
-    btnGo.classList.remove(
-        'pointer-events-none',
-        'cursor-not-allowed',
-        'opacity-60',
-        'text-[var(--an-text-muted)]',
-        'bg-[color:var(--an-success)]/10'
-    );
-    btnGo.classList.add(
-        'text-[var(--an-text)]',
-        'bg-[color:var(--an-success)]/20',
-        'hover:bg-[color:var(--an-success)]/28'
-    );
-    btnGo.removeAttribute('aria-disabled');
-
-    return;
-}
-
-
-
-                // Not unlocked yet:
-                // If user is currently on the download page (visible), remind them to stay away.
-                if (document.visibilityState === 'visible' && remaining > 0) {
-                    showMsg('error', `Please stay on ads page for ${remaining}s to unlock the link.`);
-                }
-            } catch (e) {}
+            clearInterval(timer);
+            timer = null;
+            unlockLink();
         }, 1000);
     };
 
-    // If they switch tabs, ping stops automatically; when they return, ping resumes.
-    document.addEventListener('visibilitychange', () => {
-        if (!token) return;
-        if (document.visibilityState === 'visible') {
-            startPing();
-        }
-    });
-
-    btnUnlock.addEventListener('click', async () => {
-        // If admin forgot to add ad urls
-        const adUrl = pickRandomAdUrl();
-        if (!adUrl) {
-            showMsg('error', 'No ad links configured by admin. Please try again later.');
-            return;
-        }
-
-        btnUnlock.disabled = true;
-        btnUnlock.textContent = 'Starting...';
-
-        try {
-            const res = await fetch(@json(route('link.start', ['code' => $link->code])), {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json',
-                    'X-CSRF-TOKEN': @json(csrf_token())
-                },
-                body: JSON.stringify({})
-            });
-
-            const data = await res.json();
-            token = data.token;
-
-            // open ad in new tab (random each page load)
-            window.open(adUrl, '_blank', 'noopener,noreferrer');
-
-            // start mechanics
-            btnUnlock.textContent = 'Unlock Started';
-            showMsg('info', `Timer started. Stay away for ${requiredSeconds} second(s).`);
-
-            startPing();
-            pollStatus();
-
-        } catch (e) {
-            btnUnlock.disabled = false;
-            btnUnlock.textContent = 'Click Unlock';
-            showMsg('error', 'Failed to start. Please refresh and try again.');
-        }
-    });
+    if (btnUnlock) {
+        btnUnlock.addEventListener('click', () => {
+            if (requiredSeconds <= 0) {
+                btnUnlock.disabled = true;
+                unlockLink();
+                return;
+            }
+            startCountdown();
+        });
+    }
 
     // initial UI
     setRemaining(requiredSeconds);
+    setUnlockLabel('Unlock');
 })();
 </script>
 @endsection

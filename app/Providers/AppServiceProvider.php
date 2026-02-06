@@ -19,9 +19,9 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         /*
-         |----------------------------------------------------------------------
+         |--------------------------------------------------------------------------
          | Admin theme (admin layouts only)
-         |----------------------------------------------------------------------
+         |--------------------------------------------------------------------------
          */
         View::composer(['layouts.admin', 'layouts.admin-auth'], function ($view) {
             $theme = app(ThemeService::class)->payload();
@@ -32,9 +32,9 @@ class AppServiceProvider extends ServiceProvider
         });
 
         /*
-         |----------------------------------------------------------------------
+         |--------------------------------------------------------------------------
          | Global Site Settings (cached) → shared to ALL views
-         |----------------------------------------------------------------------
+         |--------------------------------------------------------------------------
          */
         $publicKeys = [
             // Brand / Identity
@@ -61,22 +61,27 @@ class AppServiceProvider extends ServiceProvider
             // Footer
             'footer_links',
 
-            // ✅ Link Unlock Feature
+            // Link Unlock Feature
             'link_unlock_enabled',
             'link_unlock_seconds',
 
-            // ✅ NEW: JSON array of ad links for unlock button
+            // JSON array of ad links
             'link_unlock_ad_urls',
         ];
 
-        $siteSettings = Cache::remember('site.settings.public', 300, function () use ($publicKeys) {
-            return class_exists(Setting::class)
-                ? Setting::query()
-                    ->whereIn('key', $publicKeys)
-                    ->pluck('value', 'key')
-                    ->toArray()
-                : [];
-        });
+        // 🔐 IMPORTANT: Never hit DB/cache while running artisan
+        $siteSettings = [];
+
+        if (!app()->runningInConsole()) {
+            $siteSettings = Cache::remember('site.settings.public', 300, function () use ($publicKeys) {
+                return class_exists(Setting::class)
+                    ? Setting::query()
+                        ->whereIn('key', $publicKeys)
+                        ->pluck('value', 'key')
+                        ->toArray()
+                    : [];
+            });
+        }
 
         View::share('siteSettings', $siteSettings);
 
@@ -84,11 +89,15 @@ class AppServiceProvider extends ServiceProvider
         View::share('siteName', $siteName);
 
         /*
-         |----------------------------------------------------------------------
+         |--------------------------------------------------------------------------
          | Ads: load ONCE from DB + cache, then share per-layout
-         |----------------------------------------------------------------------
+         |--------------------------------------------------------------------------
          */
         $getAdsMap = function (): array {
+            if (app()->runningInConsole()) {
+                return [];
+            }
+
             return Cache::remember('ads.placements', 300, function () {
                 return AdPlacement::query()
                     ->where('is_enabled', true)
@@ -105,17 +114,14 @@ class AppServiceProvider extends ServiceProvider
         };
 
         /*
-         |----------------------------------------------------------------------
+         |--------------------------------------------------------------------------
          | Layouts that should receive ads helpers
-         |----------------------------------------------------------------------
+         |--------------------------------------------------------------------------
          */
         View::composer(['layouts.forums', 'layouts.categories'], $injectAds);
         View::composer(['layouts.post'], $injectAds);
         View::composer(['layouts.profile'], $injectAds);
         View::composer(['layouts.search', 'layouts.tags'], $injectAds);
-
-        // ✅ make sure your real layout name matches this:
-        // if you renamed it to layouts.link-download, update this line too
         View::composer(['layouts.link-unlock', 'layouts.link-download'], $injectAds);
     }
 }
