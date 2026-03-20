@@ -37,6 +37,26 @@
         ->filter(fn ($r) => $r['label'] !== '' || $r['href'] !== '') // keep partially filled rows visible
         ->values()
         ->all();
+        $quickLinks = [];
+
+$quickLinks = [];
+$rawQuick = $settings['quick_navigation_links'] ?? null;
+
+if (is_string($rawQuick) && trim($rawQuick) !== '') {
+    $decoded = json_decode($rawQuick, true);
+    if (is_array($decoded)) $quickLinks = $decoded;
+} elseif (is_array($rawQuick)) {
+    $quickLinks = $rawQuick;
+}
+
+$quickLinks = collect($quickLinks)
+    ->map(fn ($r) => [
+        'title' => trim((string)($r['title'] ?? '')),
+        'url'   => trim((string)($r['url'] ?? '')),
+    ])
+    ->filter(fn ($r) => $r['title'] !== '' || $r['url'] !== '')
+    ->values()
+    ->all();
 @endphp
 
 <div class="max-w-5xl mx-auto space-y-4">
@@ -123,7 +143,41 @@
             </div>
         </div>
 
+        {{-- Social Media --}}
+        <div class="{{ $glass }} p-5 space-y-3">
+            <div class="font-extrabold">Social Media</div>
 
+            <div class="grid gap-3 sm:grid-cols-2">
+
+                <div>
+                    <label class="text-xs text-[var(--an-text-muted)]">X / Twitter URL</label>
+                    <input
+                        name="site_twitter"
+                        value="{{ old('site_twitter', $settings['site_twitter'] ?? '') }}"
+                        class="{{ $input }}"
+                        placeholder="https://x.com/yourprofile">
+                </div>
+
+                <div>
+                    <label class="text-xs text-[var(--an-text-muted)]">Facebook URL</label>
+                    <input
+                        name="site_facebook"
+                        value="{{ old('site_facebook', $settings['site_facebook'] ?? '') }}"
+                        class="{{ $input }}"
+                        placeholder="https://facebook.com/yourpage">
+                </div>
+
+                <div class="sm:col-span-2">
+                    <label class="text-xs text-[var(--an-text-muted)]">YouTube URL</label>
+                    <input
+                        name="site_youtube"
+                        value="{{ old('site_youtube', $settings['site_youtube'] ?? '') }}"
+                        class="{{ $input }}"
+                        placeholder="https://youtube.com/@yourchannel">
+                </div>
+
+            </div>
+        </div>
 
         {{-- Policy / Age --}}
         <div class="{{ $glass }} p-5 space-y-3">
@@ -285,7 +339,74 @@
             </div>
         </div>
 
+{{-- Quick Navigation Links --}}
+<div class="{{ $glass }} p-5 space-y-3">
+    <div class="font-extrabold">Quick Navigation Links</div>
 
+    <div id="quickLinksWrap" class="space-y-2">
+        @if(count($quickLinks))
+            @foreach($quickLinks as $i => $row)
+                <div class="quick-link-row grid gap-2 sm:grid-cols-12 items-center">
+                    
+                    <div class="sm:col-span-5">
+                        <input name="quick_navigation_links[{{ $i }}][title]"
+                               value="{{ $row['title'] }}"
+                               class="{{ $input }}"
+                               placeholder="Title">
+                    </div>
+
+                    <div class="sm:col-span-6">
+                        <input name="quick_navigation_links[{{ $i }}][url]"
+                               value="{{ $row['url'] }}"
+                               class="{{ $input }}"
+                               placeholder="URL">
+                    </div>
+
+                    {{-- ✅ DELETE BUTTON --}}
+                    <div class="sm:col-span-1 flex sm:justify-end">
+                        <button type="button"
+                                class="remove-quick-link inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-[var(--an-border)]
+                                       bg-[color:var(--an-card)]/55 hover:bg-[color:var(--an-card)]/75 transition
+                                       active:scale-95 active:translate-y-[1px]">
+                            <span class="text-lg leading-none" style="color: var(--an-text-muted)">×</span>
+                        </button>
+                    </div>
+
+                </div>
+            @endforeach
+        @else
+            {{-- ✅ DEFAULT EMPTY ROW --}}
+            <div class="quick-link-row grid gap-2 sm:grid-cols-12 items-center">
+                
+                <div class="sm:col-span-5">
+                    <input name="quick_navigation_links[0][title]"
+                           class="{{ $input }}"
+                           placeholder="Title">
+                </div>
+
+                <div class="sm:col-span-6">
+                    <input name="quick_navigation_links[0][url]"
+                           class="{{ $input }}"
+                           placeholder="URL">
+                </div>
+
+                <div class="sm:col-span-1 flex sm:justify-end">
+                    <button type="button"
+                            class="remove-quick-link inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-[var(--an-border)]
+                                   bg-[color:var(--an-card)]/55 hover:bg-[color:var(--an-card)]/75 transition">
+                        <span class="text-lg">×</span>
+                    </button>
+                </div>
+
+            </div>
+        @endif
+    </div>
+
+    {{-- ✅ ADD BUTTON --}}
+    <button type="button" id="addQuickLink" class="{{ $btn }}">
+        + Add link
+    </button>
+</div>
 
 
         <div class="flex justify-end">
@@ -353,6 +474,53 @@
         row.querySelector('input')?.focus();
     });
 })();
+
+const quickWrap = document.getElementById('quickLinksWrap');
+const quickAdd = document.getElementById('addQuickLink');
+
+function bindQuickRemove(btn) {
+    btn.addEventListener('click', () => {
+        const row = btn.closest('.quick-link-row');
+        if (!row) return;
+
+        const rows = quickWrap.querySelectorAll('.quick-link-row');
+        if (rows.length <= 1) {
+            row.querySelectorAll('input').forEach(i => i.value = '');
+            return;
+        }
+
+        row.remove();
+    });
+}
+
+// Bind existing buttons
+quickWrap?.querySelectorAll('.remove-quick-link').forEach(bindQuickRemove);
+
+quickAdd?.addEventListener('click', () => {
+    const i = quickWrap.children.length;
+
+    const row = document.createElement('div');
+    row.className = 'quick-link-row grid gap-2 sm:grid-cols-12 items-center';
+
+    row.innerHTML = `
+        <div class="sm:col-span-5">
+            <input name="quick_navigation_links[${i}][title]" class="{{ $input }}" placeholder="Title">
+        </div>
+        <div class="sm:col-span-6">
+            <input name="quick_navigation_links[${i}][url]" class="{{ $input }}" placeholder="URL">
+        </div>
+        <div class="sm:col-span-1 flex sm:justify-end">
+            <button type="button"
+                    class="remove-quick-link inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-[var(--an-border)]
+                           bg-[color:var(--an-card)]/55 hover:bg-[color:var(--an-card)]/75 transition">
+                <span class="text-lg leading-none" style="color: var(--an-text-muted)">×</span>
+            </button>
+        </div>
+    `;
+
+    quickWrap.appendChild(row);
+    bindQuickRemove(row.querySelector('.remove-quick-link'));
+});
 </script>
 @endpush
 

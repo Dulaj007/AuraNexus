@@ -1,154 +1,145 @@
 @props([
     'categories' => collect(),
-    'glass' => 'sm:rounded-3xl border border-[var(--an-border)] bg-[color:var(--an-card)]/65 backdrop-blur-xl',
-    'muted' => 'color: color-mix(in srgb, var(--an-text) 65%, transparent);',
+    'glass' => 'rounded-bl-[2rem] rounded-tr-[4rem] border border-[var(--an-border)] bg-[var(--an-card)]/40 backdrop-blur-md shadow-xl',
+    'ad',
 ])
 
+@php
+    $adBottomA = $ad('home_ads_bottom'); 
+@endphp
 
-<div class="space-y-2">
-    @foreach(($categories ?? collect()) as $cat)
-        <section class="{{ $glass }} overflow-hidden">
+<div class="max-w-7xl mx-auto px-4 sm:px-6">
+    <div class="flex flex-col lg:flex-row gap-8 lg:gap-4">
+        
+        {{-- MAIN CONTENT (2/3) --}}
+        <div class="lg:w-2/3 space-y-12 lg:space-y-20">
+            @foreach(($categories ?? collect()) as $cat)
+                <section class="animate-in fade-in slide-in-from-bottom-4 duration-700">
+                    
+                    {{-- MARQUEE HEADER SYSTEM --}}
+                    <div class="relative mb-6 lg:mb-15 group cursor-default">
+                        {{-- Moving Background Title --}}
+                        <div class="absolute -top-4 inset-x-0 overflow-hidden opacity-[0.05] select-none pointer-events-none">
+                            <div class="flex whitespace-nowrap marquee">
+                                <div class="marquee__inner text-4xl lg:text-6xl font-black uppercase italic">
+                                    @for($i=0; $i<6; $i++)
+                                        <span class="mr-10 lg:mr-15">{{ $cat->name }}</span>
+                                    @endfor
+                                </div>
+                            </div>
+                        </div>
 
-            {{-- Category header --}}
-            <div class="px-3 py-3 border-b border-[var(--an-border)]
-                        bg-[var(--an-primary)]/30">
-                <div class="flex items-center justify-between gap-3">
-                    <div class="min-w-0">
-                        {{-- ✅ clickable category name --}}
-                        <a href="{{ route('categories.show', $cat) }}"
-                           class="inline-flex items-center gap-2 text-sm sm:text-base font-extrabold text-[var(--an-text)]
-                                  hover:opacity-90 transition"
-                           aria-label="Open category: {{ $cat->name }}">
-                            <span class="line-clamp-2">{{ $cat->name }}</span>
+                        <div class="relative flex items-end justify-between px-2">
+                            <div class="flex items-center gap-3 lg:gap-4">
+                                <div class="h-8 lg:h-10 w-1.5 bg-[var(--an-primary)] rounded-full shadow-[0_0_15px_var(--an-primary)]"></div>
+                                <div class="flex flex-col">
+                                    <span class="text-[8px] lg:text-[9px] font-black text-[var(--an-primary)] uppercase tracking-[0.4em] leading-none mb-1">Category</span>
+                                    <h2 class="text-xl lg:text-3xl font-black text-[var(--an-text)] tracking-tighter uppercase">
+                                        {{ $cat->name }}
+                                    </h2>
+                                </div>
+                            </div>
 
-                            {{-- tiny arrow (desktop hint) --}}
-                            <svg viewBox="0 0 24 24" fill="none"
-                                 class="h-4 w-4 opacity-70 hidden sm:block"
-                                 stroke="currentColor" stroke-width="2"
-                                 stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M9 18l6-6-6-6"/>
-                            </svg>
-                        </a>
+                            <a href="{{ route('categories.show', $cat) }}" 
+                               class="group/link flex items-center gap-2 text-[9px] lg:text-[10px] font-black text-[var(--an-text-muted)] hover:text-[var(--an-primary)] transition-all uppercase tracking-widest border-b border-[var(--an-border)] hover:border-[var(--an-primary)] pb-1">
+                                See more
+                                <span class="group-hover/link:translate-x-1 transition-transform">→</span>
+                            </a>
+                        </div>
+                    </div>
+
+                    {{-- Forums Grid --}}
+                    <div class="grid grid-cols-1 gap-10 lg:gap-15 mt-10">
+                        @foreach(($cat->forums ?? collect()) as $forum)
+                            @php
+                                $previewPost = $forum->latestPublishedPost ?? null;
+                                $img = $previewPost?->thumbnail_url;
+                            @endphp
+
+                            <div class="{{ $glass }} relative group p-3 transition-all duration-500 hover:border-[var(--an-primary)]/40 hover:shadow-[0_0_50px_rgba(var(--an-primary-rgb),0.05)]">
+
+                                {{-- Cyber Accents --}}
+                                <div class="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-[var(--an-primary)] opacity-0 group-hover:opacity-100 transition-all duration-500 transform translate-x-2 translate-y-2 group-hover:-translate-x-2 group-hover:-translate-y-2"></div>
+
+                                {{-- Image Section (Responsive Pop-out) --}}
+                                <div class="relative lg:absolute md:left-1/2 lg:left-0 -top-1 left-2/5 md:-top-12 lg:-top-10 -translate-x-1/2 lg:translate-x-0 w-full max-w-[280px] lg:w-65 h-40 lg:h-35 lg:-ml-8 rounded-xl z-20 mb-4 lg:mb-0">
+                                    @if($img)
+                                        <img src="{{ $img }}" 
+                                             class="absolute top-0 left-0 w-full h-full object-cover rounded-xl border border-white/5 shadow-lg z-30 transition-transform duration-700 group-hover:scale-105 lg:group-hover:scale-102 opacity-90">
+                                    @else
+                                        <div class="absolute top-0 left-0 w-full h-full rounded-xl bg-gradient-to-br from-[var(--an-primary)]/20 via-transparent to-transparent border border-white/5 shadow-lg z-30 flex items-center justify-center">
+                                            <span class="text-[var(--an-primary)] opacity-20 text-xs font-black">NXS</span>
+                                        </div>
+                                    @endif
+
+                                    {{-- Layer 1 --}}
+                                    <div class="absolute top-2 left-2 lg:top-3 lg:left-3 w-full h-full rounded-xl bg-[var(--an-primary)]/20 border border-white/5 shadow-md z-20"></div>
+                                    {{-- Layer 2 --}}
+                                    <div class="absolute top-4 left-4 lg:top-6 lg:left-6 w-full h-full rounded-xl bg-[var(--an-primary)]/10 border border-white/5 shadow-sm z-10"></div>
+                                </div>
+
+                                {{-- Content Section --}}
+                                <div class="lg:ml-63 md:pb-3 flex-1 flex flex-col justify-between">
+                                    <div class="text-center lg:text-left">
+                                        <h3 class="text-xl lg:text-2xl font-black text-[var(--an-text)] group-hover:text-[var(--an-primary)] transition-colors mb-2 tracking-tight">
+                                            {{ $forum->name }}
+                                        </h3>
+                                        <p class="text-sm text-[var(--an-text-muted)] line-clamp-2 leading-relaxed font-medium opacity-70">
+                                            {{ $forum->description ?: 'Encrypted sector data awaiting user interaction and community engagement.' }}
+                                        </p>
+                                    </div>
+
+                                    {{-- Footer Info --}}
+                                    <div class="md:mt-6 mt-3 flex flex-col sm:flex-row items-center justify-between gap-4 ">
+                                        @if($previewPost)
+                                            <div class="flex items-center gap-2">
+                                                <div class="flex h-2 w-2 rounded-full bg-[var(--an-primary)] shadow-[0_0_8px_var(--an-primary)] animate-pulse"></div>
+                                                <div class="flex flex-col">
+                                                    <span class="text-[8px] font-black text-[var(--an-primary)] uppercase tracking-widest leading-none">Latest Upload</span>
+                                                    <span class="text-[10px] font-bold text-[var(--an-text)] truncate ">
+                                                        {{ Str::limit($previewPost->title, 45) }}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        @endif
+
+                                        <div class="flex items-center gap-2 px-6 lg:px-4 py-2 lg:py-1.5 rounded-full bg-white/5 border border-white/5 text-[10px] font-black text-[var(--an-text)] group-hover:bg-[var(--an-primary)] group-hover:text-black transition-all cursor-pointer">
+                                            ACCESS <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                </section>
+            @endforeach
+        </div>
+
+        {{-- SIDEBAR / ADS --}}
+        <div class="lg:w-1/3">
+            <div class="lg:sticky lg:top-24 space-y-8">
+                <div class="relative pt-6">
+                    <div class="ad-label block absolute -top-1 left-1/2 -translate-x-1/2 px-2 text-[10px] font-bold uppercase bg-[var(--an-bg)] text-[var(--an-text-muted)] border border-white/10 rounded-md pointer-events-none z-10">
+                        Advertisement
+                    </div>
+                    <div class="flex flex-row justify-center p-4 ">
+                        @if($adBottomA)
+                            <div class="flex max-w-full overflow-hidden">
+                                {!! $adBottomA !!}
+                            </div>
+                        @endif
                     </div>
                 </div>
             </div>
-
-            {{-- Forums list --}}
-            <div class="divide-y divide-[var(--an-border)]">
-                @foreach(($cat->forums ?? collect()) as $forum)
-                    @php
-                        $previewPost = $forum->latestPublishedPost ?? null;
-
-                        // ✅ New simple thumbnail source (NO parsing)
-                        $img = $previewPost?->thumbnail_url;
-
-                        $alt       = $previewPost?->title ?? $forum->name;
-                        $titleAttr = $previewPost?->title ?? $forum->name;
-
-                        $postsCount = (int) ($forum->posts_count ?? 0);
-                    @endphp
-
-
-                    <a href="{{ route('forums.show', $forum) }}"
-                       class="block p-1 py-[5px] sm:p-4 hover:bg-white/5 transition bg-[var(--an-primary)]/5 ">
-
-                        <div class="pointer-events-none fixed inset-0 -z-10 overflow-hidden opacity-0 ">
-                            <div class="absolute -top-40 -left-40 h-[520px] w-[520px] rounded-full blur-3xl opacity-15 bg-[var(--an-link)]"></div>
-                            <div class="absolute top-24 -right-48 h-[620px] w-[620px] rounded-full blur-3xl opacity-12 bg-[var(--an-primary)]"></div>
-                            <div class="absolute bottom-[-220px] left-[25%] h-[520px] w-[520px] rounded-full blur-[140px] opacity-10 bg-[var(--an-info)]"></div>
-                        </div>
-
-                        {{-- ✅ PC-friendly: keep mobile exactly, only adjust on sm+ --}}
-                        <div class="flex gap-2 sm:gap-4 sm:items-center">
-
-                            {{-- Left (1/3): image --}}
-                            <div class="shrink-0 w-[28%] sm:w-[260px] md:w-[300px]">
-                                <div class="relative aspect-[10/11] sm:aspect-[16/9] overflow-hidden rounded-lg
-                                            border border-[var(--an-border)] bg-[color:var(--an-card)]/55">
-                                @if($img)
-                                    <img
-                                        src="{{ $img }}"
-                                        alt="{{ $alt }}"
-                                        title="{{ $titleAttr }}"
-                                        loading="lazy"
-                                        decoding="async"
-                                        width="300"
-                                        height="300"
-                                        class="absolute inset-0 h-full w-full object-cover"
-                                        onerror="
-                                            this.onerror=null;
-                                            this.closest('div').innerHTML =
-                                            '<div class=&quot;h-full w-full flex items-center justify-center text-[10px]&quot; style=&quot;color: var(--an-text-muted)&quot;>No preview</div>';
-                                        "
-                                    >
-                                @else
-                                    <div class="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.12),transparent_60%)]"></div>
-                                    <div class="absolute inset-0 bg-gradient-to-br from-[var(--an-primary)]/18 via-transparent to-[var(--an-secondary)]/12"></div>
-
-                                    <div class="absolute bottom-2 left-2 right-2 text-[10px] font-extrabold text-white/85 line-clamp-2">
-                                        {{ $previewPost?->title ?? 'Latest from this forum' }}
-                                    </div>
-                                @endif
-
-                                </div>
-                            </div>
-
-                            {{-- Right (2/3): details --}}
-                            <div class="min-w-0 flex-1">
-                                <div class="flex items-start justify-between gap-2 pt-1">
-                                    <div class="min-w-0">
-                                        <div class="font-extrabold text-[13px] sm:text-lg text-[var(--an-text)] line-clamp-2">
-                                            {{ $forum->name }}
-                                        </div>
-                                        <div class="text-[11px] sm:text-sm md:text-[15px] line-clamp-4" style="{{ $muted }}">
-                                            {{ $forum->description ?: '—' }}
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="mt-2 flex items-center justify-between gap-2">
-
-                                    {{-- Stats --}}
-                                    <div class="flex items-center gap-3 sm:gap-5 text-[11px] sm:text-sm" style="{{ $muted }}">
-
-                                        {{-- Posts --}}
-                                        <span class="inline-flex items-center gap-1">
-                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none"
-                                                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                                                 style="color: var(--an-text-muted)">
-                                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                                                <path d="M14 2v6h6"/>
-                                                <path d="M8 13h8"/><path d="M8 17h6"/>
-                                            </svg>
-                                            <span class="font-extrabold" style="color: var(--an-text);">
-                                                {{ number_format($postsCount) }}
-                                            </span>
-                                        </span>
-
-
-                                    </div>
-
-                                    {{-- Arrow --}}
-                                    <div class="shrink-0 sm:rounded-xl sm:border sm:border-[var(--an-border)]
-                                                sm:bg-[color:var(--an-card)]/50 sm:hover:bg-[color:var(--an-card)]/80
-                                                sm:px-2 sm:py-1 transition">
-                                        <svg viewBox="0 0 24 24" fill="none"
-                                             xmlns="http://www.w3.org/2000/svg"
-                                             class="h-6 w-9 rotate-180 sm:h-5 sm:w-5"
-                                             stroke="currentColor" stroke-width="2"
-                                             stroke-linecap="round" stroke-linejoin="round">
-                                            <path d="M4 12H20M4 12L8 8M4 12L8 16"/>
-                                        </svg>
-                                    </div>
-
-                                </div>
-                            </div>
-
-                        </div>
-                    </a>
-                @endforeach
-            </div>
-
-        </section>
-    @endforeach
+        </div>
+    </div>
 </div>
+
+<style>
+    .marquee { display: flex; overflow: hidden; user-select: none; }
+    .marquee__inner { animation: marquee-infinite 40s linear infinite; flex-shrink: 0; min-width: 100%; display: flex; justify-content: space-around; }
+    @keyframes marquee-infinite {
+        0% { transform: translateX(0); }
+        100% { transform: translateX(-50%); }
+    }
+</style>

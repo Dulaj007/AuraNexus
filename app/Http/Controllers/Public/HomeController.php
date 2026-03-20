@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use App\Models\Category;
 use App\Models\HomeTagCard;
+use App\Models\Post; // <-- Added for Latest Posts
 
 class HomeController extends Controller
 {
@@ -16,6 +17,18 @@ class HomeController extends Controller
 
         // ✅ Featured / Pinned posts (slider)
         $featuredPinnedPosts = $featuredPinned->get(10);
+
+        // ✅ Latest Posts (for Latest section)
+        $latestPosts = Cache::remember('home.latest_posts.v1', 120, function () {
+            return Post::published()
+                ->with([
+                    'forum:id,name,slug',
+                    'user:id,name,username,avatar'
+                ])
+                ->orderByDesc('created_at')
+                ->take(4) // 2x2 grid
+                ->get();
+        });
 
         // ✅ Admin curated Home Tag Cards
         $homeTagCards = Cache::remember('home.tag_cards.v1', 120, function () {
@@ -75,6 +88,7 @@ class HomeController extends Controller
 
         return view('home', [
             'featuredPinnedPosts' => $featuredPinnedPosts ?? collect(),
+            'latestPosts'         => $latestPosts ?? collect(), // <-- Added
             'homeTagCards'        => $homeTagCards ?? collect(),
             'homeCategories'      => $homeCategories ?? collect(),
             'jsonLd'              => $jsonLd,

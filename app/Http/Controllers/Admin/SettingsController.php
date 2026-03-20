@@ -33,6 +33,11 @@ class SettingsController extends Controller
             'home_meta_description' => ['nullable', 'string', 'max:200'],
             'meta_robots'           => ['nullable', 'string', 'max:200'],
 
+            //social media links
+            'site_twitter'  => ['nullable','url','max:255'],
+            'site_facebook' => ['nullable','url','max:255'],
+            'site_youtube'  => ['nullable','url','max:255'],
+
             // Policy
             'minimum_age' => ['nullable', 'integer', 'min:0', 'max:99'],
 
@@ -50,6 +55,11 @@ class SettingsController extends Controller
 
             // ✅ New: Ad redirect links (one per line)
             'link_unlock_ad_urls' => ['nullable', 'string', 'max:5000'],
+
+            'quick_navigation_links'         => ['nullable', 'array'],
+            'quick_navigation_links.*.title' => ['nullable', 'string', 'max:60'],
+            'quick_navigation_links.*.url'   => ['nullable', 'string', 'max:500'],
+            
         ]);
 
         // Normalize booleans (checkboxes)
@@ -98,7 +108,28 @@ class SettingsController extends Controller
             : $links->toJson(JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
 
         unset($data['footer_links']);
+        // Quick navigation links -> JSON
+        $quickLinks = collect($request->input('quick_navigation_links', []))
+            ->map(function ($row) {
+                $title = trim((string) ($row['title'] ?? ''));
+                $url   = trim((string) ($row['url'] ?? ''));
 
+                if ($title === '' || $url === '') return null;
+
+                $okUrl = Str::startsWith($url, ['/', 'http://', 'https://']);
+                if (!$okUrl) return null;
+
+                return ['title' => $title, 'url' => $url];
+            })
+            ->filter()
+            ->values()
+            ->take(30);
+
+        $quickLinksJson = $quickLinks->isEmpty()
+            ? null
+            : $quickLinks->toJson(JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+
+        unset($data['quick_navigation_links']);
         // Save scalar settings
         foreach ($data as $key => $value) {
             if (is_string($value)) {
@@ -115,7 +146,10 @@ class SettingsController extends Controller
                 ['value' => $value]
             );
         }
-
+        Setting::updateOrCreate(
+            ['key' => 'quick_navigation_links'],
+            ['value' => $quickLinksJson]
+        );
         // Save footer_links separately
         Setting::updateOrCreate(
             ['key' => 'footer_links'],

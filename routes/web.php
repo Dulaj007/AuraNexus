@@ -399,7 +399,8 @@ Route::middleware(['account.status'])->group(function () {
 });
 
 
-
+Route::get('/posts/top', [PostController::class, 'top'])->name('posts.top');
+Route::get('/posts/trending', [PostController::class, 'trending'])->name('posts.trending');
 Route::get('/link/{code}', [\App\Http\Controllers\Public\LinkController::class, 'show'])->name('link.show');
 Route::get('/unlock/{code}/go', [\App\Http\Controllers\Public\LinkController::class, 'go'])->name('link.go');
 

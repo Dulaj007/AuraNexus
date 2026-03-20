@@ -31,6 +31,13 @@ class AppServiceProvider extends ServiceProvider
             $view->with('adminThemeVars', $theme['vars']);
         });
 
+        View::composer('*', function ($view) {
+
+            $categories = \App\Models\Category::with('forums')->get();
+
+            $view->with('categories', $categories);
+
+        });
         /*
          |--------------------------------------------------------------------------
          | Global Site Settings (cached) → shared to ALL views
@@ -48,9 +55,11 @@ class AppServiceProvider extends ServiceProvider
             'home_meta_title',
             'home_meta_description',
 
-            // Optional
+            // Optional / Social
             'site_theme_color',
             'site_twitter',
+            'site_facebook',
+            'site_youtube', 
 
             // Policy
             'minimum_age',
@@ -67,6 +76,8 @@ class AppServiceProvider extends ServiceProvider
 
             // JSON array of ad links
             'link_unlock_ad_urls',
+
+            'quick_navigation_links',
         ];
 
         // 🔐 IMPORTANT: Never hit DB/cache while running artisan
@@ -123,5 +134,29 @@ class AppServiceProvider extends ServiceProvider
         View::composer(['layouts.profile'], $injectAds);
         View::composer(['layouts.search', 'layouts.tags'], $injectAds);
         View::composer(['layouts.link-unlock', 'layouts.link-download'], $injectAds);
+        
+        View::composer('*', function ($view) {
+        $settings = \App\Support\SiteSettings::public();
+
+        $quickLinks = [];
+
+        $rawQuick = $settings['quick_navigation_links'] ?? null;
+
+        if (is_string($rawQuick)) {
+            $decoded = json_decode($rawQuick, true);
+            if (is_array($decoded)) $quickLinks = $decoded;
+        }
+
+        $quickLinks = collect($quickLinks)
+            ->map(fn ($r) => [
+                'title' => trim($r['title'] ?? ''),
+                'url'   => trim($r['url'] ?? ''),
+            ])
+            ->filter(fn ($r) => $r['title'] || $r['url'])
+            ->values()
+            ->all();
+
+        $view->with('sidebarQuickLinks', $quickLinks);
+    });
     }
 }

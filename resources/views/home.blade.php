@@ -11,6 +11,7 @@
     $featuredPinnedPosts = $featuredPinnedPosts ?? collect();
     $homeCategories      = $homeCategories ?? collect();
     $homeTagCards        = $homeTagCards ?? collect();
+    $latestPosts = $latestPosts ?? collect();
 
     // Home meta overrides (SEO)
     $metaTitle = $settings['home_meta_title'] ?? $siteName;
@@ -50,9 +51,9 @@
 
     // ✅ Home ad placements (rendered inside page)
     // NOTE: head_home_ads is in <head> inside layouts/home.blade.php
-    $adTopA    = $ad('home_ads_top');      // primary
-    $adMidA    = $ad('home_ads_mid');      // primary
-    $adBottomA = $ad('home_ads_bottom');   // primary
+       // primary
+ 
+     // primary
 
     // (Optional future desktop extra slots if you add them later in registry)
     $adTopB    = $ad('home_ads_top_b');
@@ -87,64 +88,19 @@
 @endsection
 
 @section('content')
-<div class="max-w-7xl mx-auto px-1 sm:px-6 lg:px-8 py-2 sm:py-6 space-y-4 sm:space-y-6">
+<div class="max-w-[1500px] mx-auto w-full px-3  py-3 space-y-15">
 
-    <x-home.featured-pinned :posts="$featuredPinnedPosts" />
+    <x-home.featured-pinned :posts="$featuredPinnedPosts" :ad="$ad" />
 
-    {{-- ✅ TOP ADS (same style pattern as forums) --}}
-    @if($adTopA || $adTopB)
-        <div class="flex flex-row justify-center">
-            @if($adTopA)
-                <div class="flex">
-                    {!! $adTopA !!}
-                </div>
-            @endif
 
-            @if($adTopB)
-                <div class="hidden lg:flex">
-                    {!! $adTopB !!}
-                </div>
-            @endif
-        </div>
-    @endif
+<x-home.latest-home :latestPosts="$latestPosts" :ad="$ad"   :sidebarQuickLinks="$sidebarQuickLinks"/>
+    <x-home.forums-by-category :categories="$homeCategories" :ad="$ad" />
 
-    <x-home.forums-by-category :categories="$homeCategories" />
 
-    {{-- ✅ MID ADS --}}
-    @if($adMidA || $adMidB)
-        <div class="flex flex-row justify-center">
-            @if($adMidA)
-                <div class="flex">
-                    {!! $adMidA !!}
-                </div>
-            @endif
 
-            @if($adMidB)
-                <div class="hidden lg:flex">
-                    {!! $adMidB !!}
-                </div>
-            @endif
-        </div>
-    @endif
+    <x-home.tag-cards :cards="$homeTagCards"   />
 
-    <x-home.tag-cards :cards="$homeTagCards" />
 
-    {{-- ✅ BOTTOM ADS --}}
-    @if($adBottomA || $adBottomB)
-        <div class="flex flex-row justify-center">
-            @if($adBottomA)
-                <div class="flex">
-                    {!! $adBottomA !!}
-                </div>
-            @endif
-
-            @if($adBottomB)
-                <div class="hidden lg:flex">
-                    {!! $adBottomB !!}
-                </div>
-            @endif
-        </div>
-    @endif
 
 </div>
 @endsection
