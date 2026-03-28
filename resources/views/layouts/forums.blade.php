@@ -131,29 +131,16 @@
     @stack('head')
 </head>
 
-<body class="min-h-screen bg-[var(--an-bg)] text-[var(--an-text)] overflow-x-hidden">
+<body class="min-h-screen bg-[var(--an-bg)] text-[var(--an-text)] overflow-x-hidden font-sans">
 
-    {{-- Ambient glows (subtle) --}}
-    <div class="pointer-events-none fixed inset-0 -z-10 overflow-hidden opacity-60">
-        <div class="absolute -top-40 -left-40 h-[520px] w-[520px] rounded-full blur-3xl opacity-15 bg-[var(--an-link)]"></div>
-        <div class="absolute top-24 -right-48 h-[620px] w-[620px] rounded-full blur-3xl opacity-12 bg-[var(--an-primary)]"></div>
-        <div class="absolute bottom-[-220px] left-[25%] h-[520px] w-[520px] rounded-full blur-[140px] opacity-10 bg-[var(--an-info)]"></div>
-    </div>
-
-    {{-- Public navbar --}}
+    @include('partials.background-layer')
     @include('partials.nav')
 
-    <main class="max-w-7xl mx-auto">
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            <div class="lg:col-span-12 space-y-6">
-                @yield('forums_content')
-            </div>
-        </div>
-    </main>
-
-    {{-- Public footer --}}
-    @include('partials.footer')
+    @include('partials.app-shell')
 
     @stack('scripts')
+
+
 </body>
+
 </html>

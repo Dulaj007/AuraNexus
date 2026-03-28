@@ -94,7 +94,7 @@
 
                     @guest
                         <a href="{{ route('login') }}" class="hidden lg:inline-flex ">
-                            <x-ui.button color="var(--an-primary)">Login</x-ui.button>
+                            <x-ui.button color="var(--an-primary)">LogIn</x-ui.button>
                         </a>
                     @else
                         {{-- User Dropdown --}}

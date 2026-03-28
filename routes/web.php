@@ -210,13 +210,13 @@ Route::middleware(['account.status'])->group(function () {
         Route::get('/{category:slug}', [CategoryController::class, 'show'])->name('categories.show');
     });
 
-    Route::prefix('forum')->group(function () {
-        Route::get('/', [ForumController::class, 'index'])->name('forums.index');
+Route::prefix('forum')->group(function () {
+    Route::get('/', [ForumController::class, 'index'])->name('forums.index');
 
-        Route::get('/{forum:slug}/{page?}', [ForumController::class, 'show'])
-            ->whereNumber('page')
-            ->name('forums.show');
-    });
+    // remove the extra 'forum' in the URL
+    Route::get('/{forum:slug}', [ForumController::class, 'show'])
+        ->name('forums.show');
+});
 
     Route::prefix('tag')->group(function () {
         Route::get('/{tag:slug}', [TagController::class, 'show'])->name('tags.show');
