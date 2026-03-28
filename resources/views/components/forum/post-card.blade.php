@@ -1,151 +1,160 @@
 @props([
     'post',
-    'pinnedIds' => [], // optional, passed from controller
+    'forum', {{-- Make sure you pass the forum object --}}
+    'pinnedIds' => [],
+    'glass' => 'border border-[var(--an-border)] bg-[var(--an-card)]/40 backdrop-blur-md'
 ])
 
 @php
-    // ✅ FAST: DB-only thumbnail
-    $img  = $post->thumbnail_url ?? null;
-    $full = $img;
-
-    $alt       = $post->title;
-    $titleAttr = $post->title;
-
-    $views = (int) ($post->views ?? 0);
-
-    $formatViews = function (int $n): string {
-        if ($n < 1000) return (string) $n;
-        if ($n < 1000000) {
-            $v = $n / 1000;
-            return rtrim(rtrim(number_format($v, $v >= 10 ? 0 : 1), '0'), '.') . 'k';
-        }
-        $v = $n / 1000000;
-        return rtrim(rtrim(number_format($v, $v >= 10 ? 0 : 1), '0'), '.') . 'm';
-    };
-
-    $viewsFmt = $formatViews($views);
-    $timeAgo  = optional($post->created_at)?->diffForHumans();
-
-    // Pin logic (NO DB)
+    // Determine if post is pinned
     $isPinned = in_array((int) $post->id, array_map('intval', $pinnedIds), true);
-    $canPin   = auth()->user()?->hasPermission('approve_post') ?? false;
+    $canPin = auth()->user()?->hasPermission('approve_post') ?? false;
 
-    // Tags (already eager loaded)
-    $tags = $post->tags ?? collect();
-    $tagsShown = $tags->take(2);
+    // Format views (1.2k, 5m, etc.)
+    $views = (int) ($post->views ?? 0);
+    $formatViews = function (int $n): string {
+        if ($n < 1000) return (string)$n;
+        if ($n < 1000000) return rtrim(rtrim(number_format($n / 1000, $n >= 10000 ? 0 : 1), '0'), '.') . 'k';
+        return rtrim(rtrim(number_format($n / 1000000, $n >= 10000000 ? 0 : 1), '0'), '.') . 'm';
+    };
+    $viewsFmt = $formatViews($views);
 
-    // Avoid N+1: get forum from route, not relation
-    $forumSlug = optional(request()->route('forum'))?->slug;
+    $timeAgo = optional($post->created_at)?->diffForHumans();
 @endphp
 
+<article class="group relative {{ $glass }} overflow-hidden transition-all shadow-xl md:shadow-2xl duration-500 hover:border-[var(--an-primary)]/50 hover:shadow-[0_0_40px_rgba(var(--an-primary-rgb),0.1)] flex flex-col h-full">
 
-<div class="group relative overflow-hidden rounded-xl border border-[var(--an-border)]
-            bg-[color:var(--an-card)]/65 backdrop-blur-xl
-            transition-all duration-200
-            hover:-translate-y-[2px]
-            hover:shadow-[0_26px_85px_rgba(0,0,0,0.38)]
-            hover:ring-1 hover:ring-[var(--an-primary)]/25
-            active:scale-[0.99]">
+    {{-- Cyber Accents --}}
+    <div class="absolute top-0 left-0 w-3 h-3 md:w-4 md:h-4 border-t-2 border-l-2 border-[var(--an-primary)] opacity-0 group-hover:opacity-100 transition-all duration-500 transform -translate-x-1 -translate-y-1 group-hover:translate-x-3 group-hover:translate-y-3 z-30 pointer-events-none"></div>
+    <div class="absolute bottom-0 right-0 w-3 h-3 md:w-4 md:h-4 border-b-2 border-r-2 border-[var(--an-primary)] opacity-0 group-hover:opacity-100 transition-all duration-500 transform translate-x-1 translate-y-1 group-hover:-translate-x-3 group-hover:-translate-y-3 z-30 pointer-events-none"></div>
 
-    {{-- Pin / Unpin button (icon-only) --}}
-    @if($canPin && request()->routeIs('forums.show') && $forumSlug)
-        <form method="POST"
-              action="{{ $isPinned
-                    ? route('forum.post.unpin', ['forum' => $forumSlug, 'post' => $post->slug])
-                    : route('forum.post.pin',   ['forum' => $forumSlug, 'post' => $post->slug]) }}"
-              class="absolute top-2 right-2 z-20">
-            @csrf
-            <button type="submit"
-                    class="inline-flex items-center justify-center h-9 w-9 rounded-2xl border
-                           backdrop-blur transition
-                           {{ $isPinned
-                                ? 'bg-[color:var(--an-danger)]/25 border-[color:var(--an-danger)]/35'
-                                : 'bg-black/25 border-white/15 hover:bg-black/35' }}"
-                    aria-label="{{ $isPinned ? 'Unpin post' : 'Pin post' }}">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none"
-                     stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                     style="color: rgba(255,255,255,0.75)">
-                    <path d="M20.59 13.41L11 3H4v7l9.59 9.59a2 2 0 0 0 2.82 0l4.18-4.18a2 2 0 0 0 0-2.82z"/>
-                    <circle cx="7.5" cy="7.5" r="1.5"/>
+{{-- Pinned Icon Top Right --}}
+    <div class="absolute top-2 right-2 z-40">
+        @if($isPinned && !$canPin)
+            {{-- Read-only Pinned State: Glassmorphism with Red Glow --}}
+            <div class=" flex items-center justify-center   text-white shadow-4xl">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 md:w-5 md:h-5" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M5 6.2C5 5.07989 5 4.51984 5.21799 4.09202C5.40973 3.71569 5.71569 3.40973 6.09202 3.21799C6.51984 3 7.07989 3 8.2 3H15.8C16.9201 3 17.4802 3 17.908 3.21799C18.2843 3.40973 18.5903 3.71569 18.782 4.09202C19 4.51984 19 5.07989 19 6.2V21L12 16L5 21V6.2Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"></path>
                 </svg>
-            </button>
-        </form>
-    @endif
+            </div>
+        @elseif($canPin)
+            {{-- Toggle Pinned State: Glassmorphism with Dynamic Primary Glow --}}
+            <form method="POST" action="{{ $isPinned 
+                ? route('forum.post.unpin', ['forum' => $forum->slug, 'post' => $post->slug]) 
+                : route('forum.post.pin', ['forum' => $forum->slug, 'post' => $post->slug]) }}">
+                @csrf
+                <button type="submit" 
+                    class="group flex items-center justify-center  transition-all duration-300 ease-out hover:scale-110
+                    {{ $isPinned 
+                        ? 'text-white shadow-4xl' 
+                        : ' text-white shadow-4xl' }}" 
+                    title="{{ $isPinned ? 'Unpin Post' : 'Pin Post' }}">
+                    
+                    {{-- Bookmark SVG --}}
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 md:w-5 md:h-5 transition-transform duration-300 group-hover:-translate-y-0.5" viewBox="0 0 24 24" fill="{{ $isPinned ? 'currentColor' : 'none' }}">
+                        <path d="M5 6.2C5 5.07989 5 4.51984 5.21799 4.09202C5.40973 3.71569 5.71569 3.40973 6.09202 3.21799C6.51984 3 7.07989 3 8.2 3H15.8C16.9201 3 17.4802 3 17.908 3.21799C18.2843 3.40973 18.5903 3.71569 18.782 4.09202C19 4.51984 19 5.07989 19 6.2V21L12 16L5 21V6.2Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"></path>
+                    </svg>
+                </button>
+            </form>
+        @endif
+    </div>
 
-    <a href="{{ route('post.show', $post) }}" class="block">
-        <div class="relative aspect-[3/7] bg-[var(--an-card-2)] overflow-hidden">
+    <div class="flex flex-col h-full">
 
-            @if($img)
-                <img
-                    src="{{ $img }}"
-                    alt="{{ $alt }}"
-                    title="{{ $titleAttr }}"
-                    loading="lazy"
-                    class="absolute inset-0 h-full w-full object-cover
-                           group-hover:scale-[1.06] transition duration-300"
-                    onerror="
-                        if (this.dataset.fallback && this.src !== this.dataset.fallback) { this.src = this.dataset.fallback; return; }
-                        this.onerror=null;
-                        this.closest('div').innerHTML =
-                          '<div class=&quot;h-full w-full flex items-center justify-center text-[10px]&quot; style=&quot;color: var(--an-text-muted)&quot;>Image unavailable</div>';
-                    "
-                    data-fallback="{{ $full ?? '' }}"
-                >
+        {{-- Image --}}
+        <div class="relative aspect-[4/3] sm:aspect-[10/8] xl:aspect-[16/8] overflow-hidden bg-[var(--an-bg)]/40 flex-shrink-0 border-b border-[var(--an-border)]/50">
+            
+            <div class="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-overlay z-10 pointer-events-none"></div>
+            
+            @if($post->thumbnail_url)
+                <img src="{{ $post->thumbnail_url }}" 
+                     alt="{{ $post->title }}"
+                     onerror="this.onerror=null; this.src='/images/default-thumbnail.jpg';"
+                     class="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110 opacity-80 group-hover:opacity-100">
             @else
-                <div class="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.12),transparent_60%)]"></div>
-                <div class="absolute inset-0 bg-gradient-to-br from-[var(--an-primary)]/22 via-transparent to-[var(--an-secondary)]/14"></div>
+                <div class="w-full h-full flex items-center justify-center text-[10px] text-[var(--an-text-muted)]">
+                    Image unavailable
+                </div>
             @endif
 
-            {{-- Bottom gradient (only once) --}}
-            <div class="absolute inset-x-0 bottom-0 h-[65%]
-                        bg-gradient-to-t from-black via-black/45 to-transparent pointer-events-none">
+            {{-- Time --}}
+            <div class="absolute bottom-2 right-2 md:bottom-4 md:right-4 z-20">
+                <div class="text-[8px] md:text-[10px] text-[var(--an-text)] font-black tracking-widest opacity-60">
+                    {{ $timeAgo ?? 'N/A' }}
+                </div>
             </div>
 
-            <div class="absolute inset-x-0 bottom-0 px-1 sm:p-4 z-10">
-                <h3 class="font-extrabold text-[10px] sm:text-base leading-snug text-white line-clamp-4">
+            <div class="absolute bottom-0 inset-x-0 h-1/2 bg-gradient-to-t from-[var(--an-bg)]/90 to-transparent z-10 pointer-events-none"></div>
+        </div>
+
+        {{-- Content --}}
+        <div class="px-2 md:px-5 py-2 md:py-3 flex flex-col flex-1 relative bg-gradient-to-b from-transparent to-[var(--an-bg)]/20">
+
+            {{-- Title --}}
+            <h3 class="text-[12px] sm:text-base md:text-lg xl:text-xl font-black text-[var(--an-text)] leading-tight line-clamp-4 xl:line-clamp-3 group-hover:text-[var(--an-primary)] transition-colors tracking-tight mb-1 md:mb-2">
+                <a href="{{ url('/post/' . $post->slug) }}" class="before:absolute before:inset-0 before:z-10 focus:outline-none">
                     {{ $post->title }}
-                </h3>
+                </a>
+            </h3>
 
-                {{-- Tags --}}
-                <div class="mt-[1px] flex flex-wrap items-center gap-1">
-                    @php
-                        $tagPill = 'inline-flex items-center gap-1 px-2 py-[0.5px] rounded-full
-                                   border border-white/15 bg-black/25
-                                   text-[9px] sm:text-[11px] text-white/85
-                                   hover:bg-black/35 transition';
-                    @endphp
+            {{-- Description --}}
+            <p class="text-[10px] sm:text-[11px] md:text-[12px] text-[var(--an-text-muted)] line-clamp-2 leading-relaxed font-medium opacity-60 group-hover:opacity-90 transition-opacity mb-2 md:mb-3">
+                {{ Str::limit(strip_tags($post->content), 90) }}
+            </p>
 
-                    @foreach($tagsShown as $tag)
-                        <a href="{{ route('tags.show', $tag) }}" class="{{ $tagPill }}">
+            {{-- Tags --}}
+            @if($post->tags && $post->tags->isNotEmpty())
+                <div class="flex flex-wrap gap-1.5 md:gap-2 mb-2 relative z-20">
+                    
+                    @if($post->highlightTag)
+                        <div class="flex z-20">
+                            <x-post.tag variant="highlight" href="{{ url('/tags/' . $post->highlightTag->slug) }}">
+                                {{ $post->highlightTag->name }}
+                            </x-post.tag>
+                        </div>
+                    @endif
+
+                    @foreach($post->tags->take(2) as $tag)
+                        <x-post.tag variant="normal" href="{{ url('/tags/' . $tag->slug) }}">
                             {{ $tag->name }}
-                        </a>
+                        </x-post.tag>
                     @endforeach
                 </div>
+            @endif
 
-                {{-- meta row --}}
-                <div class="mt-1 mb-2 w-full justify-between px-1 flex items-center gap-2 text-[11px] text-white/75 whitespace-nowrap">
-                    <span class="inline-flex items-center gap-1">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none"
-                             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                             style="color: rgba(255,255,255,0.75)">
-                            <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/>
-                            <circle cx="12" cy="12" r="3"/>
-                        </svg>
-                        <span class="font-semibold text-white">{{ $viewsFmt }}</span>
-                    </span>
+            {{-- Footer --}}
+            <div class="mt-auto pt-2 md:pt-4 border-t border-[var(--an-border)]/40 flex items-center justify-between relative z-20">
+                
+                {{-- Stats --}}
+                <div class="flex items-center gap-2 md:gap-4 text-[var(--an-text-muted)] opacity-60 group-hover:opacity-100 transition-opacity">
+                    
+                    <div class="flex items-center gap-1 text-[9px] md:text-[11px] font-bold tracking-wider">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+                        <span>{{ $viewsFmt }}</span>
+                    </div>
 
-                    <span class="inline-flex items-center gap-1 min-w-0">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none"
-                             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                             style="color: rgba(255,255,255,0.75)">
-                            <circle cx="12" cy="12" r="10"/>
-                            <path d="M12 6v6l4 2"/>
-                        </svg>
-                        <span class="truncate">{{ $timeAgo }}</span>
-                    </span>
+                    <div class="flex items-center gap-1 text-[9px] md:text-[11px] font-bold tracking-wider">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path></svg>
+                        <span>{{ number_format($post->replies_count ?? 0) }}</span>
+                    </div>
+
+                    <div class="flex items-center gap-1 text-[9px] md:text-[11px] font-bold tracking-wider">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                        {{ number_format($post->reputation_points ?? 0) }}
+                    </div>
                 </div>
 
+                {{-- Read More (hide on mobile) --}}
+                <div class="hidden xl:flex items-center gap-2">
+                    <span class="text-[10px] font-black text-[var(--an-primary)] opacity-0 group-hover:opacity-100 transition-all transform -translate-x-2 group-hover:translate-x-0 uppercase tracking-widest">
+                        Read more
+                    </span>
+                    <div class="h-[2px] w-8 bg-[var(--an-border)] rounded-full overflow-hidden">
+                        <div class="h-full bg-[var(--an-primary)] w-0 group-hover:w-full transition-all duration-700"></div>
+                    </div>
+                </div>
             </div>
+
         </div>
-    </a>
-</div>
+    </div>
+</article>

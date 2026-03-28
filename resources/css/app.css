@@ -94,3 +94,32 @@
         transform: translateX(50%);
     }
 }
+
+
+
+        /* Smooth Layout Transitions */
+        #sidebar, #mainContent, #sidebarToggle {
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* Custom scrollbar for sidebar */
+        #sidebar::-webkit-scrollbar { width: 4px; }
+        #sidebar::-webkit-scrollbar-thumb { background: var(--an-border); border-radius: 10px; }
+
+                .sidebarHighlight {
+            transition: transform 0.25s ease, width 0.25s ease, height 0.25s ease;
+            background-color: var(--an-card-2);
+            position: absolute;
+            z-index: 0;
+            border-radius: 0.75rem;
+        }
+
+
+#sidebar {
+    box-sizing: border-box; /* ensures padding doesn't add extra height */
+    padding-top: 0; /* remove top padding that breaks scroll */
+}
+
+.sidebarMenu {
+    padding-top: 0; /* if pt-10 exists in sidebarMenu */
+}

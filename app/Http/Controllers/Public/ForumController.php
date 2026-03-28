@@ -22,7 +22,6 @@ class ForumController extends Controller
             ])
             ->with([
                 'latestPublishedPost' => function ($q) {
-                    // ✅ IMPORTANT: qualify columns to avoid "forum_id is ambiguous"
                     $q->select([
                         'posts.id',
                         'posts.forum_id',
@@ -35,21 +34,20 @@ class ForumController extends Controller
                 },
             ])
             ->orderBy('name')
-            ->paginate(20);
+            ->paginate(10);
 
         return view('forums.index', compact('forums'));
     }
 
-    public function show(Request $request, Forum $forum, $page = 1)
+    public function show(Request $request, Forum $forum)
     {
         $forum->load('category');
 
         $sort = $request->query('sort', 'recent');
+        $perPage = 1;
+        $page = $request->query('page', 1); // ✅ use query param, not route param
 
-        $perPage = 10;
-        $page = max(1, (int) $page);
-
-        // 1) Get pinned posts (ordered newest pin first)
+        // 1) Get pinned posts (newest pin first)
         $pinned = Post::query()
             ->select([
                 'id',
@@ -59,6 +57,10 @@ class ForumController extends Controller
                 'slug',
                 'thumbnail_url',
                 'views',
+                'highlight_tag_id',
+                'content',
+                'replies_count',
+                'reputation_points',
                 'created_at',
             ])
             ->where('forum_id', $forum->id)
@@ -66,10 +68,9 @@ class ForumController extends Controller
             ->whereIn('id', function ($q) use ($forum) {
                 $q->select('post_id')
                     ->from('pinned_posts')
-                    ->where('forum_id', $forum->id)
-                    ->orderByDesc('pinned_at');
+                    ->where('forum_id', $forum->id);
             })
-            ->with(['tags:id,name,slug','highlightTag:id,name,slug','user:id,username,name,avatar'])
+            ->with(['tags:id,name,slug', 'highlightTag:id,name,slug', 'user:id,username,name,avatar'])
             ->get()
             ->sortByDesc(function ($post) use ($forum) {
                 return DB::table('pinned_posts')
@@ -92,16 +93,16 @@ class ForumController extends Controller
                 'slug',
                 'thumbnail_url',
                 'views',
+                'highlight_tag_id',
+                'content',
+                'replies_count',
+                'reputation_points',
                 'created_at',
             ])
             ->where('forum_id', $forum->id)
             ->where('status', 'published')
-            ->when(!empty($pinnedIds), fn ($q) => $q->whereNotIn('id', $pinnedIds))
-            ->with([
-                'tags:id,name,slug',
-                'highlightTag:id,name,slug',
-                'user:id,username,name,avatar',
-            ]);
+            ->when(!empty($pinnedIds), fn($q) => $q->whereNotIn('id', $pinnedIds))
+            ->with(['tags:id,name,slug', 'highlightTag:id,name,slug', 'user:id,username,name,avatar']);
 
         if ($sort === 'oldest') {
             $query->orderBy('created_at', 'asc');
@@ -113,35 +114,27 @@ class ForumController extends Controller
 
         $nonPinnedTotal = (clone $query)->count();
 
-        // 3) Pagination math so page 1 shows pinned + (10 - pinnedCount) normal
+        // 3) Pagination logic: first page includes pinned posts
         $firstPageNonPinned = max(0, $perPage - $pinnedCount);
 
-        if ($page === 1) {
+        if ($page == 1) {
             $nonPinned = $query->limit($firstPageNonPinned)->get();
             $items = $pinned->concat($nonPinned);
-            $totalForPaginator = $pinnedCount + $nonPinnedTotal;
-
-            $posts = new LengthAwarePaginator(
-                $items,
-                $totalForPaginator,
-                $perPage,
-                $page,
-                ['path' => url('/forum/' . $forum->slug), 'query' => request()->query()]
-            );
         } else {
-            $offset = $firstPageNonPinned + (($page - 2) * $perPage);
-
+            $offset = $firstPageNonPinned + ($perPage * ($page - 2));
             $items = $query->skip($offset)->take($perPage)->get();
-            $totalForPaginator = $pinnedCount + $nonPinnedTotal;
-
-            $posts = new LengthAwarePaginator(
-                $items,
-                $totalForPaginator,
-                $perPage,
-                $page,
-                ['path' => url('/forum/' . $forum->slug), 'query' => request()->query()]
-            );
         }
+
+        $posts = new LengthAwarePaginator(
+            $items,
+            $pinnedCount + $nonPinnedTotal,
+            $perPage,
+            $page,
+            [
+                'path' => url('/forum/' . $forum->slug),
+                'query' => $request->query(), // ✅ keeps ?sort=recent/page=2
+            ]
+        );
 
         return view('forums.show', compact('forum', 'posts', 'sort', 'pinnedIds'));
     }

@@ -22,14 +22,18 @@
         ],
     ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
 
-    // Styling (match your category show page)
-    $glass  = 'bg-[color:var(--an-card)]/72 backdrop-blur-xl border border-[var(--an-border)]';
+    // MATCH forums page styling
+    $glass  = 'bg-transparent backdrop-blur-xl';
     $shadow = 'shadow-[0_16px_55px_rgba(0,0,0,0.28)]';
-    $hover  = 'hover:-translate-y-[2px] hover:shadow-[0_26px_85px_rgba(0,0,0,0.38)] hover:ring-1 hover:ring-[var(--an-primary)]/25';
+
+    // pills
+    $pill = 'inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full
+             border border-[var(--an-border)] bg-[color:var(--an-card)]/60
+             text-[11px] sm:text-xs text-[var(--an-text-muted)]';
+    $pillStrong = 'font-semibold text-[var(--an-text)]';
 
     /**
-     * ✅ Ads helper (same method everywhere)
-     * Uses ad() if available; otherwise falls back to cached DB map (ads.placements)
+     * Ads (same system)
      */
     $adsMap = null;
 
@@ -48,7 +52,6 @@
         return (is_string($html) && trim($html) !== '') ? $html : null;
     };
 
-    // ✅ Pull once (don’t call ad() 20 times)
     $topA    = $ad('community_top_a');
     $topB    = $ad('community_top_b');
     $midA    = $ad('community_mid_a');
@@ -70,325 +73,254 @@
 @section('page_title', 'Categories')
 @section('page_subtitle', 'Browse all categories and their forums')
 
-@section('categories_content')
-<div class="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8 py-2 sm:py-6 space-y-3 sm:space-y-6">
+@section('content')
+<div class="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8 py-2 sm:py-6 space-y-4">
 
-    {{-- Header (tight, consistent) --}}
-    <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2 sm:gap-3">
+    {{-- Header --}}
+    <div class="flex justify-end">
         <a href="{{ route('forums.index') }}"
-           class="inline-flex items-center gap-2 text-[12px] sm:text-sm font-semibold underline underline-offset-4 hover:no-underline"
+           class="text-sm font-semibold underline underline-offset-4"
            style="color: var(--an-link)">
-            View all forums <span aria-hidden="true">→</span>
+            View all forums →
         </a>
     </div>
 
-    {{-- TOP ADS (shared) --}}
+    {{-- TOP ADS --}}
     @if($topA || $topB)
-        <div class="flex flex-row  justify-center items-center ">
-            @if($topA)
-                <div class=" flex ">
-                    {!! $topA !!}
-                </div>
-            @endif
-
-            @if($topB)
-                <div class="hidden lg:flex ">
-                    {!! $topB !!}
-                </div>
-            @endif
+        <div class="flex justify-center gap-3">
+            {!! $topA !!}
+            <div class="hidden lg:flex">{!! $topB !!}</div>
         </div>
     @endif
 
+    {{-- HERO --}}
+    <section class="{{ $glass }} overflow-hidden relative">
 
-    @if($categories->isEmpty())
-        <div class="{{ $glass }} {{ $shadow }} rounded-3xl p-4 sm:p-6">
-            <p class="text-sm text-[var(--an-text-muted)]">No categories yet.</p>
+        <div class="p-3">
+
+            {{-- Marquee --}}
+            <div class="absolute inset-x-0 overflow-hidden opacity-[0.1] pointer-events-none">
+                <div class="flex whitespace-nowrap marquee">
+                    <div class="marquee__inner text-7xl font-black uppercase italic">
+                        @for($i=0;$i<6;$i++)
+                            <span class="mr-15 text-[var(--an-primary)]">Explore categories</span>
+                            <span class="mr-15 text-[var(--an-text)]">Discover communities</span>
+                        @endfor
+                    </div>
+                </div>
+            </div>
+
+            {{-- Title --}}
+            <div class="flex items-center gap-3">
+                <div class="h-8 w-1.5 bg-[var(--an-primary)]"></div>
+                <div>
+                    <span class="text-[9px] uppercase tracking-[0.4em] text-[var(--an-primary)]">
+                        Browse everything
+                    </span>
+                    <h2 class="text-2xl font-black uppercase tracking-tight">
+                        Categories
+                    </h2>
+                </div>
+            </div>
+
+            {{-- Quick stats --}}
+            <div class="flex gap-2 mt-3">
+                <span class="{{ $pill }}">
+                    <span class="{{ $pillStrong }}">{{ $categories->count() }}</span>
+                    Categories
+                </span>
+            </div>
+
         </div>
-    @else
 
-        <div class="space-y-4 sm:space-y-6">
+        {{-- CATEGORY SECTIONS --}}
+        <div class="space-y-6 mt-4">
+
             @foreach($categories as $category)
+
                 @php
                     $forums = $category->forums ?? collect();
-
-                    $categoryViews = (int) ($category->views ?? 0);
-                    $forumsCount   = (int) ($category->forums_count ?? $forums->count());
-
-                    $totalPosts = (int) $forums->sum(fn($f) => (int) ($f->posts_count ?? 0));
-                    $totalViews = (int) $forums->sum(fn($f) => (int) ($f->views ?? 0));
-
-                    // overlay chips for forum cards
-                    $chip = 'inline-flex items-center gap-1.5 px-2 py-1 rounded-full
-                             border border-white/15 bg-black/25
-                             text-[10px] sm:text-[11px] text-white/85';
-                    $chipStrong = 'font-semibold text-white';
-
-                    // header pills
-                    $pill = 'inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full
-                             border border-[var(--an-border)] bg-[color:var(--an-card)]/60
-                             text-[11px] sm:text-xs text-[var(--an-text-muted)]';
-                    $pillStrong = 'font-semibold text-[var(--an-text)]';
                 @endphp
 
-                <section class="{{ $glass }} {{ $shadow }} overflow-hidden rounded-3xl">
+                <div>
 
-                    {{-- Category header --}}
-                    <div class="border-b border-[var(--an-border)]
-                                bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.10),transparent_55%)]">
-                        <div class="px-3 py-3 sm:p-6 bg-[var(--an-bg)]/60 flex flex-col gap-2 sm:gap-4">
-
-                            <div class="flex items-start gap-2 sm:gap-3">
-                                <span class="shrink-0 inline-flex h-9 w-9 sm:h-11 sm:w-11 items-center justify-center rounded-2xl
-                                             border border-[var(--an-border)] bg-[color:var(--an-card)]/60">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 sm:h-6 sm:w-6"
-                                         viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                                         stroke-linecap="round" stroke-linejoin="round"
-                                         style="color: var(--an-text-muted)">
-                                        <path d="M3 7a2 2 0 0 1 2-2h5l2 2h7a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-                                    </svg>
-                                </span>
-
-                                <div class="min-w-0 flex-1">
-                                    <a href="{{ route('categories.show', $category) }}" class="block group min-w-0">
-                                        <h2 class="text-base sm:text-xl line-clamp-2 font-extrabold tracking-tight text-[var(--an-text)]
-                                                   group-hover:underline">
-                                            {{ $category->name }}
-                                        </h2>
-                                    </a>
-
-                                    <p class="mt-1 text-[12px] sm:text-sm text-[var(--an-text-muted)] line-clamp-2">
-                                        {{ $category->description ?: '—' }}
-                                    </p>
-                                </div>
-
-                                <a href="{{ route('categories.show', $category) }}"
-                                   class="shrink-0 inline-flex h-9 w-9 items-center justify-center rounded-2xl
-                                          border border-[var(--an-border)] bg-[color:var(--an-card)]/60
-                                          hover:bg-[color:var(--an-card-2)] transition"
-                                   aria-label="Open category">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none"
-                                         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                                         style="color: var(--an-text-muted)">
-                                        <path d="M9 18l6-6-6-6"/>
-                                    </svg>
-                                </a>
-                            </div>
-
-                            {{-- stats pills --}}
-                            <div class="flex flex-wrap gap-1.5 sm:gap-2">
-                                <span class="{{ $pill }}">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none"
-                                         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                                         style="color: var(--an-text-muted)">
-                                        <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/>
-                                        <circle cx="12" cy="12" r="3"/>
-                                    </svg>
-                                    <span class="{{ $pillStrong }}">{{ number_format($categoryViews) }}</span>
-                                </span>
-
-                                <span class="{{ $pill }}">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none"
-                                         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                                         style="color: var(--an-text-muted)">
-                                        <path d="M3 3h7v7H3z"/><path d="M14 3h7v7h-7z"/><path d="M14 14h7v7h-7z"/><path d="M3 14h7v7H3z"/>
-                                    </svg>
-                                    <span class="{{ $pillStrong }}">{{ number_format($forumsCount) }}</span>
-                                </span>
-
-                                <span class="{{ $pill }}">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none"
-                                         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                                         style="color: var(--an-text-muted)">
-                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                                        <path d="M14 2v6h6"/>
-                                        <path d="M8 13h8"/><path d="M8 17h6"/>
-                                    </svg>
-                                    <span class="{{ $pillStrong }}">{{ number_format($totalPosts) }}</span>
-                                </span>
-
-                                <span class="{{ $pill }}">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none"
-                                         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                                         style="color: var(--an-text-muted)">
-                                        <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/>
-                                        <circle cx="12" cy="12" r="3"/>
-                                    </svg>
-                                    <span class="{{ $pillStrong }}">{{ number_format($totalViews) }}</span>
-                                </span>
-                            </div>
-
+                    {{-- CATEGORY HEADER --}}
+                    <div class="flex items-center justify-between px-2 mb-2">
+                        <div>
+                            <h3 class="text-lg font-bold">
+                                {{ $category->name }}
+                            </h3>
+                            <p class="text-xs text-gray-400">
+                                {{ $category->description }}
+                            </p>
                         </div>
+
+                        <a href="{{ route('categories.show',$category) }}"
+                           class="text-xs underline">
+                            View →
+                        </a>
                     </div>
 
-                    {{-- Forums grid --}}
-                    <div class="">
-                        @if($forums->isEmpty())
-                            <p class="text-sm text-[var(--an-text-muted)] px-3 py-3">No forums in this category.</p>
-                        @else
-                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-                                @foreach($forums as $forum)
-                                    @php
-                                        $latest = $forum->latestPublishedPost;
-                                        $cover  = $latest?->thumbnail_url;  // ✅ simple
+                    {{-- FORUM GRID (UPGRADED STYLE) --}}
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
 
+                        @foreach($forums as $forum)
 
-                                        $postsCount = (int) ($forum->posts_count ?? 0);
-                                        $viewsCount = (int) ($forum->views ?? 0);
-                                        $replies    = (int) ($forum->replies_count ?? 0);
-                                    @endphp
+                            @php
+                                $latest = $forum->latestPublishedPost ?? null;
+                                $cover = $latest?->thumbnail_url;
+                                $categoryName = $category->name; // Using current category in loop
+                                $postsCount = (int) ($forum->posts_count ?? 0);
+                                $viewsCount = (int) ($forum->views ?? 0);
+                                $replies    = (int) ($forum->replies_count ?? 0);
+                            @endphp
 
-                                    <a href="{{ route('forums.show', $forum) }}"
-                                       class="group relative overflow-hidden
-                                              bg-[color:var(--an-card)]/65 backdrop-blur-xl
-                                              {{ $hover }}
-                                              transition-all duration-200 active:scale-[0.99]">
+                            <a href="{{ route('forums.show', $forum) }}"
+                               class="group relative overflow-hidden transition-all duration-200 active:scale-[0.99]">
 
-                                        <div class="relative aspect-3/2 bg-[var(--an-card-2)] overflow-hidden">
-                                            @if($cover)
-                                                <img
-                                                    src="{{ $cover }}"
-                                                    alt="{{ $forum->name }}"
-                                                    title="{{ $forum->name }}"
-                                                    loading="lazy"
-                                                    class="absolute inset-0 h-full w-full object-cover
-                                                        group-hover:scale-[1.06] transition duration-300"
-                                                    onerror="
-                                                        this.onerror=null;
-                                                        this.closest('div').innerHTML='<div class=&quot;h-full w-full flex items-center justify-center text-[10px]&quot; style=&quot;color: var(--an-text-muted)&quot;>No cover</div>';
-                                                    "
-                                                >
-                                            @else
-                                                <div class="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.12),transparent_60%)]"></div>
-                                                <div class="absolute inset-0 bg-gradient-to-br from-[var(--an-primary)]/22 via-transparent to-[var(--an-secondary)]/14"></div>
-                                            @endif
+                                <div class="group relative w-full h-[22rem] sm:h-[24rem] flex flex-col justify-end overflow-hidden border border-[var(--an-primary)]/10 transition-all duration-500 hover:shadow-2xl hover:-translate-y-1">
 
-                                            <div class="absolute inset-x-0 bottom-0 h-[70%]
-                                                        bg-gradient-to-t from-black via-black/45 to-transparent pointer-events-none"></div>
+                                    {{-- BACKGROUND IMAGE & FALLBACK --}}
+                                    <div class="absolute inset-0 w-full h-full z-0">
+                                        @if($cover)
+                                            <img src="{{ $cover }}"
+                                                 class="w-full h-full object-cover opacity-80 transition-transform duration-700 group-hover:scale-104 group-hover:opacity-100">
+                                        @else
+                                            <div class="w-full h-full bg-gradient-to-br from-[var(--an-primary)]/30 via-slate-800 to-slate-900 flex items-center justify-center transition-transform duration-700 group-hover:scale-105">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 text-white/10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z" />
+                                                </svg>
+                                            </div>
+                                        @endif
+                                    </div>
 
-                                            <div class="absolute inset-x-0 bottom-0 p-2.5 sm:p-3">
-                                                <div class="flex items-start gap-2">
-                                                    <div class="min-w-0 flex-1">
-                                                        <div class="font-extrabold text-[13px] sm:text-sm leading-snug text-white line-clamp-2">
-                                                            {{ $forum->name }}
-                                                        </div>
-                                                        <div class="mt-1 text-[11px] sm:text-xs text-white/80 line-clamp-2">
-                                                            {{ $forum->description ?: '—' }}
-                                                        </div>
-                                                    </div>
+                                    {{-- SMOOTH GRADIENT OVERLAY --}}
+                                    <div class="absolute inset-0 bg-gradient-to-t from-black via-black/80 to-transparent pointer-events-none z-10"></div>
 
-                                                    <span class="shrink-0 inline-flex h-8 w-8 items-center justify-center rounded-2xl
-                                                                 border border-white/15 bg-black/25 backdrop-blur
-                                                                 group-hover:bg-black/35 transition">
-                                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none"
-                                                             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                                                             style="color: rgba(255,255,255,0.85)">
-                                                            <path d="M9 18l6-6-6-6"/>
-                                                        </svg>
-                                                    </span>
-                                                </div>
+                                    {{-- TOP SECTION: CATEGORY BADGE & ACTION ARROW --}}
+                                    <div class="absolute top-4 inset-x-4 flex justify-between items-start z-20">
+                                        {{-- Category Badge --}}
+                                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/40 backdrop-blur-md border border-white/10 text-[11px] sm:text-xs font-medium text-white shadow-sm transition-colors group-hover:bg-black/60">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-[var(--an-primary,white)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                                            </svg>
+                                            {{ $categoryName }}
+                                        </span>
 
-                                                <div class="mt-2 flex flex-wrap gap-1.5">
-                                                    <span class="{{ $chip }}">
-                                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none"
-                                                             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                                                             style="color: rgba(255,255,255,0.75)">
-                                                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                                                            <path d="M14 2v6h6"/>
-                                                            <path d="M8 13h8"/><path d="M8 17h6"/>
-                                                        </svg>
-                                                        <span class="{{ $chipStrong }}">{{ number_format($postsCount) }}</span>
-                                                    </span>
+                                        {{-- Hover Arrow --}}
+                                        <span class="inline-flex h-9 w-9 items-center justify-center rounded-full bg-[var(--an-primary)]/90 text-white shadow-lg backdrop-blur-md opacity-0 transform translate-x-4 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                                            </svg>
+                                        </span>
+                                    </div>
 
-                                                    <span class="{{ $chip }}">
-                                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none"
-                                                             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                                                             style="color: rgba(255,255,255,0.75)">
-                                                            <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/>
-                                                            <circle cx="12" cy="12" r="3"/>
-                                                        </svg>
-                                                        <span class="{{ $chipStrong }}">{{ number_format($viewsCount) }}</span>
-                                                    </span>
+                                    {{-- BOTTOM SECTION: MAIN CONTENT --}}
+                                    <div class="relative z-20 p-4 flex flex-col gap-1">
+                                        
+                                        {{-- Title & Description --}}
+                                        <div>
+                                            <h3 class="text-lg sm:text-xl font-bold text-white leading-tight line-clamp-2 transition-colors duration-300 group-hover:text-[var(--an-primary,white)]">
+                                                {{ $forum->name }}
+                                            </h3>
+                                            <p class="mt-2 text-sm text-gray-300 line-clamp-2 leading-relaxed">
+                                                {{ $forum->description ?: 'No description provided for this forum.' }}
+                                            </p>
+                                        </div>
 
-                                                    <span class="{{ $chip }}">
-                                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none"
-                                                             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                                                             style="color: rgba(255,255,255,0.75)">
-                                                            <path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a2 2 0 0 1 2 2z"/>
-                                                        </svg>
-                                                        <span class="{{ $chipStrong }}">{{ number_format($replies) }}</span>
-                                                    </span>
-                                                </div>
+                                        {{-- Stats Row --}}
+                                        <div class="flex flex-wrap items-center gap-4 pt-3 mt-1 border-t border-white/10">
+                                            {{-- Posts --}}
+                                            <div class="flex items-center gap-1.5 text-gray-400 text-xs sm:text-[13px]">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9.5a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" />
+                                                </svg>
+                                                <span class="font-semibold text-gray-100">{{ number_format($postsCount) }}</span>
+                                            </div>
 
-                                                @if($latest)
-                                                    <div class="mt-2 text-[10px] sm:text-[11px] text-white/75 line-clamp-1">
-                                                        <span class="opacity-80">Latest:</span>
-                                                        <span class="font-semibold text-white">
-                                                            {{ $latest->title ?? 'New post' }}
-                                                        </span>
-                                                    </div>
-                                                @endif
+                                            {{-- Views --}}
+                                            <div class="flex items-center gap-1.5 text-gray-400 text-xs sm:text-[13px]">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                                </svg>
+                                                <span class="font-semibold text-gray-100">{{ number_format($viewsCount) }}</span>
+                                            </div>
+
+                                            {{-- Replies --}}
+                                            <div class="flex items-center gap-1.5 text-gray-400 text-xs sm:text-[13px]">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                                                </svg>
+                                                <span class="font-semibold text-gray-100">{{ number_format($replies) }}</span>
                                             </div>
                                         </div>
-                                    </a>
-                                @endforeach
-                            </div>
-                        @endif
+
+                                        {{-- Latest Post --}}
+                                        @if($latest)
+                                            <div class="flex items-center gap-2 mt-2 bg-white/5 rounded-xl p-2.5 backdrop-blur-sm border border-white/5 transition-colors hover:bg-white/10">
+                                                <div class="flex-shrink-0 flex items-center justify-center w-7 h-7 rounded-full bg-[var(--an-primary)]/20 text-[var(--an-primary,white)]">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                    </svg>
+                                                </div>
+                                                <div class="min-w-0 flex-1">
+                                                    <p class="text-[11px] text-gray-400 leading-none mb-1">Latest Post</p>
+                                                    <p class="text-[13px] font-medium text-gray-100 truncate group-hover:text-white transition-colors">
+                                                        {{ $latest->title ?? 'New post' }}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        @endif
+
+                                    </div>
+                                </div>
+                            </a>
+
+                        @endforeach
+
                     </div>
-                </section>
 
-                {{-- AD BETWEEN CATEGORY SECTIONS (shared, every 2 categories) --}}
-                @if(($loop->iteration % 2) === 0 && ($feedA || $feedB))
-                    <div class="flex flex-row  justify-center items-center ">
-                        @if($feedA)
-                            <div class=" flex">
-                                {!! $feedA !!}
-                            </div>
-                        @endif
+                </div>
 
-                        @if($feedB)
-                            <div class="hidden lg:flex">
-                                {!! $feedB !!}
-                            </div>
-                        @endif
+                {{-- FEED ADS --}}
+                @if(($loop->iteration % 2)==0)
+                    <div class="flex justify-center gap-3 mt-4">
+                        {!! $feedA !!}
+                        <div class="hidden lg:flex">{!! $feedB !!}</div>
                     </div>
                 @endif
 
             @endforeach
-        </div>
-    @endif
 
-    {{-- MID ADS (shared) --}}
+        </div>
+
+    </section>
+
+    {{-- MID ADS --}}
     @if($midA || $midB)
-        <div class="flex flex-row  justify-center items-center ">
-            @if($midA)
-                <div class="flex ">
-                    {!! $midA !!}
-                </div>
-            @endif
-
-            @if($midB)
-                <div class="hidden lg:flex ">
-                    {!! $midB !!}
-                </div>
-            @endif
+        <div class="flex justify-center gap-3">
+            {!! $midA !!}
+            <div class="hidden lg:flex">{!! $midB !!}</div>
         </div>
     @endif
-    {{-- BOTTOM ADS (shared) --}}
-    @if($bottomA || $bottomB)
-        <div class="flex flex-row  justify-center items-center ">
-            @if($bottomA)
-                <div class=" flex ">
-                    {!! $bottomA !!}
-                </div>
-            @endif
 
-            @if($bottomB)
-                <div class="hidden lg:flex ">
-                    {!! $bottomB !!}
-                </div>
-            @endif
+    {{-- BOTTOM ADS --}}
+    @if($bottomA || $bottomB)
+        <div class="flex justify-center gap-3">
+            {!! $bottomA !!}
+            <div class="hidden lg:flex">{!! $bottomB !!}</div>
         </div>
     @endif
 
 </div>
 @endsection
+
+<style>
+.marquee { display:flex; overflow:hidden }
+.marquee__inner { animation: marquee 50s linear infinite; min-width:100%; display:flex; justify-content:space-around }
+@keyframes marquee {
+    0%{transform:translateX(0)}
+    100%{transform:translateX(-50%)}
+}
+</style>
