@@ -32,6 +32,7 @@
     $siteKeywords    = $siteSettings['site_keywords'] ?? ($siteName . ', forums, community, posts, tags');
     $themeColor      = $siteSettings['site_theme_color'] ?? '#FF4268';
     $twitter         = $siteSettings['site_twitter'] ?? null;
+     $appName = $siteSettings['site_name'] ?? config('app.name', 'AuraNexus');
 
     // Theme mode (per-user)
     $mode = request()->cookie('theme_mode', 'dark');
@@ -173,31 +174,15 @@
     @stack('head')
 </head>
 
-<body class="min-h-screen bg-[var(--an-bg)] text-[var(--an-text)] overflow-x-hidden">
+<body class="min-h-screen bg-[var(--an-bg)] text-[var(--an-text)] overflow-x-hidden font-sans">
 
-    {{-- Ambient glows --}}
-    <div class="pointer-events-none fixed inset-0 -z-10 overflow-hidden opacity-80">
-        <div class="absolute -top-40 -left-40 h-[520px] w-[520px] rounded-full blur-3xl opacity-15 bg-[var(--an-link)]"></div>
-        <div class="absolute top-24 -right-48 h-[620px] w-[620px] rounded-full blur-3xl opacity-12 bg-[var(--an-primary)]"></div>
-        <div class="absolute bottom-[-220px] left-[25%] h-[520px] w-[520px] rounded-full blur-[140px] opacity-10 bg-[var(--an-info)]"></div>
-    </div>
-
-    {{-- Public nav --}}
+    @include('partials.background-layer')
     @include('partials.nav')
 
-    {{-- Page Content --}}
-    <main class="max-w-4xl mx-auto px-3 sm:px-4 py-4 sm:py-8">
-        <div class="rounded-3xl border border-[var(--an-border)]
-                    bg-[color:var(--an-card)]/65 backdrop-blur-xl
-                    shadow-[0_10px_30px_rgba(0,0,0,0.08)]
-                    p-4 sm:p-6">
-            @yield('content')
-        </div>
-    </main>
-
-    {{-- Footer --}}
-    @include('partials.footer')
+    @include('partials.app-shell')
 
     @stack('scripts')
+
+
 </body>
 </html>

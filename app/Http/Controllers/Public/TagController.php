@@ -5,51 +5,86 @@ namespace App\Http\Controllers\Public;
 use App\Http\Controllers\Controller;
 use App\Models\Post;
 use App\Models\Tag;
+use App\Models\HomeTagCard; // <-- for index cards with images
 use Illuminate\Http\Request;
-use Illuminate\Pagination\Paginator;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 class TagController extends Controller
 {
     /**
-     * /tag/{tag:slug}
-     * /tag/{tag:slug}/{page}
+     * Show all tags as cards (with images if available)
+     *
+     * Route: /tags
      */
-    public function show(Request $request, Tag $tag, ?int $page = 1)
+    public function index()
     {
-        $page = max(1, (int) $page);
-        Paginator::currentPageResolver(fn () => $page);
+        // Use HomeTagCard to get images + tag info, cached for performance
+        $cards = Cache::remember('tags.all_cards.v1', 300, function () {
+            return HomeTagCard::query()
+                ->with('tag:id,name,slug')      // eager load related tag
+                ->where('is_enabled', true)    // only enabled cards
+                ->orderBy('sort_order')         // maintain custom sort
+                ->orderByDesc('id')
+                ->get();
+        });
 
-        // Posts with this tag (published only)
-        $posts = Post::query()
+        return view('tags.index', [
+            'cards' => $cards,
+        ]);
+    }
+
+    /**
+     * Show posts for a single tag.
+     *
+     * Routes:
+     * - /tag/{tag:slug}
+     * - /tag/{tag:slug}?page=2&sort=popular
+     */
+    public function show(Request $request, Tag $tag)
+    {
+        $sort = $request->query('sort', 'recent');
+
+        $postsQuery = $tag->posts() // use tag->posts relation
             ->where('status', Post::STATUS_PUBLISHED ?? 'published')
-            ->whereHas('tags', fn ($q) => $q->where('tags.id', $tag->id))
-            ->with(['tags:id,name,slug'])
-            ->orderByDesc('created_at')
-            ->paginate(10)
-            ->withQueryString();
+            ->with(['tags:id,name,slug', 'user:id,name,username,avatar']);
 
-        // track only on canonical visit
+        // Apply sorting
+        switch ($sort) {
+            case 'popular':
+                $postsQuery->orderByDesc('views');
+                break;
+            case 'oldest':
+                $postsQuery->orderBy('created_at');
+                break;
+            case 'recent':
+            default:
+                $postsQuery->orderByDesc('created_at');
+                break;
+        }
+
+        // Paginate 10 posts per page
+        $posts = $postsQuery->paginate(10)->withQueryString();
+
+        // Track tag views
         $this->trackTagView($request, $tag);
 
         return view('tags.show', [
             'tag' => $tag,
             'posts' => $posts,
             'resultsCount' => (int) $posts->total(),
-            'page' => $page,
         ]);
     }
 
+    /**
+     * Track tag views and optionally log activity
+     */
     private function trackTagView(Request $request, Tag $tag): void
     {
-        // If you only want to count unique per session, add a session key check here.
         DB::transaction(function () use ($request, $tag) {
-
-            // increment tags.views column
             $tag->increment('views', 1);
 
-            // Optional: if you use PageView morph table and want it too
-            // (remove if you don't want/need this)
+            // PageView morph table (optional)
             if (class_exists(\App\Models\PageView::class)) {
                 $tag->views()->create([
                     'ip_address' => (string) $request->ip(),
@@ -58,7 +93,7 @@ class TagController extends Controller
                 ]);
             }
 
-            // Optional: log user_activities like you did for search
+            // Optional user_activities log
             if (DB::getSchemaBuilder()->hasTable('user_activities')) {
                 DB::table('user_activities')->insert([
                     'user_id' => $request->user()?->id,

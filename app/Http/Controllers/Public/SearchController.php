@@ -14,7 +14,7 @@ use Illuminate\View\View;
 
 class SearchController extends Controller
 {
-    private const PER_PAGE = 10;
+    private const PER_PAGE = 1;
     private const MIN_QUERY_LEN = 2;
     private const MAX_QUERY_LEN = 120;
 
@@ -53,44 +53,36 @@ class SearchController extends Controller
     }
 
     /**
-     * Results page:
-     * /search/{slug}
-     * /search/{slug}/{page}
+     * Results page: /search/{slug}
      */
-    public function index(Request $request, string $slug, ?int $page = 1): View|RedirectResponse
+    public function index(Request $request, string $slug): View|RedirectResponse
     {
-        $page = max(1, (int) $page);
-        Paginator::currentPageResolver(fn () => $page);
-
-        // Prefer exact query from ?q= (preserves case/punctuation)
+        // Get canonical query from ?q= or slug
         $q = $this->normalizeQuery((string) $request->query('q', ''));
-
-        // If opened without q, derive from slug
         if ($q === '') {
             $q = $this->normalizeQuery(Str::of($slug)->replace('-', ' ')->toString());
         }
 
-        // Ignore too short
+        // Ignore too short queries
         if (mb_strlen($q) < self::MIN_QUERY_LEN) {
             return redirect()->route('search.home');
         }
 
-        // Canonical slug check
+        // Canonical slug
         $canonicalSlug = Str::slug($q);
         if ($canonicalSlug === '') {
             return redirect()->route('search.home');
         }
 
         if ($canonicalSlug !== $slug) {
-            // Important: no analytics on non-canonical URL
+            // Redirect to canonical URL
             return redirect()->route('search.results', [
                 'slug' => $canonicalSlug,
-                'page' => $page,
                 'q' => $q,
             ]);
         }
 
-        // Posts query
+        // Use default Laravel pagination (?page=)
         $postsQuery = Post::query()
             ->where('status', 'published')
             ->where(function ($sub) use ($q) {
@@ -99,11 +91,7 @@ class SearchController extends Controller
                     ->orWhereHas('paragraphs', fn ($p) => $p->where('content', 'like', "%{$q}%"))
                     ->orWhereHas('tags', fn ($t) => $t->where('name', 'like', "%{$q}%"));
             })
-            ->with([
-                'tags:id,name,slug',
-                // IMPORTANT: your DB has `order` not `position`
-           
-            ])
+            ->with(['tags:id,name,slug'])
             ->latest();
 
         $posts = $postsQuery->paginate(self::PER_PAGE)->withQueryString();
@@ -140,19 +128,11 @@ class SearchController extends Controller
             return redirect()->route('search.home');
         }
 
-        // Note: `search.results` route accepts {slug} only.
-        // We pass page via /{page} route name when needed.
-        if ($page > 1) {
-            return redirect()->route('search.results.page', [
-                'slug' => $slug,
-                'page' => $page,
-                'q' => $q,
-            ]);
-        }
-
+        // Default Laravel pagination uses ?page=
         return redirect()->route('search.results', [
             'slug' => $slug,
             'q' => $q,
+            'page' => $page > 1 ? $page : null,
         ]);
     }
 
@@ -175,10 +155,6 @@ class SearchController extends Controller
 
     private function trackSearchQuery(string $q, int $resultsCount): void
     {
-        // IMPORTANT:
-        // Make sure your SearchQuery model DOES NOT have a relationship method named `views()`.
-        // If you had one, rename it to `pageViews()` to avoid collisions with the `views` column.
-
         DB::transaction(function () use ($q, $resultsCount) {
             $row = SearchQuery::query()->firstOrCreate(
                 ['query' => $q],
@@ -197,9 +173,6 @@ class SearchController extends Controller
 
     private function trackUserActivity(Request $request, string $q, int $resultsCount): void
     {
-        // If you want to avoid logging guests, uncomment:
-        // if (!$request->user()) return;
-
         try {
             DB::table('user_activities')->insert([
                 'user_id' => $request->user()?->id,
@@ -216,7 +189,6 @@ class SearchController extends Controller
                 'updated_at' => now(),
             ]);
         } catch (\Throwable $e) {
-            // Don't break search if analytics fails
             report($e);
         }
     }

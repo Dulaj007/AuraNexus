@@ -111,6 +111,10 @@ class Post extends Model
     {
         return $query->where('status', self::STATUS_PUBLISHED);
     }
+    public function pinned()
+{
+    return $this->hasOne(\App\Models\PinnedPost::class, 'post_id');
+}
 
     /* =========================
      | Boot (slug)

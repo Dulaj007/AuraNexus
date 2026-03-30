@@ -7,20 +7,19 @@ use App\Models\Post;
 use App\Models\PostReaction;
 use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class ProfileController extends Controller
 {
-    public function show(Request $request, User $user, ?int $page = 1)
+    /**
+     * Show a user's profile with posts, stats, and pagination.
+     */
+    public function show(Request $request, User $user)
     {
-        $page = max(1, (int) $page);
-        Paginator::currentPageResolver(fn () => $page);
-
         $viewer  = $request->user();
-        $isOwner = $viewer && (int) $viewer->id === (int) $user->id;
+        $isOwner = $viewer && ((int) $viewer->id === (int) $user->id);
 
         // Posts by this user
         $postsQuery = Post::query()
@@ -29,25 +28,20 @@ class ProfileController extends Controller
             ->with(['tags:id,name,slug', 'highlightTag:id,name,slug'])
             ->orderByDesc('created_at');
 
-        $posts = $postsQuery->paginate(10)->withQueryString();
+        // Paginate posts (10 per page)
+        $posts = $postsQuery->paginate(9)->withQueryString();
 
-        // Stats
-        $postsCount = (int) Post::where('user_id', $user->id)
+        // Counts for stats
+        $postsCount = Post::where('user_id', $user->id)
             ->where('status', Post::STATUS_PUBLISHED ?? 'published')
             ->count();
 
-        $commentsCount = (int) ($user->comments()->count());
+        $commentsCount = $user->comments()->count();
 
-        /**
-         * ✅ Reputation (calculated from reactions table)
-         * Count total "like" reactions on ALL posts owned by this user.
-         * (ignores whether user.reputation_points exists)
-         */
-        $reputationPoints = (int) PostReaction::query()
+        // Reputation points from likes on user's posts
+        $reputationPoints = PostReaction::query()
             ->where('type', 'like')
-            ->whereHas('post', function ($q) use ($user) {
-                $q->where('user_id', $user->id);
-            })
+            ->whereHas('post', fn ($q) => $q->where('user_id', $user->id))
             ->count();
 
         // Profile views
@@ -69,6 +63,9 @@ class ProfileController extends Controller
         ]);
     }
 
+    /**
+     * Update a user's profile (bio and avatar)
+     */
     public function update(Request $request, User $user)
     {
         $viewer = $request->user();
@@ -79,24 +76,23 @@ class ProfileController extends Controller
             || $viewer->hasRole('admin')
         );
 
-        if (!$canEditProfile) abort(403);
+        if (!$canEditProfile) {
+            abort(403);
+        }
 
         $data = $request->validate([
             'bio'    => ['nullable', 'string', 'max:280'],
             'avatar' => ['nullable', 'file', 'image', 'mimes:jpg,jpeg,png,webp', 'max:200'], // KB
         ]);
 
-        if (array_key_exists('bio', $data)) {
+        if (isset($data['bio'])) {
             $user->bio = trim((string) $data['bio']);
         }
 
         if ($request->hasFile('avatar')) {
             $file = $request->file('avatar');
-
             $path = $file->storePublicly('avatars', ['disk' => 'public']);
-
             $this->deleteOldAvatarIfLocal($user->avatar);
-
             $user->avatar = $path;
         }
 
@@ -105,6 +101,9 @@ class ProfileController extends Controller
         return back()->with('success', 'Profile updated.');
     }
 
+    /**
+     * Get profile views count
+     */
     private function getProfileViews(User $user): int
     {
         try {
@@ -114,23 +113,26 @@ class ProfileController extends Controller
                     DB::getSchemaBuilder()->hasColumn('page_views', 'viewable_id');
 
                 if ($hasMorphCols) {
-                    return (int) DB::table('page_views')
+                    return DB::table('page_views')
                         ->where('viewable_type', User::class)
                         ->where('viewable_id', $user->id)
                         ->count();
                 }
             }
-        } catch (\Throwable $e) {
-            // ignore and fallback
+        } catch (\Throwable) {
+            // fallback
         }
 
         try {
-            return (int) $user->pageViews()->count();
-        } catch (\Throwable $e) {
+            return $user->pageViews()->count();
+        } catch (\Throwable) {
             return 0;
         }
     }
 
+    /**
+     * Track profile views for analytics
+     */
     private function trackProfileView(Request $request, User $user): void
     {
         $key = 'profile_viewed_' . $user->id;
@@ -155,31 +157,14 @@ class ProfileController extends Controller
                     ]);
                 }
             }
-        } catch (\Throwable $e) {
-            // ignore
-        }
-
-        try {
-            if (DB::getSchemaBuilder()->hasTable('user_activities')) {
-                DB::table('user_activities')->insert([
-                    'user_id'      => $request->user()?->id,
-                    'event'        => 'profile_view',
-                    'subject_type' => User::class,
-                    'subject_id'   => $user->id,
-                    'ip_address'   => (string) $request->ip(),
-                    'user_agent'   => mb_substr((string) $request->userAgent(), 0, 500),
-                    'meta'         => json_encode([
-                        'username' => $user->username,
-                    ], JSON_UNESCAPED_SLASHES),
-                    'created_at'   => now(),
-                    'updated_at'   => now(),
-                ]);
-            }
-        } catch (\Throwable $e) {
+        } catch (\Throwable) {
             // ignore
         }
     }
 
+    /**
+     * Delete old avatar file if stored locally
+     */
     private function deleteOldAvatarIfLocal(?string $old): void
     {
         if (!$old) return;
@@ -187,7 +172,7 @@ class ProfileController extends Controller
 
         try {
             Storage::disk('public')->delete($old);
-        } catch (\Throwable $e) {
+        } catch (\Throwable) {
             // ignore
         }
     }
