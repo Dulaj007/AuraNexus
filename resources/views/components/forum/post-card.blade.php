@@ -1,6 +1,6 @@
 @props([
     'post',
-    'forum', {{-- Make sure you pass the forum object --}}
+    'forum' => null, {{-- Make sure you pass the forum object --}}
     'pinnedIds' => [],
     'glass' => 'border border-[var(--an-border)] bg-[var(--an-card)]/40 backdrop-blur-md'
 ])
@@ -20,6 +20,8 @@
     $viewsFmt = $formatViews($views);
 
     $timeAgo = optional($post->created_at)?->diffForHumans();
+        $forum = $forum ?? $post->forum ?? null;
+$forumSlug = $forum?->slug;
 @endphp
 
 <article class="group relative {{ $glass }} overflow-hidden transition-all shadow-xl md:shadow-2xl duration-500 hover:border-[var(--an-primary)]/50 hover:shadow-[0_0_40px_rgba(var(--an-primary-rgb),0.1)] flex flex-col h-full">
@@ -41,7 +43,7 @@
             {{-- Toggle Pinned State: Glassmorphism with Dynamic Primary Glow --}}
             <form method="POST" action="{{ $isPinned 
                 ? route('forum.post.unpin', ['forum' => $forum->slug, 'post' => $post->slug]) 
-                : route('forum.post.pin', ['forum' => $forum->slug, 'post' => $post->slug]) }}">
+                : route('forum.post.pin', ['forum' => $forum?->slug, 'post' => $post->slug]) }}">
                 @csrf
                 <button type="submit" 
                     class="group flex items-center justify-center  transition-all duration-300 ease-out hover:scale-110

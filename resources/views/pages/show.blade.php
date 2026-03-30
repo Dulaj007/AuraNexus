@@ -8,13 +8,13 @@
     // small safe helpers
     $updatedHuman = $page->updated_at?->diffForHumans() ?? null;
 
-    $glass = 'rounded-3xl border border-[var(--an-border)]
+    $glass = ' border border-[var(--an-border)]
               bg-[color:var(--an-card)]/65 backdrop-blur-xl';
 
     $muted = 'color: var(--an-text-muted)';
 @endphp
 
-<article class="space-y-4">
+<article class="space-y-4 p-5">
 
     <header class="space-y-2">
         <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight text-[var(--an-text)]">

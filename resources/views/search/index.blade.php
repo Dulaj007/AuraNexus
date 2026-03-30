@@ -1,4 +1,3 @@
-{{-- resources/views/search/index.blade.php --}}
 @extends('layouts.search')
 
 @php
@@ -25,11 +24,9 @@
         ? 'Search results for "' . $q . '" on ' . $siteName . '.'
         : 'Search posts on ' . $siteName . '.';
 
-    // ------------------------------------------------------------
-    // ✅ Ads (same proven method used in forums/show)
-    // - Uses helper ad() if exists
-    // - Else cached DB map
-    // ------------------------------------------------------------
+    /**
+     * Ads
+     */
     $adsMap = null;
 
     if (!function_exists('ad')) {
@@ -43,41 +40,18 @@
     }
 
     $ad = function (string $key) use (&$adsMap): ?string {
-        $html = null;
-
-        if (function_exists('ad')) {
-            $html = ad($key);
-        } else {
-            $html = $adsMap[$key] ?? null;
-        }
-
+        $html = function_exists('ad') ? ad($key) : ($adsMap[$key] ?? null);
         return (is_string($html) && trim($html) !== '') ? $html : null;
     };
 
-    // ✅ Search placements (NEW KEYS you will add in config)
     $topA         = $ad('search_top_a');
     $topB         = $ad('search_top_b');
-
     $afterSearchA = $ad('search_after_box_a');
     $afterSearchB = $ad('search_after_box_b');
-
     $after6A      = $ad('search_after_6_a');
     $after6B      = $ad('search_after_6_b');
-
     $bottomA      = $ad('search_bottom_a');
     $bottomB      = $ad('search_bottom_b');
-
-    // ✅ Theme tokens (AuraNexus)
-    $glass = 'sm:rounded-3xl border border-[var(--an-border)]
-              bg-[color:var(--an-card)]/65 backdrop-blur-xl';
-
-    $muted  = 'color: color-mix(in srgb, var(--an-text) 70%, transparent);';
-    $muted2 = 'color: color-mix(in srgb, var(--an-text) 55%, transparent);';
-
-    $btn = 'inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-2 text-sm font-extrabold
-            border border-[var(--an-border)]
-            bg-[color:var(--an-primary)]/25 hover:bg-[color:var(--an-primary)]/35
-            transition focus:outline-none focus:ring-2 focus:ring-[var(--an-ring)]';
 @endphp
 
 @section('title', $titleText)
@@ -85,34 +59,39 @@
 @section('canonical', $canonicalUrl)
 
 @section('content')
-<div class="max-w-7xl mx-auto px-1 sm:px-6 lg:px-8  sm:py-6 space-y-3 sm:space-y-6">
+<div class="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8 py-3 sm:py-6 space-y-6">
 
-    {{-- ✅ TOP ADS (before everything) --}}
+    {{-- Breadcrumb --}}
+    <x-ui.breadcrumb 
+        :items="[]"
+        current="Search"
+    />
+
+    {{-- TOP ADS --}}
     @if($topA || $topB)
-        <div class="flex flex-row justify-center items-center">
-            @if($topA)
-                <div class="flex">
-                    {!! $topA !!}
-                </div>
-            @endif
-
-            @if($topB)
-                <div class="hidden lg:flex">
-                    {!! $topB !!}
-                </div>
-            @endif
+        <div class="flex justify-center gap-3">
+            {!! $topA !!}
+            <div class="hidden lg:flex">{!! $topB !!}</div>
         </div>
     @endif
 
-    {{-- Search Box --}}
-    <div class="{{ $glass }} p-4 sm:p-6">
-        <h1 class="text-xl sm:text-2xl font-extrabold tracking-tight text-[var(--an-text)]">Search</h1>
-        <p class="mt-1 text-sm" style="{{ $muted }}">Find posts by title, tags, and content.</p>
+    {{-- HERO STYLE SEARCH --}}
+    <x-ui.forum-hero
+        title="Search"
+        description="Find posts, tags and content"
+        :postsTotal="$resultsCount ?? 0"
+        :basePath="route('search.go')"
+        :showSort="false"
+    />
 
-        <form method="GET" action="{{ route('search.go') }}" class="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end">
-            <div class="w-full">
-                <label class="text-sm font-extrabold"
-                       style="color: color-mix(in srgb, var(--an-text) 85%, transparent);">
+    {{-- SEARCH BOX (modernized) --}}
+    <section class="border border-[var(--an-border)] bg-[var(--an-card)]/40 backdrop-blur-xl p-4 sm:p-6">
+
+        <form method="GET" action="{{ route('search.go') }}"
+              class="flex flex-col sm:flex-row gap-3 sm:items-end">
+
+            <div class="flex-1">
+                <label class="text-xs font-bold text-[var(--an-text-muted)] uppercase tracking-wider">
                     Keyword
                 </label>
 
@@ -120,80 +99,70 @@
                     type="text"
                     name="q"
                     value="{{ $q }}"
-                    placeholder="Try: new, collection, videos…"
+                    placeholder="Try: videos, collection, trending…"
                     maxlength="120"
-                    class="mt-2 w-full rounded-2xl border border-[var(--an-border)]
-                           bg-[color:var(--an-card)]/55 px-4 py-3
-                           text-[var(--an-text)] outline-none
-                           focus:ring-2 focus:ring-[var(--an-ring)]"
+                    class="mt-2 w-full rounded-xl border border-[var(--an-border)]
+                           bg-[var(--an-bg)]/40 px-4 py-3
+                           text-[var(--an-text)]
+                           focus:ring-2 focus:ring-[var(--an-primary)] outline-none"
                 />
             </div>
 
-            <button type="submit" class="{{ $btn }}">
+            <button type="submit"
+                class="px-4 py-3 rounded-xl font-semibold
+                       bg-[var(--an-primary)]/80 text-white
+                       hover:bg-[var(--an-primary)] transition">
                 Search
             </button>
+
         </form>
-    </div>
+    </section>
 
-    {{-- ✅ ADS AFTER SEARCH BOX --}}
+    {{-- ADS AFTER SEARCH --}}
     @if($afterSearchA || $afterSearchB)
-        <div class="flex flex-row justify-center items-center">
-            @if($afterSearchA)
-                <div class="flex">
-                    {!! $afterSearchA !!}
-                </div>
-            @endif
-
-            @if($afterSearchB)
-                <div class="hidden lg:flex">
-                    {!! $afterSearchB !!}
-                </div>
-            @endif
+        <div class="flex justify-center gap-3">
+            {!! $afterSearchA !!}
+            <div class="hidden lg:flex">{!! $afterSearchB !!}</div>
         </div>
     @endif
 
-    <div class="px-2">
+    {{-- RESULTS --}}
+    <div class="space-y-4">
 
-        {{-- Results header --}}
+        {{-- RESULT HEADER --}}
         @if(!is_null($resultsCount ?? null) && $q !== '')
-            <div class="text-sm mb-2" style="{{ $muted }}">
+            <div class="text-sm text-[var(--an-text-muted)]">
                 Results for
-                <span class="font-extrabold" style="color: var(--an-text);">{{ $q }}</span>:
-                <span class="font-extrabold" style="color: var(--an-text);">{{ number_format((int) $resultsCount) }}</span>
+                <span class="font-bold text-[var(--an-text)]">{{ $q }}</span> —
+                <span class="font-bold text-[var(--an-text)]">{{ number_format((int) $resultsCount) }}</span>
             </div>
         @endif
 
-        {{-- Results --}}
+        {{-- POSTS --}}
         @if($q !== '')
             @if($posts instanceof \Illuminate\Contracts\Pagination\LengthAwarePaginator && $posts->count() > 0)
 
-                <div class="grid grid-cols-2 md:grid-cols-3 2xl:grid-cols-4 gap-1 sm:gap-4">
+                <div class="grid grid-cols-2 md:grid-cols-3 gap-2 sm:gap-4">
+
                     @foreach($posts as $post)
+
                         @php $i = $loop->iteration; @endphp
 
-                        {{-- ✅ same card component as forums/saved --}}
-                        <x-forum.post-card :post="$post" />
+                     <x-forum.post-card :post="$post" :forum="$post->forum ?? null" />
 
-                        {{-- ✅ ADS AFTER 6 RESULTS (insert once) --}}
+                        {{-- ADS AFTER 6 --}}
                         @if($i === 6 && ($after6A || $after6B))
-                            <div class="col-span-2 md:col-span-3 2xl:col-span-4 py-2 sm:py-4 flex justify-center items-center">
-                                @if($after6A)
-                                    <div class="flex">
-                                        {!! $after6A !!}
-                                    </div>
-                                @endif
-
-                                @if($after6B)
-                                    <div class="hidden lg:flex">
-                                        {!! $after6B !!}
-                                    </div>
-                                @endif
+                            <div class="col-span-2 md:col-span-3 flex justify-center gap-3 py-2 sm:py-4">
+                                {!! $after6A !!}
+                                <div class="hidden lg:flex">{!! $after6B !!}</div>
                             </div>
                         @endif
+
                     @endforeach
+
                 </div>
 
-                {{-- Pagination (SEO paths) --}}
+                {{-- PAGINATION (use your component) --}}
                 @php
                     $current = (int) $posts->currentPage();
                     $last = (int) $posts->lastPage();
@@ -210,47 +179,31 @@
                         : null;
                 @endphp
 
-                <div class="pt-4 flex items-center gap-2">
-                    @if($prevUrl)
-                        <a class="{{ $btn }}" href="{{ $prevUrl }}">Prev</a>
-                    @endif
-
-                    <span class="text-sm px-2" style="{{ $muted }}">
-                        Page <span class="font-extrabold" style="color: var(--an-text);">{{ $current }}</span>
-                        /
-                        <span class="font-extrabold" style="color: var(--an-text);">{{ $last }}</span>
-                    </span>
-
-                    @if($nextUrl)
-                        <a class="{{ $btn }}" href="{{ $nextUrl }}">Next</a>
-                    @endif
+                <div class="pt-4">
+                    <x-forum.path-pagination
+                        :paginator="$posts"
+                    />
                 </div>
 
             @else
-                <div class="{{ $glass }} p-6">
-                    <div class="font-extrabold text-[var(--an-text)]">No results</div>
-                    <div class="mt-1 text-sm" style="{{ $muted }}">Try a different keyword.</div>
+                <div class="border border-[var(--an-border)] bg-[var(--an-card)]/40 backdrop-blur-xl p-6">
+                    <div class="font-bold text-[var(--an-text)]">No results</div>
+                    <div class="text-sm text-[var(--an-text-muted)] mt-1">
+                        Try a different keyword.
+                    </div>
                 </div>
             @endif
         @endif
 
-        {{-- ✅ BOTTOM ADS (before footer / end of content) --}}
-        @if($bottomA || $bottomB)
-            <div class="pt-2 sm:pt-4 flex flex-row justify-center items-center">
-                @if($bottomA)
-                    <div class="flex">
-                        {!! $bottomA !!}
-                    </div>
-                @endif
-
-                @if($bottomB)
-                    <div class="hidden lg:flex">
-                        {!! $bottomB !!}
-                    </div>
-                @endif
-            </div>
-        @endif
-
     </div>
+
+    {{-- BOTTOM ADS --}}
+    @if($bottomA || $bottomB)
+        <div class="flex justify-center gap-3">
+            {!! $bottomA !!}
+            <div class="hidden lg:flex">{!! $bottomB !!}</div>
+        </div>
+    @endif
+
 </div>
 @endsection

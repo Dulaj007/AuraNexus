@@ -20,6 +20,9 @@ use App\Http\Controllers\Public\PostPinController;
 use App\Http\Controllers\Public\PagesController as PublicPagesController;
 use App\Http\Controllers\Public\LinkController;
 use App\Http\Controllers\SitemapController;
+use App\Http\Controllers\Public\TopArticleController;
+use App\Http\Controllers\Public\TrendingController;
+
 
 // USER
 use App\Http\Controllers\User\PostController;
@@ -399,16 +402,22 @@ Route::prefix('forum')->group(function () {
 });
 
 
-Route::get('/posts/top', [PostController::class, 'top'])->name('posts.top');
-Route::get('/posts/trending', [PostController::class, 'trending'])->name('posts.trending');
+
+
 Route::get('/link/{code}', [\App\Http\Controllers\Public\LinkController::class, 'show'])->name('link.show');
 Route::get('/unlock/{code}/go', [\App\Http\Controllers\Public\LinkController::class, 'go'])->name('link.go');
 
+Route::get('/posts/top', [TopArticleController::class, 'index'])
+    ->name('posts.top');
+Route::get('/posts/trending', [TrendingController::class, 'index'])->name('posts.trending');
+Route::get('/tags', [TagController::class, 'index'])
+    ->name('tags.index');
 /*
 |--------------------------------------------------------------------------
 | FALLBACK (404)
 |--------------------------------------------------------------------------
 */
+
 Route::fallback(function () {
     return response()->view('errors.404', [], 404);
 });

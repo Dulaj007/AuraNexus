@@ -76,64 +76,16 @@
     @stack('head')
 </head>
 
-<body class="min-h-screen bg-[var(--an-bg)] text-[var(--an-text)] overflow-x-hidden">
-  @include('partials.nav')
-    {{-- Ambient glows (match site) --}}
-    <div class="pointer-events-none fixed inset-0 -z-10 overflow-hidden opacity-70">
-        <div class="absolute -top-40 -left-40 h-[520px] w-[520px] rounded-full blur-3xl opacity-15 bg-[var(--an-link)]"></div>
-        <div class="absolute top-24 -right-48 h-[620px] w-[620px] rounded-full blur-3xl opacity-12 bg-[var(--an-primary)]"></div>
-        <div class="absolute bottom-[-220px] left-[25%] h-[520px] w-[520px] rounded-full blur-[140px] opacity-10 bg-[var(--an-info)]"></div>
-    </div>
 
-    <main class="min-h-screen flex justify-center py-5 sm:py-10">
-        <div class="w-full max-w-md">
+<body class="min-h-screen bg-[var(--an-bg)] text-[var(--an-text)] overflow-x-hidden font-sans">
 
-            <div class="sm:rounded-3xl border border-[var(--an-border)] bg-[color:var(--an-card)]/65 backdrop-blur-xl shadow-[0_16px_55px_rgba(0,0,0,0.28)] overflow-hidden">
-                <div class="p-6 sm:p-7 border-b border-[var(--an-border)]">
-                    <div class="text-xl sm:text-2xl font-extrabold tracking-tight text-center">
-                        @yield('header')
-                    </div>
+    @include('partials.background-layer')
+    @include('partials.nav')
 
-                    <div class="mt-1 text-sm text-center text-[var(--an-text-muted)]">
-                        {{ $appBio }}
-                    </div>
-                </div>
+    @include('partials.app-shell')
 
-                <div class=" sm:p-7">
-
-                    {{-- Flash success --}}
-                    @if(session('success'))
-                        <div class="mb-4 rounded-2xl border px-4 py-3 text-sm"
-                             style="border-color: color-mix(in srgb, var(--an-success) 35%, var(--an-border));
-                                    background: color-mix(in srgb, var(--an-success) 12%, transparent);
-                                    color: color-mix(in srgb, var(--an-text) 85%, var(--an-success));">
-                            {{ session('success') }}
-                        </div>
-                    @endif
-
-                    {{-- Global validation errors (fallback) --}}
-                    @if($errors->any())
-                        <div class="mb-4 rounded-2xl border px-4 py-3 text-sm"
-                             style="border-color: color-mix(in srgb, var(--an-danger) 35%, var(--an-border));
-                                    background: color-mix(in srgb, var(--an-danger) 12%, transparent);
-                                    color: color-mix(in srgb, var(--an-text) 85%, var(--an-danger));">
-                            <div class="font-semibold">Please fix the following:</div>
-                            <ul class="list-disc pl-5 mt-2 space-y-1">
-                                @foreach($errors->all() as $error)
-                                    <li>{{ $error }}</li>
-                                @endforeach
-                            </ul>
-                        </div>
-                    @endif
-
-                    @yield('content')
-                </div>
-            </div>
-
-
-        </div>
-    </main>
-    @include('partials.footer')
     @stack('scripts')
+
+
 </body>
 </html>

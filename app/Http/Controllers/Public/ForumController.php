@@ -34,7 +34,7 @@ class ForumController extends Controller
                 },
             ])
             ->orderBy('name')
-            ->paginate(10);
+            ->paginate(1);
 
         return view('forums.index', compact('forums'));
     }

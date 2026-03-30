@@ -11,7 +11,9 @@
     $siteKeywords    = $siteSettings['site_keywords'] ?? ($siteName . ', search, posts, tags, community');
     $themeColor      = $siteSettings['site_theme_color'] ?? '#FF4268';
     $twitterSite     = $siteSettings['site_twitter'] ?? ($siteSettings['twitter_site'] ?? null);
-
+    $themeColor      = $settings['site_theme_color'] ?? '#FF4268';
+    $appName = $siteSettings['site_name'] ?? config('app.name', 'AuraNexus');
+    
     // Theme mode (per-user)
     $mode = request()->cookie('theme_mode', 'dark');
     $mode = in_array($mode, ['dark','light'], true) ? $mode : 'dark';
@@ -147,69 +149,16 @@
     @stack('head')
 </head>
 
-<body class="min-h-screen bg-[var(--an-bg)] text-[var(--an-text)] overflow-x-hidden">
 
-    {{-- Ambient glows (subtle, match site) --}}
-    <div class="pointer-events-none fixed inset-0 -z-10 overflow-hidden opacity-70">
-        <div class="absolute -top-40 -left-40 h-[520px] w-[520px] rounded-full blur-3xl opacity-15 bg-[var(--an-link)]"></div>
-        <div class="absolute top-24 -right-48 h-[620px] w-[620px] rounded-full blur-3xl opacity-12 bg-[var(--an-primary)]"></div>
-        <div class="absolute bottom-[-220px] left-[25%] h-[520px] w-[520px] rounded-full blur-[140px] opacity-10 bg-[var(--an-info)]"></div>
-    </div>
+<body class="min-h-screen bg-[var(--an-bg)] text-[var(--an-text)] overflow-x-hidden font-sans">
 
-    {{-- Public navbar --}}
+    @include('partials.background-layer')
     @include('partials.nav')
 
-    {{-- ✅ Ads: body start injections --}}
-    @stack('ads:body_start')
-
-    <main class="max-w-7xl mx-auto sm:px-6 lg:px-8 py-2 sm:py-6">
-
-        {{-- Flash messages --}}
-        @if(session('success'))
-            <div class="mb-3 sm:mb-4 rounded-2xl border px-4 py-3 text-sm"
-                 style="border-color: color-mix(in srgb, var(--an-success) 35%, var(--an-border));
-                        background: color-mix(in srgb, var(--an-success) 12%, transparent);
-                        color: color-mix(in srgb, var(--an-text) 85%, var(--an-success));">
-                {{ session('success') }}
-            </div>
-        @endif
-
-        @if(session('error'))
-            <div class="mb-3 sm:mb-4 rounded-2xl border px-4 py-3 text-sm"
-                 style="border-color: color-mix(in srgb, var(--an-danger) 35%, var(--an-border));
-                        background: color-mix(in srgb, var(--an-danger) 12%, transparent);
-                        color: color-mix(in srgb, var(--an-text) 85%, var(--an-danger));">
-                {{ session('error') }}
-            </div>
-        @endif
-
-        {{-- Validation errors --}}
-        @if ($errors->any())
-            <div class="mb-3 sm:mb-4 rounded-2xl border px-4 py-3 text-sm"
-                 style="border-color: color-mix(in srgb, var(--an-danger) 35%, var(--an-border));
-                        background: color-mix(in srgb, var(--an-danger) 12%, transparent);
-                        color: color-mix(in srgb, var(--an-text) 85%, var(--an-danger));">
-                <div class="font-semibold">Please fix the following:</div>
-                <ul class="list-disc pl-5 mt-2 space-y-1 text-sm">
-                    @foreach ($errors->all() as $error)
-                        <li>{{ $error }}</li>
-                    @endforeach
-                </ul>
-            </div>
-        @endif
-
-        {{-- ✅ Shared Search/Tags ads set anchors --}}
-        @includeIf('ads.sets.' . $adsSet)
-
-        @yield('content')
-    </main>
-
-    {{-- Public footer --}}
-    @include('partials.footer')
-
-    {{-- ✅ Ads: body end injections --}}
-    @stack('ads:body_end')
+    @include('partials.app-shell')
 
     @stack('scripts')
+
+
 </body>
 </html>
