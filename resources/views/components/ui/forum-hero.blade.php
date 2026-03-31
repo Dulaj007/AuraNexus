@@ -5,6 +5,7 @@
     'basePath',
     'sort' => 'recent',
     'showSort' => true,  // <- add this
+    'type' => 'posts' // or 'views'
 ])
 
 <section class="relative overflow-hidden border border-[var(--an-border)] 
@@ -52,11 +53,29 @@
             <div class="flex flex-wrap items-center gap-3 sm:gap-4">
 
                 {{-- stats --}}
-                <div class="flex items-center gap-2 text-[var(--an-text-muted)]">
-  <svg class="w-5 h-5 sm:w-6 sm:h-6 text-[var(--an-text)]/60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z"></path></svg>
-                    <span class="text-[11px]">{{ number_format($postsTotal) }} </span>
-                </div>
 
+<div class="flex items-center gap-2 text-[var(--an-text-muted)]">
+
+    {{-- ICON SWITCH --}}
+    @if($type === 'views')
+        {{-- 👁️ Views icon --}}
+        <svg class="w-5 h-5 sm:w-6 sm:h-6 text-[var(--an-text)]/60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/>
+            <circle cx="12" cy="12" r="3"/>
+        </svg>
+    @else
+        {{-- 💬 Default (posts/comments) icon --}}
+        <svg class="w-5 h-5 sm:w-6 sm:h-6 text-[var(--an-text)]/60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586
+                   m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z">
+            </path>
+        </svg>
+    @endif
+
+    <span class="text-[13px]">{{ number_format($postsTotal) }}</span>
+</div>
                 {{-- sort --}} 
                 @if($showSort ?? true)
                 <form method="GET" action="{{ $basePath }}">

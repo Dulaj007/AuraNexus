@@ -56,7 +56,7 @@
                                 $img = $previewPost?->thumbnail_url;
                             @endphp
 
-                            <div class="{{ $glass }} relative group p-3 transition-all duration-500 hover:border-[var(--an-primary)]/40 hover:shadow-[0_0_50px_rgba(var(--an-primary-rgb),0.05)]">
+                            <a href="{{ url('forum/' . $forum->slug) }}"class="block {{ $glass }} relative group p-3 transition-all duration-500 hover:border-[var(--an-primary)]/40 hover:shadow-[0_0_50px_rgba(var(--an-primary-rgb),0.05)]">
 
                                 {{-- Cyber Accents --}}
                                 <div class="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-[var(--an-primary)] opacity-0 group-hover:opacity-100 transition-all duration-500 transform translate-x-2 translate-y-2 group-hover:-translate-x-2 group-hover:-translate-y-2"></div>
@@ -108,7 +108,7 @@
                                         </div>
                                     </div>
                                 </div>
-                            </div>
+                            </a>
                         @endforeach
                     </div>
                 </section>

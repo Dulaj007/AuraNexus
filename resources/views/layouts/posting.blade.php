@@ -1,3 +1,14 @@
+@php
+    use Illuminate\Support\Facades\Cache;
+
+    $settings = $siteSettings ?? [];
+    $siteName        = $settings['site_name'] ?? config('app.name', 'AuraNexus');
+    $siteDescription = $settings['site_description'] ?? ('Explore the community on ' . $siteName . '.');
+    $siteKeywords    = trim((string)($settings['site_keywords'] ?? ''));
+    $themeColor      = $settings['site_theme_color'] ?? '#FF4268';
+    $appName = $siteSettings['site_name'] ?? config('app.name', 'AuraNexus');
+@endphp
+
 <!doctype html>
 <html lang="en">
 <head>
@@ -37,19 +48,12 @@
     @stack('head')
 </head>
 
-<body class="min-h-screen bg-[var(--an-bg)] text-[var(--an-text)] antialiased overflow-x-hidden">
 
-    {{-- Ambient glows (match site vibe, subtle) --}}
-    <div class="pointer-events-none fixed inset-0 -z-10 overflow-hidden opacity-60">
-        <div class="absolute -top-40 -left-40 h-[520px] w-[520px] rounded-full blur-3xl opacity-15 bg-[var(--an-link)]"></div>
-        <div class="absolute top-24 -right-48 h-[620px] w-[620px] rounded-full blur-3xl opacity-12 bg-[var(--an-primary)]"></div>
-        <div class="absolute bottom-[-220px] left-[25%] h-[520px] w-[520px] rounded-full blur-[140px] opacity-10 bg-[var(--an-info)]"></div>
-    </div>
 
-    {{-- ✅ Use the same public navbar --}}
+<body class="min-h-screen bg-[var(--an-bg)] text-[var(--an-text)] overflow-x-hidden font-sans">
+
+    @include('partials.background-layer')
     @include('partials.nav')
-
-    <main class="min-h-screen max-w-7xl mx-auto sm:px-6 lg:px-8 py-2 sm:py-6">
         {{-- Flash messages --}}
         @if (session('success'))
             <div class="mb-3 sm:mb-4 rounded-2xl border px-4 py-3 text-sm"
@@ -82,16 +86,14 @@
                 </ul>
             </div>
         @endif
-
-        {{-- Page content --}}
-        <div class="py-2 sm:py-6">
-            @yield('content') {{-- ✅ IMPORTANT --}}
-        </div>
-    </main>
-
-    {{-- ✅ Use the same public footer --}}
-    @include('partials.footer')
+    @include('partials.app-shell')
 
     @stack('scripts')
+
+
+
+
+
+
 </body>
 </html>

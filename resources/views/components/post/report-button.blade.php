@@ -9,10 +9,8 @@
     $action = $action ?: route('post.report.store', $post);
     $modalId = 'report-modal-' . $post->id; // unique per post
 
-    $btn = 'inline-flex items-center gap-2 rounded-2xl border px-3.5 py-3 text-sm font-semibold transition
-            border-[var(--an-border)] bg-[color:var(--an-danger)]/20 text-[var(--an-text-muted)]
-            hover:bg-[color:var(--an-danger)]/60 hover:text-[var(--an-text)]
-            focus:outline-none focus:ring-2 focus:ring-[var(--an-ring)]';
+    $btn = 'inline-flex items-center gap-2 px-3.5 py-3 text-sm font-semibold transition
+            ';
 @endphp
 
 <div class="inline-block">
@@ -21,11 +19,13 @@
         data-modal-open="{{ $modalId }}"
         class="{{ $btn }}"
         aria-label="Report post"
+         title="Report"
+                 
     >
         {{-- flag icon --}}
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none"
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none"
              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-             style="color: var(--an-text-muted)">
+             style="color: var(--an-danger)">
             <path d="M4 22V4" />
             <path d="M4 4h11l-1 5 6 2-2 6H4" />
         </svg>
