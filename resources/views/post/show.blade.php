@@ -144,7 +144,7 @@
     $adEndD2 = $adHtml('post_show_end_c');
 @endphp
 
-<div class="max-w-7xl mx-auto  sm:py-6 space-y-3 sm:space-y-6">
+<div class="max-w-7xl mx-auto  sm:py-6 space-y-1">
 
     {{-- ✅ Post Ads: TOP (between nav and title) --}}
     <div class="">
@@ -205,99 +205,31 @@
         </x-post.card>
     @endif
 
-    <div class="px-3 space-y-1 ">
-        <div>
-            <h1 class="text-[18px]  sm:text-2xl md:text-3xl font-extrabold tracking-normal leading-[1.3] text-[var(--an-text)]">
-                {{ $post->title }}
-            </h1>
-
-            {{-- Breadcrumb --}}
-            <div class="text-[10px] my-1 sm:text-sm text-[var(--an-text-muted)] ">
-                @if($category)
-                    <a class="underline underline-offset-4 hover:no-underline" style="color: var(--an-link)"
-                       href="{{ route('categories.show', $category) }}">
-                        {{ $category->name }}
-                    </a>
-                @else
-                    <span class="text-white/40">Uncategorized</span>
-                @endif
-
-                <span class="mx-1">/</span>
-
-                @if($forum)
-                    <a class="underline underline-offset-4 hover:no-underline" style="color: var(--an-link)"
-                       href="{{ route('forums.show', $forum) }}">
-                        {{ $forum->name }}
-                    </a>
-                @else
-                    <span class="text-white/40">Unknown Forum</span>
-                @endif
-            </div>
+    <div class=" space-y-1 ">
+      
+        {{-- Breadcrumb --}}
+        <div class=" py-2">
+            <x-ui.breadcrumb
+                :items="[
+                    ['label' => $category->name ?? 'Category', 'url' => $category ? route('categories.show',$category) : '#'],
+                    ['label' => $forum->name ?? 'Forum', 'url' => $forum ? route('forums.show',$forum) : '#'],
+                ]"
+                :current="$post->title"
+            />
         </div>
+        {{-- HERO --}}
+        <x-ui.forum-hero
+            :title="$post->title"
+            :description="$forum?->name ?? 'Post'"
+            :posts-total="$post->views ?? 0"
+            :base-path="url()->current()"
+            :show-sort="false"
+            type="views"
+        />
 
-        {{-- Header --}}
-        <div>
-            <div class="flex flex-col gap-2 my-5 pt-2">
-                <div class="flex items-start justify-between ">
-                    <div class="min-w-0">
-                    <div class="flex items-center gap-2">
-                        @php
-                            $authorAvatarUrl = null;
-
-                            if ($author?->avatar) {
-                                $authorAvatarUrl = \Illuminate\Support\Str::startsWith($author->avatar, ['http://','https://'])
-                                    ? $author->avatar
-                                    : asset('storage/' . ltrim($author->avatar, '/'));
-                            }
-                        @endphp
-
-                        {{-- ✅ clickable author (avatar + name) --}}
-                        <a href="{{ route('profile.show', $author->username) }}"
-                        class="flex items-center gap-2 min-w-0 hover:opacity-90 transition"
-                        aria-label="View profile: {{ $author?->username ?? 'Member' }}">
-
-                            <div class="h-14 w-14 overflow-hidden rounded-xl border border-[var(--an-border)] bg-[color:var(--an-card)]/60">
-                                @if($authorAvatarUrl)
-                                    <img src="{{ $authorAvatarUrl }}"
-                                        alt="{{ $author->username }} avatar"
-                                        class="h-full w-full object-cover"
-                                        loading="lazy">
-                                @else
-                                    <div class="h-full w-full flex items-center justify-center text-xs text-[var(--an-text-muted)]">
-                                        {{ strtoupper(substr($author?->username ?? 'U', 0, 1)) }}
-                                    </div>
-                                @endif
-                            </div>
-
-                            <div class="min-w-0">
-                                <div class="text-sm font-semibold text-[var(--an-text)] truncate">
-                                    {{ $author?->name ?? $author?->username ?? 'Member' }}
-                                </div>
-                                <div class="text-xs text-[var(--an-text-muted)]">
-                                    Posted {{ optional($post->created_at)->diffForHumans() }}
-                                </div>
-                            </div>
-
-                        </a>
-
-                        <div class="shrink-0">
-                            <span class="{{ $pill }} bg-[var(--an-primary)]/20">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="none"
-                                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                                    style="color: var(--an-text-muted)">
-                                    <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/>
-                                    <circle cx="12" cy="12" r="3"/>
-                                </svg>
-                                <span class="{{ $pillStrong }}">{{ number_format((int)($post->views ?? 0)) }}</span>
-                            </span>
-                        </div>
-                    </div>
-
-                    </div>
-                </div>
-
+      
                 {{-- Tags --}}
-                <div class="flex flex-wrap gap-2 mb-1">
+                <div class="flex flex-wrap gap-2 mx-2  py-3">
                     @if($post->highlightTag)
                         <x-post.tag :href="route('tags.show', $post->highlightTag->slug) ?? '#'" variant="highlight" >
                             {{ $post->highlightTag->name }}
@@ -311,75 +243,12 @@
                         </x-post.tag>
                     @endforeach
                 </div>
-            </div>
+
+         
         </div>
 
-        <div class ="flex flex-row gap-1 justify-start w-full">
-            {{-- ❤️ Like (keep count as usual inside your component) --}}
-            <x-post.reaction-button
-                :post="$post"
-                :count="$reactionCount"
-                :reacted="$userReacted"
-                :can-react="$isLoggedIn"
-            />
-
-            {{-- 💾 Save --}}
-            @if($isLoggedIn)
-                <form method="POST" action="{{ route('post.save.toggle', $post) }}">
-                    @csrf
-                    <button type="submit"
-                            class="{{ $btnBase }} !px-3 !py-2"
-                            title="{{ $isSaved ? 'Saved' : 'Save' }}"
-                            aria-label="{{ $isSaved ? 'Saved' : 'Save' }}"
-                            style="
-                                border-color: var(--an-border);
-                                color: {{ $isSaved ? 'var(--an-success)' : 'var(--an-info)' }};
-                                background: color-mix(in srgb, currentColor 16%, transparent);
-                            ">
-                        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
-                            <path fill-rule="evenodd" clip-rule="evenodd"
-                                  d="M6.75 6L7.5 5.25H16.5L17.25 6V19.3162L12 16.2051L6.75 19.3162V6ZM8.25 6.75V16.6838L12 14.4615L15.75 16.6838V6.75H8.25Z"
-                                  fill="currentColor"/>
-                        </svg>
-                    </button>
-                </form>
-            @else
-                <a href="{{ route('login') }}"
-                   class="{{ $btnBase }} !px-3 !py-2"
-                   title="Save"
-                   aria-label="Save"
-                   style="
-                        border-color: var(--an-border);
-                        color: var(--an-info);
-                        background: color-mix(in srgb, currentColor 16%, transparent);
-                   ">
-                    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
-                        <path fill-rule="evenodd" clip-rule="evenodd"
-                              d="M6.75 6L7.5 5.25H16.5L17.25 6V19.3162L12 16.2051L6.75 19.3162V6ZM8.25 6.75V16.6838L12 14.4615L15.75 16.6838V6.75H8.25Z"
-                              fill="currentColor"/>
-                    </svg>
-                </a>
-            @endif
-
-            {{-- 🔗 Share (no count) --}}
-            <button type="button"
-                    class="{{ $btnBase }} !px-3 !py-2"
-                    title="Share"
-                    aria-label="Share"
-                    style="
-                        border-color: var(--an-border);
-                        color: var(--an-primary);
-                        background: color-mix(in srgb, currentColor 14%, transparent);
-                    "
-                    onclick="sharePost()">
-                <svg class="w-5 h-5" viewBox="0 0 512 512" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M512,230.431L283.498,44.621v94.807C60.776,141.244-21.842,307.324,4.826,467.379
-                             c48.696-99.493,149.915-138.677,278.672-143.14v92.003L512,230.431z"
-                          fill="currentColor"/>
-                </svg>
-            </button>
-        </div>
-    </div>
+       
+  
 
     {{-- ✅ Post Ads: AFTER FIRST ACTION BUTTONS (between like/save/share and content) --}}
     <div class="px-3">
@@ -580,64 +449,181 @@
         @endif
     </x-post.card>
 
+{{-- 🔷 Unified Header + Actions Container --}}
+<div class="w-full {{ $glass }} {{ $shadow }}  overflow-hidden p-3 md:p-4 flex flex-col gap-4">
 
-        {{-- Actions --}}
-        <div class ="flex flex-row gap-1 justify-between p-2 my-4 w-full">
-            <div class ="flex   ">
-                <x-post.report-button
-                    :post="$post"
-                    :message="$reportMessage"
-                    class="{{ $btnBase }} "
-                    title="Report"
-                    aria-label="Report"> </x-post.report-button>
-            </div>
+    {{-- 🔹 Top Section (Author + Reactions) --}}
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
 
-            <div class ="flex flex-row gap-1  ">
-                {{-- ✏️ Edit --}}
-                @if($canEditPost)
-                    <a href="{{ route('post.edit', $post->slug) }}"
-                       class="{{ $btnBase }} !px-3 !py-2"
-                       title="Edit"
-                       aria-label="Edit"
-                       style="
-                           border-color: var(--an-border);
-                           color: var(--an-link);
-                           background: color-mix(in srgb, currentColor 12%, transparent);
-                       ">
-                        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M20,16v4a2,2,0,0,1-2,2H4a2,2,0,0,1-2-2V6A2,2,0,0,1,4,4H8"
-                                  stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
-                            <polygon points="12.5 15.8 22 6.2 17.8 2 8.3 11.5 8 16 12.5 15.8"
-                                     stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" fill="none"/>
-                        </svg>
-                    </a>
-                @endif
+        {{-- 👤 Author --}}
+        <div class="flex items-center gap-3 min-w-0">
 
-                {{-- 🗑️ Remove --}}
-                @if($canDeletePost)
-                    <button type="button"
-                            class="{{ $btnBase }} !px-3 !py-2"
-                            title="Remove"
-                            aria-label="Remove"
+            @php
+                $authorAvatarUrl = null;
+
+                if ($author?->avatar) {
+                    $authorAvatarUrl = \Illuminate\Support\Str::startsWith($author->avatar, ['http://','https://'])
+                        ? $author->avatar
+                        : asset('storage/' . ltrim($author->avatar, '/'));
+                }
+            @endphp
+
+            <a href="{{ route('profile.show', $author->username) }}"
+               class="flex items-center gap-3 min-w-0 hover:opacity-90 transition"
+               aria-label="View profile: {{ $author?->username ?? 'Member' }}">
+
+                <div class="h-12 w-12 md:h-14 md:w-14 rounded-full overflow-hidden border border-[var(--an-border)] bg-[color:var(--an-card)]/60">
+                    @if($authorAvatarUrl)
+                        <img src="{{ $authorAvatarUrl }}"
+                             alt="{{ $author->username }} avatar"
+                             class="h-full w-full object-cover"
+                             loading="lazy">
+                    @else
+                        <div class="h-full w-full flex items-center justify-center text-xs text-[var(--an-text-muted)]">
+                            {{ strtoupper(substr($author?->username ?? 'U', 0, 1)) }}
+                        </div>
+                    @endif
+                </div>
+
+                <div class="min-w-0">
+                    <div class="text-sm md:text-base font-semibold text-[var(--an-text)] truncate">
+                        {{ $author?->name ?? $author?->username ?? 'Member' }}
+                    </div>
+                    <div class="text-xs text-[var(--an-text-muted)]">
+                        {{ optional($post->created_at)->diffForHumans() }}
+                    </div>
+                </div>
+
+            </a>
+        </div>
+
+        {{-- ❤️ 💾 🔗 Actions --}}
+        <div class="flex items-center justify-end  flex-wrap">
+        <div>
+            <x-post.report-button
+                :post="$post"
+                :message="$reportMessage"
+                class="{{ $btnBase }}"
+                title="Report"
+                aria-label="Report" />
+        </div>
+
+        {{-- ✏️ 🗑️ --}}
+        <div class="flex items-center gap-1 flex-wrap">
+
+            @if($canEditPost)
+                <a href="{{ route('post.edit', $post->slug) }}"
+                   class=" !px-3 !py-2"
+                   title="Edit"
+                   aria-label="Edit"
+                   style="
+                   
+                       color: var(--an-link);
+                
+                   ">
+                    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none">
+                        <path d="M20,16v4a2,2,0,0,1-2,2H4a2,2,0,0,1-2-2V6A2,2,0,0,1,4,4H8"
+                              stroke="currentColor" stroke-width="2"/>
+                        <polygon points="12.5 15.8 22 6.2 17.8 2 8.3 11.5 8 16 12.5 15.8"
+                                 stroke="currentColor" stroke-width="2" fill="none"/>
+                    </svg>
+                </a>
+            @endif
+
+            @if($canDeletePost)
+                <button type="button"
+                        class=" !px-3 !py-2"
+                        title="Remove"
+                        aria-label="Remove"
+                        style="
+                          
+                            color: var(--an-danger);
+                           
+                        "
+                        onclick="openRemovePostModal()">
+                    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none">
+                        <path d="M10 12V17" stroke="currentColor" stroke-width="2"/>
+                        <path d="M14 12V17" stroke="currentColor" stroke-width="2"/>
+                        <path d="M4 7H20" stroke="currentColor" stroke-width="2"/>
+                        <path d="M6 10V18C6 19.6569 7.34315 21 9 21H15C16.6569 21 18 19.6569 18 18V10"
+                              stroke="currentColor" stroke-width="2"/>
+                        <path d="M9 5C9 3.89543 9.89543 3 11 3H13C14.1046 3 15 3.89543 15 5V7H9V5Z"
+                              stroke="currentColor" stroke-width="2"/>
+                    </svg>
+                </button>
+            @endif
+
+        </div>
+            {{-- ❤️ Like --}}
+            <x-post.reaction-button
+                :post="$post"
+                :count="$reactionCount"
+                :reacted="$userReacted"
+                :can-react="$isLoggedIn"
+            />
+
+            {{-- 💾 Save --}}
+            @if($isLoggedIn)
+                <form method="POST" action="{{ route('post.save.toggle', $post) }}">
+                    @csrf
+                    <button type="submit"
+                            class="!px-3 !py-2"
+                            title="{{ $isSaved ? 'Saved' : 'Save' }}"
+                            aria-label="{{ $isSaved ? 'Saved' : 'Save' }}"
                             style="
-                                border-color: color-mix(in srgb, var(--an-danger) 35%, var(--an-border));
-                                color: var(--an-danger);
-                                background: color-mix(in srgb, currentColor 12%, transparent);
-                            "
-                            onclick="openRemovePostModal()">
-                        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M10 12V17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            <path d="M14 12V17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            <path d="M4 7H20" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            <path d="M6 10V18C6 19.6569 7.34315 21 9 21H15C16.6569 21 18 19.6569 18 18V10"
-                                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            <path d="M9 5C9 3.89543 9.89543 3 11 3H13C14.1046 3 15 3.89543 15 5V7H9V5Z"
-                                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                               
+                                color: {{ $isSaved ? 'var(--an-success)' : 'var(--an-info)' }};
+                              
+                            ">
+                        <svg class="w-7 h-7" viewBox="0 0 24 24" fill="none">
+                            <path fill-rule="evenodd" clip-rule="evenodd"
+                                d="M6.75 6L7.5 5.25H16.5L17.25 6V19.3162L12 16.2051L6.75 19.3162V6ZM8.25 6.75V16.6838L12 14.4615L15.75 16.6838V6.75H8.25Z"
+                                fill="currentColor"/>
                         </svg>
                     </button>
-                @endif
-            </div>
+                </form>
+            @else
+                <a href="{{ route('login') }}"
+                   class=" !px-3 !py-2"
+                   title="Save"
+                   aria-label="Save"
+                   style="
+                       
+                        color: var(--an-info);
+                       
+                   ">
+                    <svg class="w-7 h-7" viewBox="0 0 24 24" fill="none">
+                        <path fill-rule="evenodd" clip-rule="evenodd"
+                            d="M6.75 6L7.5 5.25H16.5L17.25 6V19.3162L12 16.2051L6.75 19.3162V6ZM8.25 6.75V16.6838L12 14.4615L15.75 16.6838V6.75H8.25Z"
+                            fill="currentColor"/>
+                    </svg>
+                </a>
+            @endif
+
+            {{-- 🔗 Share --}}
+            <button type="button"
+                    class=" !px-3 !py-2"
+                    title="Share"
+                    aria-label="Share"
+                    style="
+                     
+                        color: var(--an-primary);
+                     
+                    "
+                    onclick="sharePost()">
+                <svg class="w-5 h-5" viewBox="0 0 512 512">
+                    <path d="M512,230.431L283.498,44.621v94.807C60.776,141.244-21.842,307.324,4.826,467.379
+                            c48.696-99.493,149.915-138.677,278.672-143.14v92.003L512,230.431z"
+                        fill="currentColor"/>
+                </svg>
+            </button>
+
         </div>
+    </div>
+
+
+
+</div>
 
         {{-- ✅ Post Ads: AFTER REPORT/EDIT/REMOVE (before comments box) --}}
         <div class="px-3">
@@ -666,59 +652,60 @@
                 </div>
             @endif
         </div>
-<x-post.related-posts :posts="$relatedPosts" />
 
-        {{-- Comments --}}
-        <x-post.card class="{{ $glass }} {{ $shadow }} overflow-hidden {{ $isPending ? 'opacity-90' : '' }}">
-            <x-post.comments
-                :post="$post"
-                :post-id="$post->id"
-                :is-logged-in="$isLoggedIn"
-                :can-approve="$canApprove"
-                :can-delete="$canDeletePost"
-                :comments="$comments"
-                :pending-comments="$pendingComments"
-            />
-        </x-post.card>
+        <x-post.related-posts :posts="$relatedPosts" />
 
-        {{-- ✅ Post Ads: END (after comments, before footer) --}}
-        <div class="px-3">
-            {{-- Mobile (1) --}}
-            @if($adEndM)
-                <div class="block lg:hidden">
-                    <div class="flex justify-center">
-                        {!! $adEndM !!}
+                {{-- Comments --}}
+                <x-post.card class="{{ $glass }} {{ $shadow }} overflow-hidden {{ $isPending ? 'opacity-90' : '' }}">
+                    <x-post.comments
+                        :post="$post"
+                        :post-id="$post->id"
+                        :is-logged-in="$isLoggedIn"
+                        :can-approve="$canApprove"
+                        :can-delete="$canDeletePost"
+                        :comments="$comments"
+                        :pending-comments="$pendingComments"
+                    />
+                </x-post.card>
+
+                {{-- ✅ Post Ads: END (after comments, before footer) --}}
+                <div class="px-3">
+                    {{-- Mobile (1) --}}
+                    @if($adEndM)
+                        <div class="block lg:hidden">
+                            <div class="flex justify-center">
+                                {!! $adEndM !!}
+                            </div>
+                        </div>
+                    @endif
+
+                    {{-- Desktop (2) --}}
+                    @if($adEndD1 || $adEndD2)
+                        <div class="hidden  flex-row lg:flex justify-center">
+                            @if($adEndD1)
+                                <div class="flex ">
+                                    {!! $adEndD1 !!}
+                                </div>
+                            @endif
+                            @if($adEndD2)
+                                <div class="flex ">
+                                    {!! $adEndD2 !!}
+                                </div>
+                            @endif
+                        </div>
+                    @endif
+                </div>
+
+            @else
+                {{-- Not allowed to see content --}}
+                <x-post.card class="{{ $glass }} {{ $shadow }} rounded-3xl overflow-hidden opacity-90">
+                    <div class="text-sm text-[var(--an-text-muted)]">
+                        This post is currently pending approval.
                     </div>
-                </div>
+                </x-post.card>
             @endif
 
-            {{-- Desktop (2) --}}
-            @if($adEndD1 || $adEndD2)
-                 <div class="hidden  flex-row lg:flex justify-center">
-                    @if($adEndD1)
-                        <div class="flex ">
-                            {!! $adEndD1 !!}
-                        </div>
-                    @endif
-                    @if($adEndD2)
-                        <div class="flex ">
-                            {!! $adEndD2 !!}
-                        </div>
-                    @endif
-                </div>
-            @endif
         </div>
-
-    @else
-        {{-- Not allowed to see content --}}
-        <x-post.card class="{{ $glass }} {{ $shadow }} rounded-3xl overflow-hidden opacity-90">
-            <div class="text-sm text-[var(--an-text-muted)]">
-                This post is currently pending approval.
-            </div>
-        </x-post.card>
-    @endif
-
-</div>
 
 <script>
 async function sharePost() {

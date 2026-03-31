@@ -7,12 +7,12 @@
 ])
 
 @php
-    $wrap = 'inline-flex items-center gap-2 rounded-2xl border px-3.5 py-2 text-sm font-semibold transition
-             focus:outline-none focus:ring-2 focus:ring-[var(--an-ring)]';
+    $wrap = 'inline-flex items-center gap-2  px-3.5 py-2 text-sm font-semibold transition
+           ';
 
-    $on  = 'border-[color:var(--an-danger)]/35 bg-[color:var(--an-danger)]/12 text-[var(--an-danger)]';
-    $off = 'border-[var(--an-danger)]/40 bg-[color:var(--an-danger)]/20 text-[var(--an-text-muted)]
-            hover:bg-[color:var(--an-card-2)]/60 hover:text-[var(--an-text)]';
+    $on  = '  text-[var(--an-danger)]';
+    $off = '  text-[var(--an-text-muted)]
+            ';
 
     $dis = 'cursor-not-allowed opacity-60';
 
@@ -48,7 +48,7 @@
             aria-label="{{ $canReact ? 'React to this post' : 'Login to react' }}"
         >
             {{-- heart icon --}}
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4"
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5"
                  viewBox="0 0 24 24"
                  fill="{{ $reacted ? 'currentColor' : 'none' }}"
                  stroke="currentColor"
