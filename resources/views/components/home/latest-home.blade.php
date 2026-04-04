@@ -89,7 +89,7 @@
                                 </h3>
 
                                 <p class="text-sm text-[var(--an-text-muted)] line-clamp-2 leading-relaxed font-medium opacity-60 group-hover:opacity-90 transition-opacity">
-                                    {{ Str::limit($post->content ?? $post->body, 90) }}
+                                   {!! \Illuminate\Support\Str::words(strip_tags($post->content ?? $post->body), 20, '...') !!}
                                 </p>
 
                                 <div class="mt-3 flex items-center justify-between">

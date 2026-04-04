@@ -15,7 +15,7 @@ use App\Models\UserActivity;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
-
+use Purifier;
 class PostingController extends Controller
 {
     public function create(Request $request)
@@ -99,10 +99,57 @@ class PostingController extends Controller
             }
         }
 
-        $post = DB::transaction(function () use ($validated, $user, $request, $status, $normTagNames, $highlightName) {
+    
 
-        $title    = trim($validated['title']);
-        $postSlug = $this->uniqueSlug($title);
+$cleanContent = Purifier::clean($validated['content'], [
+    'HTML.Allowed' => null, // allow all tags and attributes
+    'AutoFormat.AutoParagraph' => false,
+    'AutoFormat.RemoveEmpty'  => false,
+]);
+
+
+if ($cleanContent !== $validated['content']) {
+    return back()->withInput()->with('error', 'Your post contains disallowed or unsafe content.');
+}
+
+$cleanParagraph = !empty($validated['paragraph_content'])
+    ? Purifier::clean($validated['paragraph_content'], 'post')
+    : null;
+
+// single transaction for saving everything
+$post = DB::transaction(function () use ($validated, $user, $request, $status, $normTagNames, $highlightName, $cleanContent, $cleanParagraph) {
+
+    $title    = trim($validated['title']);
+    $postSlug = $this->uniqueSlug($title);
+
+    // model logic
+    $modelId = null;
+    if (!empty($validated['model_name'])) {
+        $name = trim($validated['model_name']);
+        $modelSlug = Str::slug(mb_strtolower($name));
+        if ($modelSlug !== '') {
+            $model = Model::firstOrCreate(
+                ['slug' => $modelSlug],
+                ['name' => $name]
+            );
+            $modelId = $model->id;
+        }
+    }
+
+    // save post
+    $post = Post::create([
+        'forum_id'      => (int) $validated['forum_id'],
+        'user_id'       => (int) $user->id,
+        'title'         => $title,
+        'slug'          => $postSlug,
+        'content'       => $cleanContent,
+        'thumbnail_url' => $validated['thumbnail_url'] ?? null,
+        'views'         => 0,
+        'status'        => $status,
+        'replies_count' => 0,
+        'reputation_points' => 0,
+        'model_id'      => $modelId,
+    ]);
 
         $modelId = null;
 
@@ -121,19 +168,7 @@ class PostingController extends Controller
             }
         }
 
-        $post = Post::create([
-            'forum_id' => (int) $validated['forum_id'],
-            'user_id'  => (int) $user->id,
-            'title'    => $title,
-            'slug'     => $postSlug,   // ✅ always title-based
-            'content'  => $validated['content'],
-            'thumbnail_url' => $validated['thumbnail_url'] ?? null,
-            'views'    => 0,
-            'status'   => $status,
-            'replies_count'      => 0,
-            'reputation_points'  => 0,
-            'model_id' => $modelId,
-        ]);
+
 
 
 

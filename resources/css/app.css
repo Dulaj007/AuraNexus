@@ -123,3 +123,33 @@
 .sidebarMenu {
     padding-top: 0; /* if pt-10 exists in sidebarMenu */
 }
+
+.post-content h2 {
+    font-size: 1.5rem; /* ~24px */
+    font-weight: 700;
+    margin: 8px 0;
+}
+
+.post-content h3 {
+    font-size: 1.25rem; /* ~20px */
+    font-weight: 600;
+    margin: 6px 0;
+}
+
+.post-content ul {
+    padding-left: 1.2rem;
+    margin: 6px 0;
+}
+
+.post-content ul li {
+    list-style: none;
+    position: relative;
+    padding-left: 1.2rem;
+}
+
+.post-content ul li::before {
+    content: "•";
+    position: absolute;
+    left: 0;
+    color: var(--an-text-muted);
+}
