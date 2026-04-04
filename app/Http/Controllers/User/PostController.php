@@ -13,7 +13,7 @@ use App\Models\RemovedPost;
 use App\Services\PostLinkifier;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
-
+use Purifier;
 class PostController extends Controller
 {
     /**
@@ -59,10 +59,27 @@ class PostController extends Controller
         }
 
         // ✅ lightweight parse (NO $post->parsedContent())
+        try {
+            // ✅ sanitize HTML before parsing
+        $cleanContent = Purifier::clean($post->content, 'post');
+
+        if ($cleanContent !== $post->content) {
+            // optional: log what was stripped for review
+            \Log::info('Purifier removed content from post ID '.$post->id, [
+                'original' => $post->content,
+                'cleaned'  => $cleanContent,
+            ]);
+        }
+
+        // continue rendering safely
         $rendered = $this->buildRenderedFromContent(
-            (string) $post->content,
+            (string) $cleanContent,
             (string) $post->title
         );
+        } catch (\Exception $e) {
+            // catch any parsing or sanitization errors
+            return back()->with('error', 'Failed to render the post content safely.');
+        }
 
         // ✅ Convert outbound links into /link/{code} (download gate) + add masked display
         $rendered = app(PostLinkifier::class)->linkifySections($post->id, $rendered);
@@ -322,7 +339,7 @@ class PostController extends Controller
             ],
             'url'         => $url,
             'image'       => $images,
-            'articleBody' => $plainText ?: Str::limit(strip_tags((string) $post->content), 5000),
+            'articleBody' => $plainText ?: Str::limit(strip_tags(Purifier::clean((string) $post->content, 'post')), 5000),
         ];
     }
 

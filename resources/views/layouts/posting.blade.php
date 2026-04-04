@@ -56,7 +56,7 @@
     @include('partials.nav')
         {{-- Flash messages --}}
         @if (session('success'))
-            <div class="mb-3 sm:mb-4 rounded-2xl border px-4 py-3 text-sm"
+            <div class="mb-3 sm:mb-4 rounded-2xl border px-4 py-3 text-sm max-w-7xl mx-auto mt-3"
                  style="border-color: color-mix(in srgb, var(--an-success) 35%, var(--an-border));
                         background: color-mix(in srgb, var(--an-success) 12%, transparent);
                         color: color-mix(in srgb, var(--an-text) 85%, var(--an-success));">
@@ -65,7 +65,7 @@
         @endif
 
         @if (session('error'))
-            <div class="mb-3 sm:mb-4 rounded-2xl border px-4 py-3 text-sm"
+            <div class="mb-3 sm:mb-4 rounded-2xl border px-4 py-3 text-sm max-w-7xl mx-auto mt-3"
                  style="border-color: color-mix(in srgb, var(--an-danger) 35%, var(--an-border));
                         background: color-mix(in srgb, var(--an-danger) 12%, transparent);
                         color: color-mix(in srgb, var(--an-text) 85%, var(--an-danger));">
@@ -75,7 +75,7 @@
 
         {{-- Validation errors --}}
         @if ($errors->any())
-            <div class="mb-3 sm:mb-4 rounded-2xl border px-4 py-3 text-sm"
+            <div class="mb-3 sm:mb-4 rounded-2xl border px-4 py-3 text-sm max-w-7xl mx-auto mt-3"
                  style="border-color: color-mix(in srgb, var(--an-danger) 35%, var(--an-border));
                         background: color-mix(in srgb, var(--an-danger) 12%, transparent);
                         color: color-mix(in srgb, var(--an-text) 85%, var(--an-danger));">
