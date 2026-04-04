@@ -59,7 +59,7 @@ class PostingController extends Controller
 
         $validated = $request->validate([
             'forum_id' => ['required', 'integer', 'exists:forums,id'],
-            'title'    => ['required', 'string', 'min:5', 'max:200'],
+            'title'    => ['required', 'string', 'min:5', 'max:1200'],
             'content'  => ['required', 'string', 'min:20'],
 
             // user-created tags (names)
@@ -100,21 +100,16 @@ class PostingController extends Controller
         }
 
     
-
 $cleanContent = Purifier::clean($validated['content'], [
-    'HTML.Allowed' => null, // allow all tags and attributes
-    'AutoFormat.AutoParagraph' => false,
-    'AutoFormat.RemoveEmpty'  => false,
+    'HTML.Allowed' => 'p,b,strong,i,em,ul,ol,li,a[href|target],img[src|alt],br,h2,h3,div',
 ]);
-
-
-if ($cleanContent !== $validated['content']) {
-    return back()->withInput()->with('error', 'Your post contains disallowed or unsafe content.');
-}
 
 $cleanParagraph = !empty($validated['paragraph_content'])
     ? Purifier::clean($validated['paragraph_content'], 'post')
     : null;
+
+
+
 
 // single transaction for saving everything
 $post = DB::transaction(function () use ($validated, $user, $request, $status, $normTagNames, $highlightName, $cleanContent, $cleanParagraph) {
@@ -136,20 +131,19 @@ $post = DB::transaction(function () use ($validated, $user, $request, $status, $
         }
     }
 
-    // save post
-    $post = Post::create([
-        'forum_id'      => (int) $validated['forum_id'],
-        'user_id'       => (int) $user->id,
-        'title'         => $title,
-        'slug'          => $postSlug,
-        'content'       => $cleanContent,
-        'thumbnail_url' => $validated['thumbnail_url'] ?? null,
-        'views'         => 0,
-        'status'        => $status,
-        'replies_count' => 0,
-        'reputation_points' => 0,
-        'model_id'      => $modelId,
-    ]);
+$post = Post::create([
+    'forum_id'      => (int) $validated['forum_id'],
+    'user_id'       => (int) $user->id,
+    'title'         => $title,
+    'slug'          => $postSlug,
+    'content'       => $cleanContent, // ✅ cleaned content goes here
+    'thumbnail_url' => $validated['thumbnail_url'] ?? null,
+    'views'         => 0,
+    'status'        => $status,
+    'replies_count' => 0,
+    'reputation_points' => 0,
+    'model_id'      => $modelId,
+]);
 
         $modelId = null;
 
