@@ -36,6 +36,7 @@
 @section('title', $isEdit ? 'Update Post' : 'Create a Post')
 
 @section('content')
+
 {{-- Display general validation errors --}}
 @if ($errors->any())
     <div class="mb-4 rounded-2xl border px-4 py-3 text-sm"
