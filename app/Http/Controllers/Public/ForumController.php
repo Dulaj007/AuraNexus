@@ -44,7 +44,7 @@ class ForumController extends Controller
         $forum->load('category');
 
         $sort = $request->query('sort', 'recent');
-        $perPage = 1;
+        $perPage = 9;
         $page = $request->query('page', 1); // ✅ use query param, not route param
 
         // 1) Get pinned posts (newest pin first)

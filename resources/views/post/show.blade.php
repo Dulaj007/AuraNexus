@@ -491,8 +491,9 @@
             @endif
         </div>
 
+        <div class="my-3">
         <x-post.related-posts :posts="$relatedPosts" />
-
+        </div>
                 {{-- Comments --}}
                 <x-post.card class="{{ $glass }} {{ $shadow }} overflow-hidden {{ $isPending ? 'opacity-90' : '' }}">
                     <x-post.comments
