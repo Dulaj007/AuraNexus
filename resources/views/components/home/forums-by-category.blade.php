@@ -23,7 +23,8 @@
                             <div class="flex whitespace-nowrap marquee">
                                 <div class="marquee__inner text-4xl lg:text-6xl font-black uppercase italic">
                                     @for($i=0; $i<6; $i++)
-                                        <span class="mr-10 lg:mr-15">{{ $cat->name }}</span>
+                                        <span class="mr-10 ">{{ $cat->name }}</span>
+                                        <span class="mr-10   text-[var(--an-primary)]">Category</span>
                                     @endfor
                                 </div>
                             </div>

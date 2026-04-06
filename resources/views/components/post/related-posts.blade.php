@@ -20,7 +20,7 @@
             </span>
         </div>
 
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-1 sm:gap-4">
+        <div class="grid grid-cols-2 gap-1 sm:gap-4 mb-1">
             @foreach($posts as $p)
                 <x-forum.post-card :post="$p" />
             @endforeach
