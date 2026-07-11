@@ -15,6 +15,8 @@
     }
 
     $homeActive = request()->routeIs('home');
+    $topArticlesActive = request()->routeIs('posts.top');
+    $trendingActive = request()->routeIs('posts.trending');
 
     if ($viewer) {
         $initial = strtoupper(substr($viewer->name ?? 'U', 0, 1));
@@ -59,13 +61,16 @@
                     <div id="navMenu" class="relative hidden xl:flex items-center uppercase gap-2">
                         <div id="navHighlight" class="absolute h-full bg-[var(--an-primary)]/10 rounded-xl transition-all duration-300 ease-out"></div>
 
-                        <a data-nav data-active="{{ $homeActive ? '1' : '0' }}" href="{{ route('home') }}" class="relative px-3 py-2 rounded-xl font-semibold text-sm text-[var(--an-text)]/90 hover:text-[var(--an-text)] hover:neon-link transition">
+                        <a data-nav data-active="{{ $homeActive ? '1' : '0' }}" href="{{ route('home') }}"
+                           class="relative px-3 py-2 rounded-xl font-semibold text-sm hover:neon-link transition {{ $homeActive ? 'text-[var(--an-text)]' : 'text-[var(--an-text)]/70 hover:text-[var(--an-text)]' }}">
                             Home
                         </a>
-                        <a data-nav href="{{ route('posts.top') }}" class="relative px-3 py-2 rounded-xl font-semibold text-sm text-[var(--an-text)]/70 hover:text-[var(--an-text)] hover:neon-link transition">
+                        <a data-nav data-active="{{ $topArticlesActive ? '1' : '0' }}" href="{{ route('posts.top') }}"
+                           class="relative px-3 py-2 rounded-xl font-semibold text-sm hover:neon-link transition {{ $topArticlesActive ? 'text-[var(--an-text)]' : 'text-[var(--an-text)]/70 hover:text-[var(--an-text)]' }}">
                             Top Articles
                         </a>
-                        <a data-nav href="{{ route('posts.trending') }}" class="relative px-3 py-2 rounded-xl font-semibold text-sm text-[var(--an-text)]/70 hover:text-[var(--an-text)] hover:neon-link transition">
+                        <a data-nav data-active="{{ $trendingActive ? '1' : '0' }}" href="{{ route('posts.trending') }}"
+                           class="relative px-3 py-2 rounded-xl font-semibold text-sm hover:neon-link transition {{ $trendingActive ? 'text-[var(--an-text)]' : 'text-[var(--an-text)]/70 hover:text-[var(--an-text)]' }}">
                             Trending
                         </a>
                     </div>
@@ -173,7 +178,10 @@ document.addEventListener("DOMContentLoaded", () => {
     const navItems = navMenu.querySelectorAll("[data-nav]");
 
     function updateHighlight(el) {
-        if (!el) return;
+        if (!el) {
+            highlight.style.opacity = "0";
+            return;
+        }
         const rect = el.getBoundingClientRect();
         const parentRect = navMenu.getBoundingClientRect();
         highlight.style.width = `${rect.width}px`;
@@ -182,7 +190,9 @@ document.addEventListener("DOMContentLoaded", () => {
         highlight.style.opacity = "1";
     }
 
-    let currentActive = Array.from(navItems).find(i => i.dataset.active === "1") || navItems[0];
+    // null (not navItems[0]) when on a page that isn't Home/Top Articles/Trending —
+    // otherwise the highlight always fell back to "Home" on every other page.
+    let currentActive = Array.from(navItems).find(i => i.dataset.active === "1") || null;
 
     navItems.forEach(item => {
         item.addEventListener("mouseenter", () => updateHighlight(item));

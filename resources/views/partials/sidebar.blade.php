@@ -14,6 +14,10 @@
         $colors = ['bg-indigo-500','bg-green-500','bg-red-500','bg-yellow-500','bg-purple-500','bg-pink-500'];
         $color = $colors[ord($initial) % count($colors)];
     }
+
+    // Active-state detection for the current page
+    $isTrendingActive = request()->routeIs('posts.trending');
+    $activeForumId = request()->routeIs('forums.show') ? optional(request()->route('forum'))->id : null;
 @endphp
 
 <div class="flex flex-col min-h-screen p-3  relative overflow-hidden sidebarMenu ">
@@ -109,14 +113,18 @@
         <div class="px-3 mb-2 select-none">
             <h2 class="text-[10px] uppercase tracking-widest font-bold text-[var(--an-text-muted)] opacity-60">Hot Right Now</h2>
         </div>
-        <a href="{{ route('posts.trending') }}" data-sidebar-item="1" class="flex items-center gap-3 px-3 py-2.5 rounded-xl transition group">
+        <a href="{{ route('posts.trending') }}" data-sidebar-item="1"
+           class="relative flex items-center gap-3 px-3 py-2.5 rounded-xl transition group {{ $isTrendingActive ? 'bg-[var(--an-primary)]/10' : '' }}">
+            @if($isTrendingActive)
+                <span class="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-[3px] rounded-full bg-[var(--an-primary)]"></span>
+            @endif
             <div class="relative">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-orange-500 animate-pulse" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M19.48,12.35c-1.57-4.08-7.16-4.3-5.81-10.23c0.1-0.44-0.37-0.78-0.75-0.55C9.29,3.71,6.68,8,8.87,13.62 c0.18,0.46-0.36,0.89-0.75,0.59c-1.81-1.37-3.04-3.34-2.8-5.71c0.04-0.35-0.34-0.56-0.55-0.3c-2.09,2.61-2.9,6.07-2.18,9.52 c0.92,4.41,4.9,7.69,9.45,7.78c5.15,0.1,9.42-4.14,9.17-9.28C21.12,14.69,20.49,13.39,19.48,12.35z"/>
                 </svg>
                 <div class="absolute inset-0 h-5 w-5 bg-orange-500 blur-lg opacity-20"></div>
             </div>
-            <span class="font-bold text-sm text-[var(--an-text)] group-hover:text-[var(--an-primary)] transition uppercase">Trending</span>
+            <span class="font-bold text-sm uppercase transition group-hover:text-[var(--an-primary)] {{ $isTrendingActive ? 'text-[var(--an-primary)]' : 'text-[var(--an-text)]' }}">Trending</span>
         </a>
     </div>
 
@@ -127,20 +135,27 @@
         </div>
 
         @foreach($categories as $category)
+            @php
+                $categoryHasActive = $activeForumId && $category->forums->contains('id', $activeForumId);
+            @endphp
             <div class="category relative mb-1">
-                <button class="category-toggle relative w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition group" data-sidebar-item="1">
+                <button class="category-toggle relative w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition group {{ $categoryHasActive ? 'bg-[var(--an-primary)]/10' : '' }}"
+                        data-sidebar-item="1" @if($categoryHasActive) data-expand-on-load="1" @endif>
                     <div class="flex items-center gap-3">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-[var(--an-text-muted)] group-hover:text-[var(--an-primary)] transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 transition-colors group-hover:text-[var(--an-primary)] {{ $categoryHasActive ? 'text-[var(--an-primary)]' : 'text-[var(--an-text-muted)]' }}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
                         </svg>
-                        <span class="font-medium text-sm uppercase">{{ $category->name }}</span>
+                        <span class="font-medium text-sm uppercase {{ $categoryHasActive ? 'text-[var(--an-primary)]' : '' }}">{{ $category->name }}</span>
                     </div>
-                    <svg class="h-4 w-4 transition-transform duration-300 arrow text-[var(--an-text-muted)]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                    <svg class="h-4 w-4 transition-transform duration-300 arrow {{ $categoryHasActive ? 'text-[var(--an-primary)]' : 'text-[var(--an-text-muted)]' }}" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                 </button>
 
                 <div class="forums ml-4 border-l border-[var(--an-border)] overflow-hidden max-h-0 transition-all duration-300 ">
                     @foreach($category->forums as $forum)
-                        <a href="{{ route('forums.show', $forum->slug) }}" class="relative flex items-center gap-2 px-2 py-2 text-xs text-[var(--an-text-muted)] leading-normal hover:text-[var(--an-primary)] transition capitalize" data-sidebar-item="1">
+                        @php $isForumActive = $forum->id === $activeForumId; @endphp
+                        <a href="{{ route('forums.show', $forum->slug) }}"
+                           class="relative flex items-center gap-2 px-2 py-2 text-xs leading-normal transition capitalize hover:text-[var(--an-primary)] {{ $isForumActive ? 'text-[var(--an-primary)] font-bold' : 'text-[var(--an-text-muted)]' }}"
+                           data-sidebar-item="1">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
                             </svg>
@@ -172,6 +187,14 @@ document.addEventListener("DOMContentLoaded", () => {
                 arrow.style.transform = "rotate(180deg)";
             }
         });
+    });
+
+    // Auto-expand the category containing the forum you're currently viewing
+    document.querySelectorAll('.category-toggle[data-expand-on-load="1"]').forEach(btn => {
+        const forums = btn.parentElement.querySelector(".forums");
+        const arrow = btn.querySelector(".arrow");
+        forums.style.maxHeight = forums.scrollHeight + "px";
+        arrow.style.transform = "rotate(180deg)";
     });
 
     // Gliding Highlight

@@ -10,6 +10,35 @@
         'Segoe UI Symbol', 'Noto Color Emoji';
 }
 
+/* Themed page scrollbar (replaces the browser default gray bar) */
+html {
+    scrollbar-width: thin;
+    scrollbar-color: var(--an-primary) var(--an-bg);
+}
+
+::-webkit-scrollbar {
+    width: 12px;
+    height: 12px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--an-bg);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--an-primary);
+    border-radius: 999px;
+    border: 3px solid var(--an-bg);
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: color-mix(in srgb, var(--an-primary) 80%, white);
+}
+
+::-webkit-scrollbar-corner {
+    background: var(--an-bg);
+}
+
 @keyframes an-gradient-move {
   0%   { background-position: 0% 50%; }
   50%  { background-position: 100% 50%; }
@@ -95,6 +124,62 @@
     }
 }
 
+/* Ambient background blobs (used by partials/background-layer.blade.php) */
+@keyframes an-blob {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    33%      { transform: translate(40px, -30px) scale(1.08); }
+    66%      { transform: translate(-25px, 25px) scale(0.95); }
+}
+
+.animate-blob {
+    animation: an-blob 14s ease-in-out infinite;
+}
+
+.animation-delay-2000 {
+    animation-delay: 2s;
+}
+
+/* Glass card entrance (auth / posting forms) */
+@keyframes an-card-in {
+    from { opacity: 0; transform: translateY(14px) scale(0.98); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.an-card-in {
+    animation: an-card-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Slow-drifting conic glow used behind auth cards */
+@keyframes an-spin-slow {
+    to { transform: rotate(360deg); }
+}
+
+.an-spin-slow {
+    animation: an-spin-slow 18s linear infinite;
+}
+
+/* Splash screen */
+@keyframes an-spin-fast {
+    to { transform: rotate(360deg); }
+}
+
+.an-spin-fast {
+    animation: an-spin-fast 1.4s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+}
+
+@keyframes an-pulse-scale {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50%      { transform: scale(1.06); opacity: 0.85; }
+}
+
+.an-pulse-scale {
+    animation: an-pulse-scale 1.8s ease-in-out infinite;
+}
+
+#splashScreen {
+    transition: opacity 0.5s ease;
+}
+
 
 
         /* Smooth Layout Transitions */
@@ -103,8 +188,10 @@
         }
 
         /* Custom scrollbar for sidebar */
-        #sidebar::-webkit-scrollbar { width: 4px; }
-        #sidebar::-webkit-scrollbar-thumb { background: var(--an-border); border-radius: 10px; }
+        #sidebar { scrollbar-width: thin; scrollbar-color: var(--an-border) transparent; }
+        #sidebar::-webkit-scrollbar { width: 2px; }
+        #sidebar::-webkit-scrollbar-track { background: transparent; }
+        #sidebar::-webkit-scrollbar-thumb { background: var(--an-border); border-radius: 10px; border: none; }
 
                 .sidebarHighlight {
             transition: transform 0.25s ease, width 0.25s ease, height 0.25s ease;
@@ -118,6 +205,7 @@
 #sidebar {
     box-sizing: border-box; /* ensures padding doesn't add extra height */
     padding-top: 0; /* remove top padding that breaks scroll */
+    overflow-x: hidden; /* collapsed (w-16) state must clip, not scroll, the full-width inner content */
 }
 
 .sidebarMenu {
@@ -153,3 +241,38 @@
     left: 0;
     color: var(--an-text-muted);
 }
+
+.post-content img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+    border-radius: 0.75rem;
+    margin: 0.75rem 0;
+    border: 1px solid var(--an-border);
+}
+
+.post-content a:has(> img) {
+    display: block;
+}
+
+/* Rich text editor (posting/create.blade.php) */
+.an-editor:empty:before {
+    content: attr(data-placeholder);
+    color: var(--an-text-muted);
+    pointer-events: none;
+}
+
+.an-editor a {
+    color: var(--an-link);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.an-editor img {
+    max-width: 100%;
+    border-radius: 0.75rem;
+    margin: 0.5rem 0;
+}
+
+.an-editor::-webkit-scrollbar { width: 6px; }
+.an-editor::-webkit-scrollbar-thumb { background: var(--an-border); border-radius: 10px; border: none; }

@@ -1,4 +1,6 @@
 
+@include('partials.splash-screen')
+
 @php
     use Illuminate\Support\Facades\Cache;
 

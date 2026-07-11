@@ -5,76 +5,133 @@
 
 @section('content')
 @php
-    $glass = 'sm:rounded-3xl border border-[var(--an-border)]
-              bg-[color:var(--an-card)]/65 backdrop-blur-xl';
+    $glass = 'rounded-3xl border border-[var(--an-border)]
+              bg-[color:var(--an-card)]/60 backdrop-blur-2xl
+              shadow-[0_25px_70px_-15px_rgba(0,0,0,0.45),0_8px_24px_-8px_rgba(0,0,0,0.3),inset_0_1px_0_0_rgba(255,255,255,0.06)]';
 
-    $input = 'mt-1 w-full rounded-2xl border border-[var(--an-border)]
-              bg-[color:var(--an-bg)]/40 px-3 py-3 text-sm text-[var(--an-text)]
-              placeholder:text-[color:color-mix(in_srgb,var(--an-text)_45%,transparent)]
-              focus:outline-none focus:ring-2 focus:ring-[var(--an-ring)]';
+    $input = 'w-full rounded-2xl border border-[var(--an-border)]
+              bg-[color:var(--an-bg)]/40 pl-11 pr-4 py-3 text-sm text-[var(--an-text)]
+              placeholder:text-[color:color-mix(in_srgb,var(--an-text)_40%,transparent)]
+              outline-none transition focus:border-transparent focus:ring-2 focus:ring-[var(--an-ring)]
+              hover:border-[color:color-mix(in_srgb,var(--an-primary)_30%,var(--an-border))]';
 
-    $label = 'text-xs font-extrabold text-[var(--an-text-muted)]';
+    $label = 'text-[11px] font-extrabold uppercase tracking-wider text-[var(--an-text-muted)]';
 
-    $btn = 'inline-flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-extrabold
-            border border-[var(--an-border)]
-            bg-[color:var(--an-primary)]/25 hover:bg-[color:var(--an-primary)]/35
-            transition focus:outline-none focus:ring-2 focus:ring-[var(--an-ring)]
-            active:scale-[0.99] active:translate-y-[1px]
-            disabled:opacity-50 disabled:cursor-not-allowed';
+    $btn = 'group inline-flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-3.5 text-sm font-extrabold
+            text-white transition focus:outline-none focus:ring-2 focus:ring-[var(--an-ring)] focus:ring-offset-2 focus:ring-offset-[var(--an-bg)]
+            active:scale-[0.98] shadow-[0_10px_30px_-8px_var(--an-primary)]
+            hover:shadow-[0_14px_40px_-8px_var(--an-primary)] hover:-translate-y-0.5
+            disabled:opacity-40 disabled:pointer-events-none disabled:translate-y-0 disabled:shadow-none';
 
-    $hint = 'text-xs mt-2 text-[var(--an-text-muted)]';
-    $link = 'underline underline-offset-4 hover:no-underline transition';
+    $hint = 'text-xs mt-1.5 text-[var(--an-text-muted)]';
+    $link = 'font-semibold underline underline-offset-4 hover:no-underline transition';
 @endphp
 
-<div class="{{ $glass }} p-5 sm:p-6 space-y-2">
+<div class="relative flex flex-col items-center justify-center px-3 py-6 sm:py-10 min-h-[70vh]">
 
-    <form id="registerForm" action="{{ route('register') }}" method="POST" novalidate class="space-y-3">
+    {{-- Focused glow behind the card, on top of the site-wide ambient blobs --}}
+    <div class="pointer-events-none absolute inset-0 -z-10 flex items-center justify-center overflow-hidden">
+        <div class="an-spin-slow h-[420px] w-[420px] rounded-full opacity-30 blur-[100px]"
+             style="background: conic-gradient(from 0deg, var(--an-primary), var(--an-link), var(--an-info), var(--an-primary));"></div>
+    </div>
+
+    <div class="an-card-in w-full flex flex-col items-center">
+
+        {{-- Brand mark --}}
+        <a href="{{ route('home') }}" class="mb-6 flex flex-col items-center gap-3 text-center group">
+            @if($logoUrl = asset(config('app.logo')))
+                <span class="h-14 w-14 overflow-hidden rounded-2xl border border-[var(--an-border)] shadow-[0_8px_24px_rgba(0,0,0,0.25)] transition-transform duration-300 group-hover:scale-105">
+                    <img src="{{ $logoUrl }}" alt="{{ $appName ?? config('app.name') }}" class="h-full w-full object-cover">
+                </span>
+            @endif
+        </a>
+
+        <div class="{{ $glass }} p-6 sm:p-8 space-y-5 max-w-[460px] w-full mx-auto">
+
+            <div class="text-center space-y-1">
+                <h1 class="text-2xl font-black tracking-tight text-[var(--an-text)]">Create your account</h1>
+                <p class="text-sm text-[var(--an-text-muted)]">Join {{ $appName ?? config('app.name') }} in under a minute</p>
+            </div>
+
+    <form id="registerForm" action="{{ route('register') }}" method="POST" novalidate class="space-y-4">
         @csrf
 
         {{-- Display Name --}}
         <div>
             <label class="{{ $label }}" for="name">Display Name</label>
-            <input id="name" type="text" name="name" value="{{ old('name') }}"
-                   class="{{ $input }}" maxlength="30" required
-                   placeholder="Your name">
+            <div class="relative mt-1.5">
+                <span class="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--an-text-muted)]">
+                    <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="8" r="4"/>
+                        <path stroke-linecap="round" d="M4 20c0-4 3.6-6 8-6s8 2 8 6"/>
+                    </svg>
+                </span>
+                <input id="name" type="text" name="name" value="{{ old('name') }}"
+                       class="{{ $input }}" maxlength="30" required
+                       placeholder="Your name">
+            </div>
             <small id="nameError" class="text-xs text-red-400 hidden"></small>
-            @error('name') <p class="text-red-400 text-xs mt-1">{{ $message }}</p> @enderror
+            @error('name') <p class="text-red-400 text-xs mt-1.5">{{ $message }}</p> @enderror
         </div>
 
         {{-- Username --}}
         <div>
             <label class="{{ $label }}" for="username">Username</label>
-            <input id="username" type="text" name="username" value="{{ old('username') }}"
-                   class="{{ $input }}" required
-                   placeholder="e.g. Jake5">
+            <div class="relative mt-1.5">
+                <span class="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--an-text-muted)]">@</span>
+                <input id="username" type="text" name="username" value="{{ old('username') }}"
+                       class="{{ $input }}" required
+                       placeholder="e.g. Jake5">
+            </div>
             <small id="usernameError" class="text-xs text-red-400 hidden"></small>
-            @error('username') <p class="text-red-400 text-xs mt-1">{{ $message }}</p> @enderror
+            @error('username') <p class="text-red-400 text-xs mt-1.5">{{ $message }}</p> @enderror
             <div class="{{ $hint }}">Only letters, numbers, and underscores.</div>
         </div>
 
         {{-- Email --}}
         <div>
             <label class="{{ $label }}" for="email">Email</label>
-            <input id="email" type="email" name="email" value="{{ old('email') }}"
-                   class="{{ $input }}" required
-                   placeholder="you@gmail.com" autocomplete="email">
+            <div class="relative mt-1.5">
+                <span class="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--an-text-muted)]">
+                    <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 7l9 6 9-6M5 5h14a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2z"/>
+                    </svg>
+                </span>
+                <input id="email" type="email" name="email" value="{{ old('email') }}"
+                       class="{{ $input }}" required
+                       placeholder="you@gmail.com" autocomplete="email">
+            </div>
             <small id="emailError" class="text-xs text-red-400 hidden"></small>
-            @error('email') <p class="text-red-400 text-xs mt-1">{{ $message }}</p> @enderror
+            @error('email') <p class="text-red-400 text-xs mt-1.5">{{ $message }}</p> @enderror
         </div>
 
         {{-- Date of Birth --}}
         <div>
             <label class="{{ $label }}" for="dob">Date of Birth</label>
-            <input type="date" name="dob" id="dob" class="{{ $input }}" required>
+            <div class="relative mt-1.5">
+                <span class="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--an-text-muted)]">
+                    <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="5" width="18" height="16" rx="2"/>
+                        <path stroke-linecap="round" d="M8 3v4M16 3v4M3 10h18"/>
+                    </svg>
+                </span>
+                <input type="date" name="dob" id="dob" class="{{ $input }}" required>
+            </div>
             <small id="dobError" class="text-xs text-red-400 hidden"></small>
-            @error('dob') <p class="text-red-400 text-xs mt-1">{{ $message }}</p> @enderror
+            @error('dob') <p class="text-red-400 text-xs mt-1.5">{{ $message }}</p> @enderror
         </div>
 
         {{-- Password --}}
         <div>
             <label class="{{ $label }}" for="password">Password</label>
 
-            <div class="relative">
+            <div class="relative mt-1.5">
+                <span class="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--an-text-muted)]">
+                    <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="4" y="10" width="16" height="10" rx="2"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M8 10V7a4 4 0 118 0v3"/>
+                    </svg>
+                </span>
                 <input id="password" type="password" name="password"
                        class="{{ $input }} pr-12" required
                        placeholder="••••••••" autocomplete="new-password">
@@ -95,14 +152,20 @@
             </div>
 
             <small id="passwordHint" class="block text-xs mt-2 text-[var(--an-text-muted)]"></small>
-            @error('password') <p class="text-red-400 text-xs mt-1">{{ $message }}</p> @enderror
+            @error('password') <p class="text-red-400 text-xs mt-1.5">{{ $message }}</p> @enderror
         </div>
 
         {{-- Confirm Password --}}
         <div>
             <label class="{{ $label }}" for="password_confirmation">Confirm Password</label>
 
-            <div class="relative">
+            <div class="relative mt-1.5">
+                <span class="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--an-text-muted)]">
+                    <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="4" y="10" width="16" height="10" rx="2"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M8 10V7a4 4 0 118 0v3"/>
+                    </svg>
+                </span>
                 <input id="password_confirmation" type="password" name="password_confirmation"
                        class="{{ $input }} pr-12" required
                        placeholder="••••••••" autocomplete="new-password">
@@ -124,8 +187,8 @@
         </div>
 
         {{-- Terms --}}
-        <div class="pt-1">
-            <label class="flex items-start gap-2 text-sm text-[var(--an-text)]/85 leading-snug">
+        <div class="rounded-2xl border border-[var(--an-border)] bg-[color:var(--an-bg)]/25 p-3.5">
+            <label class="flex items-start gap-2 text-sm text-[var(--an-text)]/85 leading-snug cursor-pointer">
                 <input type="checkbox" name="terms" required
                     class="mt-1 h-4 w-4 rounded border border-[var(--an-border)]
                             bg-[color:var(--an-bg)]/40 text-[var(--an-primary)]
@@ -150,22 +213,22 @@
             </label>
 
             @error('terms')
-                <p class="text-red-400 text-xs mt-1">{{ $message }}</p>
+                <p class="text-red-400 text-xs mt-1.5">{{ $message }}</p>
             @enderror
         </div>
 
-
         {{-- Google reCAPTCHA --}}
-        <div class=" ">
+        <div class="overflow-hidden rounded-2xl border border-[var(--an-border)] bg-[color:var(--an-bg)]/30 p-3">
             <div class="scale-90 px-auto justify-center items-center flex w-full">
                 <div class="g-recaptcha" data-sitekey="{{ env('NOCAPTCHA_SITEKEY') }}"></div>
             </div>
-            @error('g-recaptcha-response') <p class="text-red-400 text-xs mt-1">{{ $message }}</p> @enderror
+            @error('g-recaptcha-response') <p class="text-red-400 text-xs mt-1.5">{{ $message }}</p> @enderror
         </div>
 
-        <button id="submitBtn" class="{{ $btn }}" disabled>
+        <button id="submitBtn" class="{{ $btn }}" disabled
+                style="background: linear-gradient(135deg, var(--an-primary), color-mix(in srgb, var(--an-primary) 60%, var(--an-link)));">
             <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" aria-hidden="true"
-                 xmlns="http://www.w3.org/2000/svg" style="color: var(--an-text);">
+                 xmlns="http://www.w3.org/2000/svg">
                 <path d="M12 5v14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
                 <path d="M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
             </svg>
@@ -173,13 +236,15 @@
         </button>
     </form>
 
-    <div class="pt-2 text-center text-sm text-[var(--an-text-muted)]">
+    <div class="pt-1 text-center text-sm text-[var(--an-text-muted)]">
         Already have an account?
         <a href="{{ route('login') }}" class="{{ $link }}" style="color: var(--an-link);">Login</a>
     </div>
+        </div>
+    </div>
 </div>
 
-{{-- ✅ Frontend Validation JS --}}
+{{-- Client-side validation --}}
 <script src="https://www.google.com/recaptcha/api.js" async defer></script>
 <script>
 const nameInput = document.getElementById('name');
