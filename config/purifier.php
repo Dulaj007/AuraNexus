@@ -103,7 +103,7 @@ return [
         ],
         'post' => [
             'HTML.Doctype'             => 'HTML 4.01 Transitional',
-            'HTML.Allowed'             => 'div[class],p[class],span[class],br,b,i,u,strong,em,ul,ol,li,h1,h2,h3,h4,a[href|title|target],img[src|alt|title|width|height]',
+            'HTML.Allowed'             => 'div[class],p[class],span[class],br,b,i,u,strong,em,ul,ol,li,h1,h2,h3,h4,a[href|title|target|rel],img[src|alt|title|width|height]',
             'Attr.AllowedFrameTargets' => ['_blank', '_self', '_top', '_parent'],
             'AutoFormat.AutoParagraph' => true,
             'AutoFormat.RemoveEmpty'   => true,

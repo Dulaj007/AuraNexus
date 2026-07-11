@@ -49,12 +49,12 @@ class PostingController extends Controller
     {
         $user = $request->user();
 
-        // ✅ hard permission check (server-side)
+        // Server-side permission check; the form itself is gated too, but this is the real guard.
         if (!$user || !$user->hasPermission('create_post')) {
             return redirect('/')->with('error', 'You are not allowed to create posts.');
         }
 
-        // ✅ status rule
+        // Users who can approve posts publish immediately; everyone else goes to pending.
         $status = $user->hasPermission('approve_post') ? 'published' : 'pending';
 
         $validated = $request->validate([
@@ -78,7 +78,7 @@ class PostingController extends Controller
 
         ]);
 
-        // ✅ normalize tag names once (lower/trim), remove empties, unique
+        // Normalize tag names once: trim, lowercase, drop empties, dedupe.
         $rawTagNames = $validated['tag_names'] ?? [];
         $normTagNames = collect($rawTagNames)
             ->map(fn ($t) => trim((string) $t))
@@ -88,7 +88,7 @@ class PostingController extends Controller
             ->values()
             ->all();
 
-        // ✅ if highlight set, ensure it exists in tag_names
+        // If a highlight tag was chosen, it must be one of the selected tags.
         $highlightName = null;
         if (!empty($validated['highlight_tag_name'])) {
             $highlightName = mb_strtolower(trim((string) $validated['highlight_tag_name']));
@@ -99,9 +99,13 @@ class PostingController extends Controller
             }
         }
 
-    
-$cleanContent = Purifier::clean($validated['content'], [
-    'HTML.Allowed' => 'p,b,strong,i,em,ul,ol,li,a[href|target],img[src|alt],br,h2,h3,div',
+        // Older content may still contain [url=..][img]..[/img][/url] bbcode
+        // pasted without using the editor's "Image" button; convert it to
+        // real <img> tags before sanitizing.
+$contentWithImages = app(\App\Services\BbcodeImageParser::class)->parse($validated['content']);
+
+$cleanContent = Purifier::clean($contentWithImages, [
+    'HTML.Allowed' => 'p,b,strong,i,em,ul,ol,li,a[href|target|rel],img[src|alt],br,h2,h3,div',
 ]);
 
 $cleanParagraph = !empty($validated['paragraph_content'])
@@ -136,7 +140,7 @@ $post = Post::create([
     'user_id'       => (int) $user->id,
     'title'         => $title,
     'slug'          => $postSlug,
-    'content'       => $cleanContent, // ✅ cleaned content goes here
+    'content'       => $cleanContent,
     'thumbnail_url' => $validated['thumbnail_url'] ?? null,
     'views'         => 0,
     'status'        => $status,
@@ -166,7 +170,7 @@ $post = Post::create([
 
 
 
-            // ✅ tags: create on-the-fly from names
+            // Create tags on the fly from their names.
             $tagIds = [];
             $slugToId = [];
 
@@ -189,7 +193,7 @@ $post = Post::create([
                 $post->tags()->sync($tagIds);
             }
 
-            // ✅ highlight tag by NAME -> convert to ID and save (must be within selected tags)
+            // Resolve the highlight tag name to an id; it must be within the selected tags.
             if ($highlightName) {
                 $highlightSlug = Str::slug($highlightName);
                 $highlightTagId = $slugToId[$highlightSlug] ?? null;
@@ -199,7 +203,7 @@ $post = Post::create([
                 }
             }
 
-            // ✅ paragraph save (only if both exist)
+            // Only save a paragraph row if both the template and its content were provided.
             if (!empty($validated['paragraph_template_id']) && !empty($validated['paragraph_content'])) {
                 PostParagraph::create([
                     'post_id'      => $post->id,
@@ -209,7 +213,7 @@ $post = Post::create([
                 ]);
             }
 
-            // ✅ stats + activity only if actually created
+            // Only counted once the post has actually been created.
             $this->incrementPostStats();
 
             $this->logActivity(
@@ -228,7 +232,6 @@ $post = Post::create([
             return $post;
         });
 
-        // ✅ Always redirect to the created post page
         if ($post->status === 'pending') {
             return redirect()
                 ->route('post.show', $post->slug)

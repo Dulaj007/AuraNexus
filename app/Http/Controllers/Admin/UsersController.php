@@ -76,6 +76,10 @@ class UsersController extends Controller
 
     public function store(Request $request)
     {
+        if (!$request->user()?->hasRole('admin')) {
+            abort(403);
+        }
+
         $validated = $request->validate([
             'role_id'  => ['required', 'exists:roles,id'],
             'name'     => ['required', 'string', 'max:50'],
@@ -103,6 +107,7 @@ class UsersController extends Controller
                 'password'          => $validated['password'], // hashed by model cast/mutator
                 'status'            => $status,
                 'bio'               => $validated['bio'] ?? null,
+                'age'               => $validated['age'] ?? null,
                 'email_verified_at' => now(),
             ];
 
@@ -271,7 +276,7 @@ public function update(Request $request, User $user)
         $update['banned_at']         = null;
         $update['restricted_reason'] = $validated['restricted_reason'] ?? null;
     }
-// ✅ Avatar upload wins
+// An uploaded file takes priority over the remove_avatar flag.
 if ($request->hasFile('avatar')) {
 
     // delete old
@@ -309,8 +314,12 @@ if ($request->hasFile('avatar')) {
 
 
 
-    public function destroy(User $user)
+    public function destroy(Request $request, User $user)
     {
+        if (!$request->user()?->hasRole('admin')) {
+            abort(403);
+        }
+
         if (auth()->id() === $user->id) {
             return back()->withErrors(['admin' => 'You cannot delete your own account.']);
         }
@@ -331,6 +340,10 @@ if ($request->hasFile('avatar')) {
 
     public function updatePermissionOverrides(Request $request, User $user)
     {
+        if (!$request->user()?->hasRole('admin')) {
+            abort(403);
+        }
+
         $data = (array) $request->input('overrides', []);
         $sync = [];
 
@@ -347,6 +360,10 @@ if ($request->hasFile('avatar')) {
 
     public function updateRole(Request $request, User $user)
     {
+        if (!$request->user()?->hasRole('admin')) {
+            abort(403);
+        }
+
         if (auth()->id() === $user->id) {
             return back()->withErrors(['admin' => 'You cannot change your own role.']);
         }
