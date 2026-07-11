@@ -4,7 +4,7 @@
 @php
     use Illuminate\Support\Str;
 
-    // ✅ Safety fallbacks (avoid undefined variable crashes)
+    // Fallbacks so the view doesn't error if a variable wasn't passed in.
     $post = $post ?? request()->route('post');
 
     $paragraph = $paragraph ?? null;
@@ -32,7 +32,6 @@
 
 @section('title', ($post?->title ?? 'Post') . ' • ' . config('app.name'))
 
-{{-- ✅ Feed meta into the NEW post layout sections --}}
 @php
     $metaText = ($rendered['plainText'] ?? '');
     if (!empty($paragraph?->content)) {
@@ -41,7 +40,7 @@
 
     $desc = Str::limit(strip_tags($metaText), 160);
     $url = url()->current();
-    // ✅ Prefer first image THUMB (img69) for OG/Twitter (direct asset URL)
+    // Prefer the first image's thumb URL for Open Graph/Twitter previews.
     $firstPostImage = null;
 
     foreach (($rendered['sections'] ?? []) as $block) {
@@ -94,7 +93,7 @@
     $canApprove = $canApprove ?? (bool) session('can_approve_post', false);
     $canDeletePost = $isLoggedIn && auth()->user()->hasPermission('delete_post');
 
-    // ✅ Edit permission (owner OR edit_post)
+    // Editing is allowed for the post's owner or anyone with edit_post.
     $isOwner = $isLoggedIn && auth()->id() === $post->user_id;
     $canEditAny = $isLoggedIn && auth()->user()->hasPermission('edit_post');
     $canEditPost = $isOwner || $canEditAny;
@@ -120,10 +119,9 @@
     $btnBase = 'inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-2 text-sm font-semibold
                 border transition focus:outline-none focus:ring-2 focus:ring-[var(--an-ring)] active:scale-[0.98]';
 
-    // ✅ Post ads (new helper-based setup)
     $adHtml = function (string $key) {
         if (function_exists('ad_html')) return ad_html($key);
-        if (function_exists('ad')) return ad($key); // fallback if your helper name is "ad"
+        if (function_exists('ad')) return ad($key);
         return null;
     };
 
@@ -146,7 +144,7 @@
 
 <div class="max-w-7xl mx-auto  sm:py-6 space-y-1">
 
-    {{-- ✅ Post Ads: TOP (between nav and title) --}}
+    {{-- Ad slot: top of the page, between the nav and the post title --}}
     <div class="">
         {{-- Mobile (1) --}}
         @if($adTopM)
@@ -250,7 +248,7 @@
        
   
 
-    {{-- ✅ Post Ads: AFTER FIRST ACTION BUTTONS (between like/save/share and content) --}}
+    {{-- Ad slot: between the action buttons and the post content --}}
     <div class="px-3">
         {{-- Mobile (1) --}}
         @if($adMid1M)
@@ -281,19 +279,23 @@
     {{-- Content (only show if published OR approver) --}}
     @if(!$isPending || $canApprove)
 
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+
+    {{-- Main column (narrower to make room for the Recent Posts sidebar) --}}
+    <div class="lg:col-span-2 space-y-1 min-w-0">
+
     <x-post.card class="{{ $glass }} {{ $shadow }} post-content  overflow-hidden {{ $isPending ? 'opacity-90' : '' }}">
 
 
        {!! $post->content !!}
     </x-post.card>
 
-{{-- 🔷 Unified Header + Actions Container --}}
+{{-- Author info and action buttons, in a single card --}}
 <div class="w-full {{ $glass }} {{ $shadow }}  overflow-hidden p-3 md:p-4 flex flex-col gap-4">
 
-    {{-- 🔹 Top Section (Author + Reactions) --}}
     <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
 
-        {{-- 👤 Author --}}
+        {{-- Author --}}
         <div class="flex items-center gap-3 min-w-0">
 
             @php
@@ -335,7 +337,7 @@
             </a>
         </div>
 
-        {{-- ❤️ 💾 🔗 Actions --}}
+        {{-- Report / edit / remove / like / save / share actions --}}
         <div class="flex items-center justify-end  flex-wrap">
         <div>
             <x-post.report-button
@@ -346,7 +348,6 @@
                 aria-label="Report" />
         </div>
 
-        {{-- ✏️ 🗑️ --}}
         <div class="flex items-center gap-1 flex-wrap">
 
             @if($canEditPost)
@@ -392,7 +393,6 @@
             @endif
 
         </div>
-            {{-- ❤️ Like --}}
             <x-post.reaction-button
                 :post="$post"
                 :count="$reactionCount"
@@ -400,7 +400,6 @@
                 :can-react="$isLoggedIn"
             />
 
-            {{-- 💾 Save --}}
             @if($isLoggedIn)
                 <form method="POST" action="{{ route('post.save.toggle', $post) }}">
                     @csrf
@@ -438,7 +437,6 @@
                 </a>
             @endif
 
-            {{-- 🔗 Share --}}
             <button type="button"
                     class=" !px-3 !py-2"
                     title="Share"
@@ -463,7 +461,7 @@
 
 </div>
 
-        {{-- ✅ Post Ads: AFTER REPORT/EDIT/REMOVE (before comments box) --}}
+        {{-- Ad slot: below the action row, above the comments --}}
         <div class="px-3">
             {{-- Mobile (1) --}}
             @if($adMid2M)
@@ -491,9 +489,6 @@
             @endif
         </div>
 
-        <div class="my-3">
-        <x-post.related-posts :posts="$relatedPosts" />
-        </div>
                 {{-- Comments --}}
                 <x-post.card class="{{ $glass }} {{ $shadow }} overflow-hidden {{ $isPending ? 'opacity-90' : '' }}">
                     <x-post.comments
@@ -507,7 +502,7 @@
                     />
                 </x-post.card>
 
-                {{-- ✅ Post Ads: END (after comments, before footer) --}}
+                {{-- Ad slot: end of the page, before the footer --}}
                 <div class="px-3">
                     {{-- Mobile (1) --}}
                     @if($adEndM)
@@ -534,6 +529,38 @@
                         </div>
                     @endif
                 </div>
+
+    </div>{{-- /main column --}}
+
+    {{-- Sidebar: Recent Posts --}}
+    <div class="space-y-4">
+        <div class="{{ $glass }} {{ $shadow }} overflow-hidden sticky top-20">
+            <div class="flex items-center gap-2.5 p-4 pb-3">
+                <span class="flex h-8 w-8 items-center justify-center rounded-xl bg-[color:var(--an-primary)]/15 text-[var(--an-primary)]">
+                    <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="9"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 7v5l3 3"/>
+                    </svg>
+                </span>
+                <h3 class="text-base font-extrabold text-[var(--an-text)]">Recent Posts</h3>
+            </div>
+
+            <div class="space-y-3 p-3 pt-0 max-h-[80vh] overflow-y-auto custom-scrollbar">
+                @forelse($recentPosts as $rp)
+                    <x-forum.post-card :post="$rp" />
+                @empty
+                    <div class="px-1 pb-3 text-sm text-[var(--an-text-muted)]">Nothing here yet.</div>
+                @endforelse
+            </div>
+        </div>
+    </div>
+
+    </div>{{-- /grid --}}
+
+    {{-- Related Posts — end of page, before footer --}}
+    <div class="my-3">
+        <x-post.related-posts :posts="$relatedPosts" />
+    </div>
 
             @else
                 {{-- Not allowed to see content --}}
@@ -583,7 +610,7 @@ async function trackShare(channel) {
 }
 </script>
 
-{{-- ✅ Remove Post Modal --}}
+{{-- Remove-post confirmation modal --}}
 @if($canDeletePost)
 <div id="removePostModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/70 p-4">
     <div class="w-full max-w-lg rounded-3xl border border-[var(--an-border)] bg-[color:var(--an-card)]/90 backdrop-blur-xl p-5">
