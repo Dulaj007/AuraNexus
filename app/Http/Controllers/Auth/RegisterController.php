@@ -14,7 +14,7 @@ use App\Support\SiteSettings;
 class RegisterController extends Controller
 {
     /**
-     * ✅ Central helper: check if registrations are open (from settings table)
+     * Whether new registrations are currently allowed, per the admin setting.
      */
     protected function registrationsOpen(): bool
     {
@@ -23,7 +23,7 @@ class RegisterController extends Controller
     }
 
     /**
-     * ✅ Central helper: get site name (for messages)
+     * Site name used in user-facing messages.
      */
     protected function siteName(): string
     {
@@ -33,7 +33,7 @@ class RegisterController extends Controller
 
     public function show()
     {
-        // ✅ If registrations are closed, show the closed page instead of the form
+        // Show the closed page instead of the registration form when registrations are off.
         if (!$this->registrationsOpen()) {
             return response()->view('auth.registration-closed', [
                 'siteName' => $this->siteName(),
@@ -45,20 +45,22 @@ class RegisterController extends Controller
 
     public function store(Request $request)
     {
-        // ✅ Block registration attempts when registrations are closed
         if (!$this->registrationsOpen()) {
             return redirect()
                 ->route('login')
                 ->with('error', $this->siteName() . ' is currently not allowing new registrations.');
         }
 
-        // ✅ Backend validation including Google reCAPTCHA
+        $settings = class_exists(SiteSettings::class) ? SiteSettings::public() : [];
+        $minimumAge = (int) ($settings['minimum_age'] ?? 18);
+
+        // Server-side validation, including the reCAPTCHA response.
         $request->validate(
             [
                 'name' => 'required|string|max:30|regex:/^[A-Za-z ]+$/',
                 'username' => 'required|min:5|max:30|regex:/^[A-Za-z0-9_]+$/|unique:users|unique:pending_users',
                 'email' => 'required|email:rfc,dns|max:100|unique:users|unique:pending_users',
-                'dob' => ['required', 'date', 'before:-'.env('MINIMUM_AGE', 18).' years'],
+                'dob' => ['required', 'date', 'before:-'.$minimumAge.' years'],
 
                 'password' => [
                     'required',
@@ -67,7 +69,7 @@ class RegisterController extends Controller
                     'regex:/^(?=.*[A-Z])(?=.*[a-z])(?=.*\d).+$/'
                 ],
                 'terms' => 'accepted',
-                'g-recaptcha-response' => 'required|captcha', // ✅ Google reCAPTCHA validation
+                'g-recaptcha-response' => 'required|captcha',
             ],
             [
                 'dob.before' =>
@@ -87,7 +89,7 @@ class RegisterController extends Controller
             ]
         );
 
-        // ✅ Block temporary email providers
+        // Reject disposable/temporary email domains.
         $emailDomain = substr(strrchr($request->email, "@"), 1);
         if (in_array($emailDomain, config('blocked_emails'))) {
             return back()->withErrors([
@@ -95,12 +97,10 @@ class RegisterController extends Controller
             ])->withInput();
         }
 
-        // ✅ Calculate age from DOB
         $age = Carbon::parse($request->dob)->age;
 
         $token = Str::uuid();
 
-        // ✅ Create pending user
         $pending = PendingUser::create([
             'name' => $request->name,
             'email' => $request->email,
@@ -111,7 +111,6 @@ class RegisterController extends Controller
             'expires_at' => now()->addHours(24),
         ]);
 
-        // ✅ Send verification email
         Mail::to($pending->email)->send(
             new \App\Mail\VerifyEmail($pending)
         );

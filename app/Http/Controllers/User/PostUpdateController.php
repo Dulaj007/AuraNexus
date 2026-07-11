@@ -13,6 +13,7 @@ use App\Support\LogsUserActivity;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Purifier;
 
 class PostUpdateController extends Controller
 {
@@ -22,7 +23,7 @@ class PostUpdateController extends Controller
     {
         $user = $request->user();
 
-        // ✅ Only owner OR edit_post can access
+        // Only the post's owner or someone with edit_post can access this.
         $isOwner   = $user && (int) $user->id === (int) $post->user_id;
         $canEditAny = $user?->hasPermission('edit_post') ?? false;
 
@@ -38,11 +39,10 @@ class PostUpdateController extends Controller
             ->get(['id', 'category', 'content'])
             ->groupBy('category');
 
-        // Existing tags + highlight
         $existingTagNames = $post->tags()->pluck('name')->toArray();
         $existingHighlightName = $post->highlightTag?->name ?? '';
 
-        // Existing paragraph (your save uses order=1)
+        // Paragraph rows are always saved with order=1, so there's at most one.
         $existingParagraph = PostParagraph::where('post_id', $post->id)
             ->where('order', 1)
             ->first();
@@ -54,7 +54,7 @@ class PostUpdateController extends Controller
             'forums' => $forums,
             'templates' => $templates,
 
-            // for form prefills (your JS can use these)
+            // Used to prefill the form fields on the client.
             'existingTagNames' => $existingTagNames,
             'existingHighlightName' => $existingHighlightName,
             'existingParagraph' => $existingParagraph,
@@ -89,7 +89,7 @@ class PostUpdateController extends Controller
             'edit_reason' => ['nullable', 'string', 'max:300'],
         ]);
 
-        // ✅ highlight must be among tag_names if set
+        // The highlight tag must be one of the selected tags.
         if (!empty($validated['highlight_tag_name'])) {
             $tags = array_map(fn ($t) => strtolower(trim($t)), $validated['tag_names'] ?? []);
             $highlight = strtolower(trim($validated['highlight_tag_name']));
@@ -101,16 +101,28 @@ class PostUpdateController extends Controller
             }
         }
 
-        DB::transaction(function () use ($validated, $user, $post, $isOwner) {
+        // Older content may still contain [url=..][img]..[/img][/url] bbcode
+        // pasted without using the editor's "Image" button; convert it to
+        // real <img> tags before sanitizing.
+        $contentWithImages = app(\App\Services\BbcodeImageParser::class)->parse($validated['content']);
 
-            // Update post core fields
+        $cleanContent = Purifier::clean($contentWithImages, [
+            'HTML.Allowed' => 'p,b,strong,i,em,ul,ol,li,a[href|target|rel],img[src|alt],br,h2,h3,div',
+        ]);
+
+        $cleanParagraph = !empty($validated['paragraph_content'])
+            ? Purifier::clean($validated['paragraph_content'], 'post')
+            : null;
+
+        DB::transaction(function () use ($validated, $user, $post, $isOwner, $cleanContent, $cleanParagraph) {
+
             $post->update([
                 'forum_id' => $validated['forum_id'],
                 'title'    => trim($validated['title']),
-                'content'  => $validated['content'],
+                'content'  => $cleanContent,
             ]);
 
-            // ✅ tags (create if not exist)
+            // Create any tags that don't exist yet.
             $tagIds = [];
             foreach (($validated['tag_names'] ?? []) as $name) {
                 $cleanName = trim($name);
@@ -127,7 +139,7 @@ class PostUpdateController extends Controller
             $tagIds = array_values(array_unique($tagIds));
             $post->tags()->sync($tagIds);
 
-            // ✅ highlight tag by NAME → ID
+            // Resolve the highlight tag name back to an id.
             $post->update(['highlight_tag_id' => null]);
 
             if (!empty($validated['highlight_tag_name'])) {
@@ -139,7 +151,7 @@ class PostUpdateController extends Controller
                 }
             }
 
-            // ✅ paragraph update (keep single row order=1)
+            // Paragraph rows are kept as a single row at order=1.
             $existing = PostParagraph::where('post_id', $post->id)
                 ->where('order', 1)
                 ->first();
@@ -148,13 +160,13 @@ class PostUpdateController extends Controller
                 if ($existing) {
                     $existing->update([
                         'paragraph_id' => $validated['paragraph_template_id'],
-                        'content'      => $validated['paragraph_content'],
+                        'content'      => $cleanParagraph,
                     ]);
                 } else {
                     PostParagraph::create([
                         'post_id'      => $post->id,
                         'paragraph_id' => $validated['paragraph_template_id'],
-                        'content'      => $validated['paragraph_content'],
+                        'content'      => $cleanParagraph,
                         'order'        => 1,
                     ]);
                 }
@@ -162,7 +174,7 @@ class PostUpdateController extends Controller
                 if ($existing) $existing->delete();
             }
 
-            // ✅ log edit (who edited + reason)
+            // Track who made the edit and why, for moderator review.
             PostEdit::create([
                 'post_id'   => $post->id,
                 'edited_by' => $user->id,
@@ -171,7 +183,6 @@ class PostUpdateController extends Controller
             ]);
         });
 
-        // ✅ Activity log (UserActivity)
         $this->logActivity(
             $request,
             $user->id,

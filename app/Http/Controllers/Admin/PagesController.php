@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Page;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Purifier;
 
 class PagesController extends Controller
 {
@@ -41,6 +42,7 @@ class PagesController extends Controller
 
         $data['slug'] = Str::slug($data['slug']);
         $data['views'] = 0;
+        $data['content'] = Purifier::clean($data['content'] ?? '', 'post');
 
         Page::create($data);
 
@@ -80,6 +82,8 @@ class PagesController extends Controller
         } else {
             unset($data['slug']);
         }
+
+        $data['content'] = Purifier::clean($data['content'] ?? '', 'post');
 
         $page->update($data);
 

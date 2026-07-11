@@ -34,6 +34,10 @@ class AdsController extends Controller
      */
     public function update(Request $request)
     {
+        if (!$request->user()?->hasRole('admin')) {
+            abort(403);
+        }
+
         $placements = config('ads.placements');
         $inputAds   = $request->input('ads', []);
 
