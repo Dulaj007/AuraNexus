@@ -25,6 +25,7 @@ class User extends Authenticatable
         'password',
         'avatar',
         'bio',
+        'age',
         'status',
         'suspended_until',
         'banned_at',
@@ -44,7 +45,7 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password'          => 'hashed',
 
-            // ✅ IMPORTANT: so Carbon works properly everywhere
+            // Cast to Carbon instances so date comparisons work correctly wherever these are used.
             'suspended_until'   => 'datetime',
             'banned_at'         => 'datetime',
         ];
@@ -123,8 +124,8 @@ class User extends Authenticatable
     }
 
     /**
-     * ✅ Auto-clear suspension if time is over.
-     * Call this from middleware (best) and anywhere else you want.
+     * Clears a suspension once it has expired. Called from middleware on
+     * every request so expired suspensions lift automatically.
      */
     public function syncRestrictionState(): void
     {
@@ -196,9 +197,9 @@ class User extends Authenticatable
             return true;
         }
 
-        $permission = $this->permissionOverrides()
-            ->where('permissions.name', $permissionName)
-            ->first();
+        $this->loadMissing('permissionOverrides');
+
+        $permission = $this->permissionOverrides->firstWhere('name', $permissionName);
 
         if (!$permission) {
             return false;

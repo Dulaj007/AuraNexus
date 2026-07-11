@@ -20,6 +20,7 @@ class TopArticleController extends Controller
         // Fetch pinned posts
         $posts = Post::query()
             ->whereIn('id', $pinnedIds)
+            ->where('status', 'published')
             ->with([
                 'user:id,username,name,avatar',
                 'tags:id,name,slug',
