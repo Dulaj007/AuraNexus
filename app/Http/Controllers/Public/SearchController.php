@@ -14,7 +14,7 @@ use Illuminate\View\View;
 
 class SearchController extends Controller
 {
-    private const PER_PAGE = 1;
+    private const PER_PAGE = 10;
     private const MIN_QUERY_LEN = 2;
     private const MAX_QUERY_LEN = 120;
 
