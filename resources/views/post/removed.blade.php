@@ -3,10 +3,7 @@
 
 @section('title', 'Post Removed • ' . config('app.name'))
 
-@section('meta')
-    {{-- Prevent indexing of removed content --}}
-    <meta name="robots" content="noindex, nofollow">
-@endsection
+@section('meta_robots', 'noindex,nofollow')
 
 @section('content')
 <div class="space-y-6">

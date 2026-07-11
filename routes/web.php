@@ -22,6 +22,7 @@ use App\Http\Controllers\Public\LinkController;
 use App\Http\Controllers\SitemapController;
 use App\Http\Controllers\Public\TopArticleController;
 use App\Http\Controllers\Public\TrendingController;
+use App\Http\Controllers\Public\ThumbnailController;
 
 
 // USER
@@ -52,6 +53,22 @@ use App\Http\Controllers\ThemeModeController;
 
 
 Route::get('/sitemap.xml', [SitemapController::class, 'index'])->name('sitemap');
+
+Route::get('/thumb', [ThumbnailController::class, 'show'])
+    ->middleware('signed')
+    ->name('thumb.show');
+
+Route::get('/robots.txt', function () {
+    $lines = [
+        'User-agent: *',
+        'Allow: /',
+        '',
+        'Sitemap: '.url('/sitemap.xml'),
+    ];
+
+    return response(implode("\n", $lines), 200)
+        ->header('Content-Type', 'text/plain');
+})->name('robots');
 /*
 |--------------------------------------------------------------------------
 | RESTRICTED (BANNED / SUSPENDED) PAGE
@@ -101,7 +118,7 @@ Route::middleware(['account.status'])->group(function () {
     */
     Route::middleware('guest')->group(function () {
 
-        // ✅ Register (blocked when admin disables registrations)
+        // Register (blocked when admin disables registrations)
         Route::middleware('registrations.open')->group(function () {
             Route::get('/register', [RegisterController::class, 'show'])->name('register');
             Route::post('/register', [RegisterController::class, 'store'])->name('register.store');
@@ -128,7 +145,7 @@ Route::middleware(['account.status'])->group(function () {
             // Dashboard
             Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
 
-            // ✅ Settings (Admin)
+            // Settings (Admin)
             Route::get('/settings', [SettingsController::class, 'index'])->name('settings.index');
             Route::post('/settings', [SettingsController::class, 'update'])->name('settings.update');
 
