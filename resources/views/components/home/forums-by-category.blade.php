@@ -65,7 +65,8 @@
                                 {{-- Image Section (Responsive Pop-out) --}}
                                 <div class="relative lg:absolute md:left-1/2 lg:left-0 -top-1 left-2/5 md:-top-12 lg:-top-10 -translate-x-1/2 lg:translate-x-0 w-full max-w-[280px] lg:w-65 h-40 lg:h-35 lg:-ml-8 rounded-xl z-20 mb-4 lg:mb-0">
                                     @if($img)
-                                        <img src="{{ $img }}" 
+                                        <img src="{{ resized_image_url($img, 360, 75) }}" alt="{{ $forum->name }}"
+                                             loading="lazy" decoding="async"
                                              class="absolute top-0 left-0 w-full h-full object-cover rounded-xl border border-white/5 shadow-lg z-30 transition-transform duration-700 group-hover:scale-105 lg:group-hover:scale-102 opacity-90">
                                     @else
                                         <div class="absolute top-0 left-0 w-full h-full rounded-xl bg-gradient-to-br from-[var(--an-primary)]/20 via-transparent to-transparent border border-white/5 shadow-lg z-30 flex items-center justify-center">
