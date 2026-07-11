@@ -17,20 +17,23 @@
     $existingParagraph = $existingParagraph ?? null;
 
     // Theme helpers
-    $glass  = 'rounded-3xl mx-2 border border-[var(--an-border)] bg-[color:var(--an-card)]/70 backdrop-blur-xl';
-    $shadow = 'shadow-[0_16px_55px_rgba(0,0,0,0.28)]';
+    $glass  = 'rounded-3xl mx-2 border border-[var(--an-border)] bg-[color:var(--an-card)]/65 backdrop-blur-2xl
+               transition-shadow duration-300 hover:shadow-[0_30px_80px_-15px_rgba(0,0,0,0.5),0_10px_28px_-8px_rgba(0,0,0,0.35),inset_0_1px_0_0_rgba(255,255,255,0.06)]';
+    $shadow = 'shadow-[0_25px_70px_-15px_rgba(0,0,0,0.42),0_8px_24px_-8px_rgba(0,0,0,0.28),inset_0_1px_0_0_rgba(255,255,255,0.06)]';
 
     $label = 'text-sm font-semibold text-[var(--an-text)]';
     $hint  = 'text-xs text-[var(--an-text-muted)] mt-1';
 
     $inputBase = 'w-full rounded-2xl border border-[var(--an-border)] bg-[color:var(--an-bg)]/35
                   px-4 py-3 text-sm text-[var(--an-text)]
-                  outline-none focus:ring-2 focus:ring-[var(--an-ring)]/60 focus:border-[var(--an-border)]
+                  outline-none transition focus:ring-2 focus:ring-[var(--an-ring)]/60 focus:border-transparent
+                  hover:border-[color:color-mix(in_srgb,var(--an-primary)_25%,var(--an-border))]
                   placeholder:text-[var(--an-text-muted)]';
 
-    $btnPrimary = 'inline-flex items-center justify-center gap-2 rounded-2xl px-5 py-3 text-sm font-extrabold
-                   border transition focus:outline-none focus:ring-2 focus:ring-[var(--an-ring)]
-                   active:scale-[0.98]';
+    $btnPrimary = 'group inline-flex items-center justify-center gap-2 rounded-2xl px-5 py-3.5 text-sm font-extrabold
+                   text-white transition focus:outline-none focus:ring-2 focus:ring-[var(--an-ring)] focus:ring-offset-2 focus:ring-offset-[var(--an-bg)]
+                   active:scale-[0.98] shadow-[0_10px_30px_-8px_var(--an-primary)]
+                   hover:shadow-[0_14px_40px_-8px_var(--an-primary)] hover:-translate-y-0.5';
 @endphp
 
 @section('title', $isEdit ? 'Update Post' : 'Create a Post')
@@ -50,7 +53,7 @@
         </ul>
     </div>
 @endif
-<form id="postForm" action="{{ $formAction }}" method="POST" class="space-y-4 sm:space-y-6">
+<form id="postForm" action="{{ $formAction }}" method="POST" class="space-y-4 sm:space-y-6 my-10">
     @csrf
     @if($isEdit)
         @method('PUT')
@@ -58,13 +61,22 @@
 
     {{-- Header --}}
     <div class="px-3 sm:px-0">
-        <div class="flex flex-col gap-1">
-            <h1 class="text-xl sm:text-2xl font-extrabold tracking-tight text-[var(--an-text)]">
-                {{ $isEdit ? 'Update Post' : 'Create a Post' }}
-            </h1>
-            <p class="text-sm text-[var(--an-text-muted)]">
-                Read posting rules before posting. Any rule breaking can end up perminant bann of your account 
-            </p>
+        <div class="flex items-start gap-3 sm:gap-4">
+            <span class="hidden sm:flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-[var(--an-border)]
+                         bg-[color:var(--an-card)]/60 backdrop-blur-xl shadow-[0_10px_30px_-8px_var(--an-primary)]">
+                <svg class="h-5 w-5 text-[var(--an-primary)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M11 4H6a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2v-5"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                </svg>
+            </span>
+            <div class="flex flex-col gap-1">
+                <h1 class="text-xl sm:text-2xl font-extrabold tracking-tight text-[var(--an-text)]">
+                    {{ $isEdit ? 'Update Post' : 'Create a Post' }}
+                </h1>
+                <p class="text-sm text-[var(--an-text-muted)]">
+                    Read posting rules before posting. Any rule breaking can end up perminant bann of your account
+                </p>
+            </div>
         </div>
     </div>
 
@@ -195,27 +207,95 @@
 
 
             {{-- Content editor --}}
+            @php
+                $toolBtn = 'inline-flex h-9 w-9 items-center justify-center rounded-lg text-[var(--an-text-muted)]
+                            transition hover:bg-[color:var(--an-primary)]/12 hover:text-[var(--an-text)]
+                            active:scale-90';
+                $toolBtnWide = 'inline-flex h-9 items-center justify-center gap-1.5 rounded-lg px-2.5 text-[var(--an-text-muted)]
+                            transition hover:bg-[color:var(--an-primary)]/12 hover:text-[var(--an-text)]
+                            active:scale-95';
+                $toolDivider = 'w-px h-6 bg-[var(--an-border)] mx-1 shrink-0';
+            @endphp
             <div class="{{ $glass }} {{ $shadow }} overflow-hidden">
-                <div class="p-3 sm:p-6 space-y-3">
-                    <div class="{{ $label }} pl-1 pt-1 text-base">Content</div>
-                    <div class="{{ $hint }} pl-2">
-                        You can paste multiple links line by line and image URLs. Keep sections like: Download Links:, Watch Online:, Then image hotlinks 
+                <div class="flex items-center justify-between gap-3 px-4 sm:px-6 pt-4 sm:pt-6 pb-1">
+                    <div>
+                        <div class="{{ $label }} text-base">Content</div>
+                        <div class="{{ $hint }}">
+                            Paste links line by line. Keep sections like <span class="font-semibold text-[var(--an-text)]/80">Download Links:</span> or <span class="font-semibold text-[var(--an-text)]/80">Watch Online:</span> as headings, then image hotlinks below them.
+                        </div>
                     </div>
-                    <div class="flex gap-2 flex-wrap mb-3">
-                        <button type="button" onclick="format('bold')" class="px-3 py-1.5 rounded-xl border border-[var(--an-border)] bg-[color:var(--an-card)]/40 backdrop-blur-md text-sm font-semibold text-[var(--an-text)] hover:bg-[color:var(--an-card)]/70 hover:scale-[1.03] active:scale-[0.95] transition">B</button>
-                        <button type="button" onclick="format('italic')" class="px-3 py-1.5 rounded-xl border border-[var(--an-border)] bg-[color:var(--an-card)]/40 backdrop-blur-md text-sm italic text-[var(--an-text)] hover:bg-[color:var(--an-card)]/70 hover:scale-[1.03] active:scale-[0.95] transition">I</button>
-                        <button type="button" onclick="format('insertUnorderedList')" class="px-3 py-1.5 rounded-xl border border-[var(--an-border)] bg-[color:var(--an-card)]/40 backdrop-blur-md text-sm text-[var(--an-text)] hover:bg-[color:var(--an-card)]/70 hover:scale-[1.03] active:scale-[0.95] transition">• List</button>
-                        <button type="button" onclick="format('formatBlock','h2')" class="px-3 py-1.5 rounded-xl border border-[var(--an-border)] bg-[color:var(--an-card)]/40 backdrop-blur-md text-sm font-bold text-[var(--an-text)] hover:bg-[color:var(--an-card)]/70 hover:scale-[1.03] active:scale-[0.95] transition">H2</button>
-                        <button type="button" onclick="format('formatBlock','h3')" class="px-3 py-1.5 rounded-xl border border-[var(--an-border)] bg-[color:var(--an-card)]/40 backdrop-blur-md text-sm font-semibold text-[var(--an-text)] hover:bg-[color:var(--an-card)]/70 hover:scale-[1.03] active:scale-[0.95] transition">H3</button>
-                        <button type="button" onclick="toggleAlign('center')" class="px-3 py-1.5 rounded-xl border border-[var(--an-border)] bg-[color:var(--an-card)]/40 backdrop-blur-md text-sm font-semibold text-[var(--an-text)] hover:bg-[color:var(--an-card)]/70 hover:scale-[1.03] active:scale-[0.95] transition">Center</button>
-                        <button type="button" onclick="insertImage()" class="px-3 py-1.5 rounded-xl border border-[var(--an-border)] bg-[color:var(--an-card)]/40 backdrop-blur-md text-sm font-semibold text-[var(--an-text)] hover:bg-[color:var(--an-card)]/70 hover:scale-[1.03] active:scale-[0.95] transition">Image</button>
-                        <button type="button" onclick="insertSocial()" class="px-3 py-1.5 rounded-xl border border-[var(--an-border)] bg-[color:var(--an-card)]/40 backdrop-blur-md text-sm font-semibold text-[var(--an-text)] hover:bg-[color:var(--an-card)]/70 hover:scale-[1.03] active:scale-[0.95] transition">Social Media</button>
-                        <button type="button" onclick="clearFormatting()" class="px-3 py-1.5 rounded-xl border border-[var(--an-border)] bg-[color:var(--an-card)]/40 backdrop-blur-md text-sm text-[var(--an-text)] hover:bg-red-500/20 hover:text-red-400 transition">Clear</button>
-                    </div>
+                    <span id="wordCount" class="hidden sm:inline-flex shrink-0 items-center rounded-full border border-[var(--an-border)] bg-[color:var(--an-bg)]/30 px-3 py-1 text-[11px] font-semibold text-[var(--an-text-muted)]">
+                        0 words
+                    </span>
+                </div>
 
-                    <div id="editor" contenteditable="true" class="{{ $inputBase }} min-h-[320px] text-sm leading-6 post-content">
-                        {!! old('content', $isEdit ? ($post->content ?? '') : '') !!}
+                <div class="px-3 sm:px-6 pt-3">
+                    {{-- Toolbar --}}
+                    <div class="flex items-center gap-0.5 flex-wrap rounded-2xl border border-[var(--an-border)] bg-[color:var(--an-bg)]/40 backdrop-blur-md p-1.5 shadow-inner">
+
+                        {{-- Text style --}}
+                        <button type="button" onclick="format('bold')" title="Bold" aria-label="Bold" class="{{ $toolBtn }} font-black text-[15px]">B</button>
+                        <button type="button" onclick="format('italic')" title="Italic" aria-label="Italic" class="{{ $toolBtn }} italic font-serif text-base">I</button>
+
+                        <div class="{{ $toolDivider }}"></div>
+
+                        {{-- Structure --}}
+                        <button type="button" onclick="format('formatBlock','h2')" title="Heading 2" aria-label="Heading 2" class="{{ $toolBtnWide }} text-[13px] font-extrabold">H2</button>
+                        <button type="button" onclick="format('formatBlock','h3')" title="Heading 3" aria-label="Heading 3" class="{{ $toolBtnWide }} text-[13px] font-bold">H3</button>
+                        <button type="button" onclick="format('insertUnorderedList')" title="Bullet list" aria-label="Bullet list" class="{{ $toolBtn }}">
+                            <svg class="h-4.5 w-4.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="4.5" cy="6" r="1.2" fill="currentColor" stroke="none"/>
+                                <circle cx="4.5" cy="12" r="1.2" fill="currentColor" stroke="none"/>
+                                <circle cx="4.5" cy="18" r="1.2" fill="currentColor" stroke="none"/>
+                                <path stroke-linecap="round" d="M9 6h11M9 12h11M9 18h11"/>
+                            </svg>
+                        </button>
+
+                        <div class="{{ $toolDivider }}"></div>
+
+                        {{-- Alignment --}}
+                        <button type="button" onclick="toggleAlign('center')" title="Center align" aria-label="Center align" class="{{ $toolBtn }}">
+                            <svg class="h-4.5 w-4.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" d="M5 6h14M8 12h8M6 18h12"/>
+                            </svg>
+                        </button>
+
+                        <div class="{{ $toolDivider }}"></div>
+
+                        {{-- Insert --}}
+                        <button type="button" onclick="insertImage()" title="Insert image (select the URL text first)" aria-label="Insert image" class="{{ $toolBtnWide }}">
+                            <svg class="h-4.5 w-4.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="3" y="4" width="18" height="16" rx="2"/>
+                                <circle cx="8.5" cy="9.5" r="1.5"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M21 16l-5.5-5.5a1 1 0 00-1.4 0L6 19"/>
+                            </svg>
+                            <span class="hidden md:inline text-[13px] font-semibold">Image</span>
+                        </button>
+                        <button type="button" onclick="insertSocial()" title="Insert social link (select the URL text first)" aria-label="Insert social link" class="{{ $toolBtnWide }}">
+                            <svg class="h-4.5 w-4.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M10 13a5 5 0 007.07 0l2-2a5 5 0 00-7.07-7.07l-1.1 1.1M14 11a5 5 0 00-7.07 0l-2 2a5 5 0 007.07 7.07l1.1-1.1"/>
+                            </svg>
+                            <span class="hidden md:inline text-[13px] font-semibold">Link</span>
+                        </button>
+
+                        <div class="flex-1"></div>
+
+                        {{-- Utility --}}
+                        <button type="button" onclick="clearFormatting()" title="Clear formatting" aria-label="Clear formatting" class="{{ $toolBtn }} hover:!bg-red-500/12 hover:!text-red-400">
+                            <svg class="h-4.5 w-4.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M17 3l4 4-9.5 9.5H7L3 12l9.5-9.5a1 1 0 011.4 0L17 3z"/>
+                                <path stroke-linecap="round" d="M7.5 16.5L4 20h16"/>
+                            </svg>
+                        </button>
                     </div>
+                </div>
+
+                <div class="px-3 sm:px-6 pb-4 sm:pb-6 pt-3">
+                    <div id="editor" contenteditable="true" data-placeholder="Start writing your post…"
+                         class="an-editor rounded-2xl border border-[var(--an-border)] bg-[color:var(--an-bg)]/25
+                                px-4 py-4 sm:px-5 sm:py-5 text-sm leading-7 text-[var(--an-text)] post-content
+                                min-h-[340px] outline-none transition
+                                focus:ring-2 focus:ring-[var(--an-ring)]/60 focus:border-transparent">{!! old('content', $isEdit ? ($post->content ?? '') : '') !!}</div>
 
                     <input type="hidden" name="content" id="hiddenContent">
                 </div>
@@ -225,9 +305,19 @@
             document.addEventListener('DOMContentLoaded', function () {
                 const editor = document.getElementById('editor');
                 const hiddenInput = document.getElementById('hiddenContent');
+                const wordCount = document.getElementById('wordCount');
 
                 // initial sync
                 hiddenInput.value = editor.innerHTML.trim();
+
+                // live word count
+                function updateWordCount() {
+                    if (!wordCount) return;
+                    const words = (editor.innerText || '').trim().split(/\s+/).filter(Boolean);
+                    wordCount.textContent = words.length + (words.length === 1 ? ' word' : ' words');
+                }
+                editor.addEventListener('input', updateWordCount);
+                updateWordCount();
 
                 // generic formatting
                 window.format = function(command, value = null) {
@@ -425,9 +515,10 @@
             <div class="flex flex-col sm:flex-row sm:items-center mx-2  gap-3">
                 <button type="submit"
                         class="{{ $btnPrimary }}"
-                        style="border-color: color-mix(in srgb, var(--an-primary) 35%, var(--an-border));
-                               background: color-mix(in srgb, var(--an-primary) 18%, transparent);
-                               color: var(--an-text);">
+                        style="background: linear-gradient(135deg, var(--an-primary), color-mix(in srgb, var(--an-primary) 60%, var(--an-link)));">
+                    <svg class="h-4 w-4 transition-transform group-hover:translate-x-0.5" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                        <path d="M12 5v14M5 12l7 7 7-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
                     {{ $submitText }}
                 </button>
 
@@ -446,14 +537,22 @@
         {{-- Right (sidebar) --}}
         <div class="space-y-4 sm:space-y-6">
 
-            <div class="{{ $glass }} {{ $shadow }} overflow-hidden">
+            <div class="{{ $glass }} {{ $shadow }} overflow-hidden sticky top-20">
                 <div class="p-4 sm:p-6">
-                    <h3 class="text-base font-extrabold text-[var(--an-text)] mb-2">Posting Tips</h3>
-                    <ul class="text-sm text-[var(--an-text-muted)] space-y-2 list-disc pl-5">
-                        <li>Use a clear title with keywords.</li>
-                        <li>Put image URLs on their own line (jpg/png/webp).</li>
-                        <li>Keep “Download Links / Watch Online” as headings.</li>
-                        <li>The saved paragraph renders later as a normal text block.</li>
+                    <div class="flex items-center gap-2.5 mb-3">
+                        <span class="flex h-8 w-8 items-center justify-center rounded-xl bg-[color:var(--an-primary)]/15 text-[var(--an-primary)]">
+                            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 2a7 7 0 00-4 12.7V17a1 1 0 001 1h6a1 1 0 001-1v-2.3A7 7 0 0012 2z"/>
+                                <path stroke-linecap="round" d="M10 21h4"/>
+                            </svg>
+                        </span>
+                        <h3 class="text-base font-extrabold text-[var(--an-text)]">Posting Tips</h3>
+                    </div>
+                    <ul class="text-sm text-[var(--an-text-muted)] space-y-2.5 pl-1">
+                        <li class="flex gap-2"><span class="text-[var(--an-primary)]">•</span> Use a clear title with keywords.</li>
+                        <li class="flex gap-2"><span class="text-[var(--an-primary)]">•</span> Put image URLs on their own line (jpg/png/webp).</li>
+                        <li class="flex gap-2"><span class="text-[var(--an-primary)]">•</span> Keep "Download Links / Watch Online" as headings.</li>
+                        <li class="flex gap-2"><span class="text-[var(--an-primary)]">•</span> The saved paragraph renders later as a normal text block.</li>
                     </ul>
                 </div>
             </div>
@@ -464,12 +563,11 @@
     </div>
 </form>
 
-{{-- JS (no packages) --}}
 <script>
 /**
- * IMPORTANT:
- * - We prevent Enter/Go/Done from submitting the form while in the tag input.
- * - We also block "implicit submit" on Enter for the entire form except textarea.
+ * Enter/Go/Done in the tag input adds a tag instead of submitting the form.
+ * Enter is also blocked from implicitly submitting the form anywhere except
+ * inside a textarea, where it should just insert a newline.
  */
 
 const form = document.getElementById('postForm');
