@@ -31,10 +31,10 @@
                 <a href="{{ $tagUrl }}" class="group relative aspect-square overflow-hidden bg-black">
                     {{-- Background Image with Zoom & Darken --}}
                     @if($imgUrl)
-                        <img src="{{ $imgUrl }}"
+                        <img src="{{ resized_image_url($imgUrl, 400, 75) }}"
                              alt="{{ $card->tag?->name }}"
                              class="absolute inset-0 h-full w-full object-cover opacity-60 transition-all duration-700 scale-105 group-hover:scale-110 group-hover:opacity-40"
-                             loading="lazy">
+                             loading="lazy" decoding="async">
                     @else
                         <div class="absolute inset-0 bg-gradient-to-br from-[var(--an-primary)]/20 via-black to-black"></div>
                     @endif

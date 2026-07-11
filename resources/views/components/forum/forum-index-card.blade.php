@@ -21,7 +21,7 @@
         {{-- BACKGROUND IMAGE --}}
         <div class="absolute inset-0 w-full h-full z-0">
             @if($cover)
-                <img src="{{ $cover }}"
+                <img src="{{ $cover }}" alt="{{ $forum->name }}"
                      class="w-full h-full object-cover opacity-80 transition-transform duration-700 group-hover:scale-104 group-hover:opacity-100">
             @else
                 <div class="w-full h-full bg-gradient-to-br from-[var(--an-primary)]/30 via-slate-800 to-slate-900 flex items-center justify-center transition-transform duration-700 group-hover:scale-105">

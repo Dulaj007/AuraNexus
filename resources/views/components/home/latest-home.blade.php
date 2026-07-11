@@ -60,8 +60,9 @@
                                 {{-- Grainy Scanline Overlay --}}
                                 <div class="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-overlay z-10 pointer-events-none"></div>
                                 
-                                <img src="{{ $post->thumbnail_url ?? '/images/default-thumbnail.jpg' }}" 
+                                <img src="{{ $post->thumbnail_url ? resized_image_url($post->thumbnail_url, 480, 75) : '/images/default-thumbnail.jpg' }}"
                                      alt="{{ $post->title }}"
+                                     loading="lazy" decoding="async"
                                      class="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110 opacity-80 group-hover:opacity-100">
 
                                 {{-- Meta Badges --}}
@@ -120,7 +121,7 @@
                 
                 {{-- Enhanced Cyber Ad Box --}}
 
-    {{-- ✅ MID ADS --}}
+    {{-- Sidebar ad slot --}}
    <div class="ad-label block absolute -top-3 left-1/2 -translate-x-1/2 px-2 text-[10px] font-bold uppercase bg-[var(--an-bg)] text-[var(--an-text-muted)] border border-white/10 rounded-md pointer-events-none">
         Advertisement
     </div>

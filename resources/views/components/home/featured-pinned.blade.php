@@ -62,8 +62,9 @@
                 <div class="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-overlay z-10 pointer-events-none"></div>
                 
                 {{-- Main Image --}}
-                <img src="{{ $main->thumbnail_url }}" 
+                <img src="{{ resized_image_url($main->thumbnail_url, 960, 80) }}"
                      alt="{{ $main->title }}"
+                     fetchpriority="high" decoding="async"
                      class="absolute inset-0 h-full w-full object-cover transition-all duration-1000 ease-out group-hover:scale-110 opacity-70 group-hover:opacity-90">
                 
                 {{-- Deep Cyber Gradient --}}
@@ -104,7 +105,7 @@
         {{-- SIDE POSTS --}}
         <div class="lg:col-span-5 flex flex-col gap-2 relative sideHoverWrap">
 
-            {{-- 🔥 NEW: Gliding highlight --}}
+            {{-- Gliding highlight that follows the hovered side item --}}
             <span class="sideHighlight hidden lg:block absolute top-0 left-0 rounded-xl pointer-events-none z-0"></span>
 
             <div class="text-[10px] hidden lg:flex font-black text-[var(--an-primary)] uppercase tracking-[0.3em] mb-1 px-2 flex items-center gap-2">
@@ -116,7 +117,7 @@
 <a href="{{ route('post.show', $post->slug) }}" 
    class="sideItem group flex items-center gap-3 pr-2 bg-[var(--an-card)] shadow-2xl border border-[var(--an-primary)]/20 hover:border-[var(--an-primary)]/40 hover:bg-[var(--an-card)]/60 backdrop-blur-md transition-all duration-500 relative overflow-hidden">
 
-    {{-- ✅ Gradient (send to back) --}}
+    {{-- Gradient overlay, sent behind the content --}}
     <div class="absolute inset-0 bg-gradient-to-t from-[var(--an-bg)]/60 via--[var(--an-bg)]/10 to-transparent z-0 pointer-events-none"></div>
 
     {{-- Hover Indicator --}}
@@ -124,7 +125,8 @@
 
     {{-- Image --}}
     <div class="relative h-23 w-30 lg:h-30 lg:w-50 shrink-0 overflow-hidden border border-white/10 bg-black z-10">
-        <img src="{{ $post->thumbnail_url }}" 
+        <img src="{{ resized_image_url($post->thumbnail_url, 400, 75) }}" alt="{{ $post->title }}"
+             loading="lazy" decoding="async"
              class="h-full w-full object-cover opacity-80 group-hover:opacity-100 group-hover:scale-110 transition-all duration-700">
     </div>
 
@@ -163,9 +165,8 @@
 
     {{-- Responsive Ad Container --}}
     <div class="ad-container group relative w-full  overflow-hidden cursor-pointer ">
-        {{-- INSERT YOUR AD CODE HERE --}}
 <div class="ad-inner w-full h-[50px]">
-    {{-- ✅ TOP ADS (same style pattern as forums) --}}
+    {{-- Top ad slot, styled the same as the forums layout --}}
     @if($adTopA )
         <div class="flex flex-row justify-center">
             @if($adTopA)
@@ -200,7 +201,6 @@
 </section>
 @endif
 
-{{-- 🔥 NEW SCRIPT --}}
 <script>
 document.addEventListener("DOMContentLoaded", () => {
     document.querySelectorAll(".sideHoverWrap").forEach(wrapper => {
@@ -228,7 +228,6 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 </script>
 
-{{-- 🔥 NEW STYLE --}}
 <style>
 .sideHighlight {
     background: var(--an-card-2);

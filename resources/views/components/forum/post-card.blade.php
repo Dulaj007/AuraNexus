@@ -69,8 +69,9 @@ $forumSlug = $forum?->slug;
             <div class="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-overlay z-10 pointer-events-none"></div>
             
             @if($post->thumbnail_url)
-                <img src="{{ $post->thumbnail_url }}" 
+                <img src="{{ $post->thumbnail_url }}"
                      alt="{{ $post->title }}"
+                     loading="lazy" decoding="async"
                      onerror="this.onerror=null; this.src='/images/default-thumbnail.jpg';"
                      class="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110 opacity-80 group-hover:opacity-100">
             @else
