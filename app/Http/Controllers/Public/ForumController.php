@@ -34,7 +34,7 @@ class ForumController extends Controller
                 },
             ])
             ->orderBy('name')
-            ->paginate(1);
+            ->paginate(20);
 
         return view('forums.index', compact('forums'));
     }
@@ -45,7 +45,7 @@ class ForumController extends Controller
 
         $sort = $request->query('sort', 'recent');
         $perPage = 9;
-        $page = $request->query('page', 1); // ✅ use query param, not route param
+        $page = $request->query('page', 1); // Read from the query string, not a route parameter.
 
         // 1) Get pinned posts (newest pin first)
         $pinned = Post::query()
@@ -132,7 +132,7 @@ class ForumController extends Controller
             $page,
             [
                 'path' => url('/forum/' . $forum->slug),
-                'query' => $request->query(), // ✅ keeps ?sort=recent/page=2
+                'query' => $request->query(), // Preserves ?sort=recent&page=2 in pagination links.
             ]
         );
 
