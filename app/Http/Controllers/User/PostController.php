@@ -10,6 +10,7 @@ use App\Models\PostReaction;
 use App\Models\Setting;
 use App\Models\UserActivity;
 use App\Models\RemovedPost;
+use App\Services\BbcodeImageParser;
 use App\Services\PostLinkifier;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -34,57 +35,60 @@ class PostController extends Controller
         $isOwner    = $user && (int) $user->id === (int) $post->user_id;
         $canApprove = $user?->hasPermission('approve_post') ?? false;
 
-        // ✅ removed posts -> custom removed page
+        // Removed posts get their own template instead of the normal show view.
         if ($post->status === Post::STATUS_REMOVED || $post->status === 'removed') {
             $removed = RemovedPost::where('post_id', $post->id)->latest()->first();
 
-            return view('post.removed', [
+            return response()->view('post.removed', [
                 'post'    => $post,
                 'removed' => $removed,
-            ]);
+            ], 410);
         }
 
-        // ✅ pending flag (only for non-removed)
         $isPending = $post->status !== Post::STATUS_PUBLISHED;
 
-        // ✅ hide pending posts from everyone except owner/approver
+        // Pending posts are only visible to their owner or someone who can approve them.
         if ($isPending && !$isOwner && !$canApprove) {
             abort(404);
         }
 
-        // ✅ view count (only for published)
+        // Count the view once per session so refreshes don't inflate the number.
         if ($post->status === Post::STATUS_PUBLISHED && !$request->session()->has("viewed_post_{$post->id}")) {
             $post->increment('views');
             $request->session()->put("viewed_post_{$post->id}", true);
         }
 
-        // ✅ lightweight parse (NO $post->parsedContent())
         try {
-            // ✅ sanitize HTML before parsing
-        $cleanContent = Purifier::clean($post->content, 'post');
+            // Older posts may still contain [url=..][img]..[/img][/url] bbcode
+            // pasted without using the editor's "Image" button. Convert it to
+            // real <img> tags before sanitizing so it renders as an image
+            // instead of literal bracket text.
+            $withImages = app(BbcodeImageParser::class)->parse((string) $post->content);
+            $cleanContent = Purifier::clean($withImages, 'post');
 
-        if ($cleanContent !== $post->content) {
-            // optional: log what was stripped for review
-            \Log::info('Purifier removed content from post ID '.$post->id, [
-                'original' => $post->content,
-                'cleaned'  => $cleanContent,
-            ]);
-        }
+            if ($cleanContent !== $post->content) {
+                // Log what Purifier stripped so it can be reviewed if content looks wrong.
+                \Log::info('Purifier removed content from post ID '.$post->id, [
+                    'original' => $post->content,
+                    'cleaned'  => $cleanContent,
+                ]);
+            }
 
-        // continue rendering safely
-        $rendered = $this->buildRenderedFromContent(
-            (string) $cleanContent,
-            (string) $post->title
-        );
+            // Only applied in memory, not saved, so the view renders the
+            // converted and sanitized HTML without rewriting the stored value.
+            $post->content = $cleanContent;
+
+            $rendered = $this->buildRenderedFromContent(
+                (string) $cleanContent,
+                (string) $post->title
+            );
         } catch (\Exception $e) {
-            // catch any parsing or sanitization errors
             return back()->with('error', 'Failed to render the post content safely.');
         }
 
-        // ✅ Convert outbound links into /link/{code} (download gate) + add masked display
+        // Swap outbound links for /link/{code} download-gate URLs with a masked display.
         $rendered = app(PostLinkifier::class)->linkifySections($post->id, $rendered);
 
-        // ✅ optional SEO paragraph
         $paragraph = PostParagraph::where('post_id', $post->id)->latest()->first();
 
         $metaText = $rendered['plainText'] ?? '';
@@ -92,7 +96,6 @@ class PostController extends Controller
             $metaText .= ' ' . $paragraph->content;
         }
 
-        // ✅ json-ld
         $jsonLd = $this->buildJsonLd(
             $post,
             $rendered['images'] ?? [],
@@ -100,7 +103,6 @@ class PostController extends Controller
             $metaText
         );
 
-        // ✅ reactions
         $reactionCount = PostReaction::where('post_id', $post->id)
             ->where('type', 'like')
             ->count();
@@ -112,29 +114,28 @@ class PostController extends Controller
                 ->exists()
             : false;
 
-        // ✅ report message
         $reportMessage = Setting::where('key', 'report_post_message')
             ->value('value') ?: 'Please explain why you are reporting this post. Reports are reviewed by moderators.';
 
-        // ✅ saved?
         $isSaved = false;
         if ($user) {
             $isSaved = $user->savedPosts()->where('post_id', $post->id)->exists();
         }
 
-        // ✅ share count (using activities)
         $shareCount = UserActivity::where('event', 'post_shared')
             ->where('subject_type', Post::class)
             ->where('subject_id', $post->id)
             ->count();
 
-        // ✅ comments (Collections!)
         $commentsQuery = Comment::with('user:id,username,name,avatar')
             ->where('post_id', $post->id)
             ->latest();
 
+        // Capped so a post with an unusually large thread can't load an
+        // unbounded result set into memory on every view.
         $comments = (clone $commentsQuery)
             ->where('status', 'published')
+            ->limit(500)
             ->get();
 
         $pendingComments = collect();
@@ -142,15 +143,17 @@ class PostController extends Controller
         if ($canApprove) {
             $pendingComments = (clone $commentsQuery)
                 ->where('status', 'pending')
+                ->limit(500)
                 ->get();
         } elseif ($user) {
             $pendingComments = (clone $commentsQuery)
                 ->where('status', 'pending')
                 ->where('user_id', $user->id)
+                ->limit(500)
                 ->get();
         }
 
-        // ✅ RELATED POSTS (tag overlap score, then most recent)
+        // Related posts: ranked by tag overlap first, then recency.
         $tagIds = $post->tags->pluck('id')->values();
         $relatedPosts = collect();
 
@@ -175,9 +178,26 @@ class PostController extends Controller
                 ->get();
         }
 
+        // Recent posts for the sidebar: just the latest published posts.
+        $recentPosts = Post::query()
+            ->where('status', Post::STATUS_PUBLISHED)
+            ->where('id', '!=', $post->id)
+            ->whereNotIn('id', $relatedPosts->pluck('id'))
+            ->with([
+                'forum:id,name,slug,category_id',
+                'forum.category:id,name,slug',
+                'tags:id,name,slug',
+                'highlightTag:id,name,slug',
+                'user:id,username,name,avatar',
+            ])
+            ->latest()
+            ->limit(5)
+            ->get();
+
         return view('post.show', [
             'post'            => $post,
             'relatedPosts'    => $relatedPosts,
+            'recentPosts'     => $recentPosts,
 
             'isPending'       => $isPending,
             'canApprove'      => $canApprove,
