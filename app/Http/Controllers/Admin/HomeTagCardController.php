@@ -32,16 +32,13 @@ class HomeTagCardController extends Controller
         $name = trim($data['tag_name']);
         $slug = Str::slug($name);
 
-        // ✅ get or create tag
         $tag = Tag::firstOrCreate(
             ['slug' => $slug],
             ['name' => $name]
         );
 
-        // ✅ store image
         $path = $request->file('image')->store('home/tag-cards', 'public');
 
-        // ✅ create card (set image_path + enabled)
         HomeTagCard::create([
             'tag_id'     => $tag->id,
             'image_path' => $path,
@@ -68,7 +65,7 @@ class HomeTagCardController extends Controller
 
     public function toggle(HomeTagCard $card)
     {
-        $card->update(['is_active' => ! (bool) $card->is_active]);
+        $card->update(['is_enabled' => ! (bool) $card->is_enabled]);
 
         Cache::forget('home.tag_cards.v1');
 

@@ -23,8 +23,9 @@ class VerifyController extends Controller
             'email' => $pending->email,
             'username' => $pending->username,
             'password' => $pending->password,
+            'age' => $pending->age,
 
-            // ✅ verification metadata
+            // Verification metadata
             'email_verified_at' => now(),
             'email_verified_ip' => request()->ip(),
         ]);
