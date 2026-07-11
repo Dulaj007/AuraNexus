@@ -71,6 +71,13 @@
     <meta property="og:url" content="{{ $canonical }}">
     <meta property="og:image" content="{{ $ogImage }}">
 
+    {{-- JSON-LD --}}
+    @hasSection('json_ld')
+        <script type="application/ld+json">
+{!! trim($__env->yieldContent('json_ld')) !!}
+        </script>
+    @endif
+
     @vite(['resources/css/app.css','resources/js/app.js'])
 
     @inject('theme', \App\Services\ThemeService::class)

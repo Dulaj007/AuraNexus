@@ -78,9 +78,7 @@ class SitemapController extends Controller
         // Posts
         if (\Route::has('post.show') && class_exists(Post::class)) {
             Post::query()
-                // ✅ ADD YOUR "published only" logic here:
-                // ->where('status', 'published')
-                // ->whereNotNull('published_at')
+                ->where('status', 'published')
                 ->each(function ($post) use ($sitemap) {
                     $sitemap->add(
                         Url::create(route('post.show', $post->slug))

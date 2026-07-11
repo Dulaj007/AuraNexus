@@ -43,9 +43,9 @@
                         {{ $description }}
                     </span>
 
-                    <h2 class="text-lg sm:text-2xl lg:text-3xl font-black text-[var(--an-text)] tracking-tight uppercase leading-tight">
+                    <h1 class="text-lg sm:text-2xl lg:text-3xl font-black text-[var(--an-text)] tracking-tight uppercase leading-tight">
                         {{ $title }}
-                    </h2>
+                    </h1>
                 </div>
             </div>
 
